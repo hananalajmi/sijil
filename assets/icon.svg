@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="38%" r="75%"><stop offset="0" stop-color="#2a4682"/><stop offset=".55" stop-color="#1b2f5c"/><stop offset="1" stop-color="#0e1a36"/></radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7e3a8"/><stop offset=".5" stop-color="#d6b062"/><stop offset="1" stop-color="#a97f32"/></linearGradient>
+    <linearGradient id="page" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#eef1f8"/></linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffe7a6" stop-opacity=".55"/><stop offset="1" stop-color="#ffe7a6" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <circle cx="512" cy="512" r="430" fill="none" stroke="url(#gold)" stroke-width="10" opacity=".55"/>
+  <ellipse cx="512" cy="560" rx="330" ry="210" fill="url(#glow)"/>
+  <!-- الكتاب المفتوح -->
+  <g transform="translate(512 625)">
+    <path d="M0 -150 C -90 -205 -230 -210 -330 -170 L -330 140 C -230 100 -90 105 0 160 Z" fill="url(#gold)"/>
+    <path d="M0 -150 C 90 -205 230 -210 330 -170 L 330 140 C 230 100 90 105 0 160 Z" fill="url(#gold)"/>
+    <path d="M0 -135 C -85 -185 -215 -190 -305 -155 L -305 120 C -215 88 -85 92 0 140 Z" fill="url(#page)"/>
+    <path d="M0 -135 C 85 -185 215 -190 305 -155 L 305 120 C 215 88 85 92 0 140 Z" fill="url(#page)"/>
+    <path d="M0 -135 L 0 140" stroke="#c9a24f" stroke-width="6"/>
+    <g stroke="#9fb0cf" stroke-width="13" stroke-linecap="round" fill="none">
+      <path d="M -250 -100 C -190 -122 -110 -120 -50 -92"/><path d="M -250 -40 C -190 -62 -110 -60 -50 -32"/><path d="M -250 20 C -190 -2 -140 0 -100 14"/>
+      <path d="M 250 -100 C 190 -122 110 -120 50 -92"/><path d="M 250 -40 C 190 -62 110 -60 50 -32"/><path d="M 250 20 C 190 -2 140 0 100 14"/>
+    </g>
+  </g>
+  <!-- قارورة العلوم فوق الكتاب -->
+  <g transform="translate(512 262) scale(.92)">
+    <path d="M -38 -120 L 38 -120 M -26 -120 L -26 -30 L -110 110 Q -122 135 -95 135 L 95 135 Q 122 135 110 110 L 26 -30 L 26 -120" fill="none" stroke="url(#gold)" stroke-width="22" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M -72 55 L 72 55 L 98 106 Q 104 118 90 118 L -90 118 Q -104 118 -98 106 Z" fill="url(#gold)" opacity=".9"/>
+    <circle cx="-18" cy="85" r="11" fill="#1b2f5c" opacity=".55"/><circle cx="24" cy="96" r="7" fill="#1b2f5c" opacity=".55"/>
+  </g>
+  <g fill="#f7e3a8"><path d="M 760 250 l 10 28 l 28 10 l -28 10 l -10 28 l -10 -28 l -28 -10 l 28 -10 Z"/><path d="M 268 300 l 7 19 l 19 7 l -19 7 l -7 19 l -7 -19 l -19 -7 l 19 -7 Z" opacity=".8"/></g>
+</svg>

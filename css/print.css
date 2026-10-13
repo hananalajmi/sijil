@@ -1,0 +1,349 @@
+/* ===================== صفحات الطباعة A4 — قوالب رسمية ===================== */
+.sheets { display: flex; flex-direction: column; align-items: center; gap: 18px; padding-block: 18px; }
+.sheet { background: #fff; color: #000; box-shadow: 0 2px 14px rgba(0,0,0,.18); direction: rtl; overflow: hidden;
+  font-family: var(--print-font, Arial), Arial, "Simplified Arabic", "Traditional Arabic", Tahoma, "DejaVu Sans", sans-serif; font-size: 11pt; line-height: 1.45; flex: none; }
+.sheet.portrait { width: 210mm; height: 297mm; }
+.sheet.landscape { width: 297mm; height: 210mm; }
+.sheet-inner { box-sizing: border-box; height: 100%; display: flex; flex-direction: column; padding: 9mm 10mm 7mm; position: relative; }
+.sheet-inner.framed { border: 1.6pt solid #000; margin: 7mm 9mm; height: calc(100% - 14mm); padding: 4mm 5mm 4mm; }
+.pg-header, .pg-identity, .pg-footer { flex: none; }
+.pg-body { flex: 1 1 auto; overflow: hidden; min-height: 0; display: flex; flex-direction: column; }
+.pg-body > .blk { flex: none; break-inside: avoid; }
+.pg-footer { padding-top: 3mm; }
+.pg-num { position: absolute; bottom: 1.5mm; left: 0; right: 0; text-align: center; font-size: 8pt; color: #444; }
+.sheet .logo { display: block; object-fit: contain; }
+.sheet .dots { display: inline-block; min-width: 38mm; border-bottom: 1pt dotted #000; height: 1em; vertical-align: bottom; }
+.sheet .oversize { outline: 1px dashed #c00; }
+.sheet table { border-collapse: collapse; width: 100%; }
+.sheet table.grid th, .sheet table.grid td { border: 1pt solid #000; padding: 1.2mm 1.5mm; text-align: center; vertical-align: middle; overflow-wrap: anywhere; }
+.sheet table.grid th { background: #d9d9d9; font-weight: 700; }
+.sheet .ln { border-bottom: 1pt dotted #555; min-height: 6.2mm; padding: .6mm 1mm 0; overflow-wrap: anywhere; }
+
+/* التوقيعات */
+.sigs { display: flex; justify-content: space-between; gap: 6mm; }
+.sig { flex: 1 1 0; text-align: center; min-width: 0; }
+.sig-title { font-weight: 700; }
+.sig-name { margin-top: 2mm; }
+.sig-marks { height: 15mm; display: flex; justify-content: center; align-items: center; gap: 2mm; }
+.sig-marks img { max-height: 15mm; max-width: 30mm; object-fit: contain; }
+.sig-date { font-size: 9pt; }
+
+/* صور التوثيق */
+.photo-row { display: flex; gap: 4mm; justify-content: center; padding-block: 3mm; }
+.photo-row .photo { width: 56mm; height: 42mm; object-fit: cover; border: 1pt solid #000; }
+.photo-row.n1 .photo { width: 90mm; height: 62mm; }
+
+/* ---------- زيارة المعلم ---------- */
+.t-tv .tv-head { display: grid; grid-template-columns: 34mm 1fr 34mm; align-items: center; }
+.t-tv .tv-logo-r .logo { height: 17mm; margin-inline-start: auto; }
+.t-tv .tv-logo-l .logo { height: 15mm; }
+.t-tv .tv-title { margin: 0; text-align: center; font-size: 19pt; font-weight: 800; }
+.t-tv .tv-meta { display: flex; justify-content: space-between; align-items: flex-start; margin: 2mm 4mm 2mm; font-size: 10.5pt; }
+.t-tv .tv-school { flex: 1; text-align: center; }
+.t-tv .tv-school .fill { display: inline-block; min-width: 60mm; border-bottom: 1pt dotted #000; }
+.t-tv .tv-year { text-align: right; }
+.t-tv .tv-id { margin-bottom: 3mm; font-size: 10pt; border: 1.4pt solid #000; }
+.t-tv .tv-id td { height: 9mm; }
+.t-tv .pv-sec, .t-tv .pv-recs { }
+.t-tv .pv-sec { border: 1.4pt solid #000; border-top-width: 0; }
+.t-tv .pg-body > .tv-sec:first-child, .t-tv .pv-sec:first-of-type { border-top-width: 1.4pt; }
+.t-tv .sec-head { background: #d9d9d9; border-bottom: 1.4pt solid #000; border-top: 1.4pt solid #000; text-align: center; font-weight: 800; padding: 1mm; margin-top: -1.4pt; }
+.t-tv .pv-sec .grp-items { padding: 1mm 3mm 2mm; min-height: 4mm; }
+.t-tv .pv-recs { margin-top: 3mm; }
+.t-tv .recs-head { font-weight: 800; font-size: 12pt; }
+.t-tv .pv-recs .grp-items { padding-inline: 1mm; }
+.t-tv .tv-sigs .sig-title { font-size: 10pt; }
+
+/* ---------- زيارة الموجه للمدرسة ---------- */
+.t-sv .sv-head { display: grid; grid-template-columns: 52mm 1fr 52mm; align-items: center; }
+.t-sv .sv-head .logo { height: 16mm; }
+.t-sv .sv-logos-l { display: flex; gap: 2mm; justify-content: flex-end; }
+.t-sv .sv-logos-l .logo { height: 17mm; }
+.t-sv .sv-title { margin: 0; text-align: center; font-size: 20pt; font-weight: 800; }
+.t-sv .sv-id { margin-top: 3mm; }
+.t-sv .sv-id td { height: 7mm; }
+.t-sv .sv-id .w-school { width: 42%; }
+.t-sv .sv-id2 { margin: 2mm 0 3mm; }
+.t-sv .sv-id2 th { width: 16%; } .t-sv .sv-id2 td { width: 34%; }
+.t-sv .sv-cols2 { display: grid; grid-template-columns: 54mm 1fr; gap: 4mm; align-items: stretch; }
+.t-sv .sv-cols2 .sv-main { display: flex; flex-direction: column; }
+.t-sv .sv-fill { flex: 1 1 auto; min-height: 6.2mm; margin-inline: 2mm; background: repeating-linear-gradient(to bottom, transparent 0 calc(6.2mm - 1pt), #555 calc(6.2mm - 1pt) 6.2mm); -webkit-mask: repeating-linear-gradient(to left, #000 0 1.2pt, transparent 1.2pt 3pt); mask: repeating-linear-gradient(to left, #000 0 1.2pt, transparent 1.2pt 3pt); }
+.t-sv .sv-cols2.side-only { grid-template-columns: 1fr; }
+.t-sv .sv-cols2.side-only .sv-side { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
+.t-sv .sv-side { display: flex; flex-direction: column; gap: 3mm; }
+.t-sv .sv-box { border: 1pt solid #000; }
+.t-sv .sv-box-h, .t-sv .sv-main-h { background: #d9d9d9; border-bottom: 1pt solid #000; font-weight: 800; text-align: center; padding: 1mm; }
+.t-sv .sv-main-h { text-align: right; padding-inline: 3mm; }
+.t-sv .sv-checks { padding: 1mm 2mm; font-size: 10pt; line-height: 1.4; }
+.t-sv .sv-box-h { font-size: 10.5pt; white-space: nowrap; }
+.t-sv .ck { white-space: nowrap; letter-spacing: -.1px; }
+.t-sv .ck .other { white-space: normal; }
+.t-sv .ck .cb { font-size: 12pt; margin-inline-end: 1.5mm; }
+.t-sv .ck .other { border-bottom: 1pt dotted #000; }
+.t-sv .sv-main { border: 1pt solid #000; }
+.t-sv .sv-main .grp-items, .t-sv .sv-main > .ln { }
+.t-sv .sv-main .ln { margin-inline: 2mm; }
+.t-sv .sv-tr { display: grid; grid-template-columns: 2fr 1.1fr .8fr .9fr 2fr; gap: 1.5mm; }
+.t-sv .sv-tr > span { min-width: 0; overflow-wrap: anywhere; }
+.t-sv .sv-cols > span { white-space: nowrap; }
+.t-sv .sv-cols { color: #8a8a8a; font-weight: 700; border-bottom: 0; }
+.t-sv .sv-recs { border: 1pt solid #000; margin-top: 4mm; }
+.t-sv .sv-recs .grp-items { padding: 0 2mm 2mm; }
+.t-sv .sv-sigs .sig-name { text-align: center; }
+
+/* ---------- الإحصائيات ---------- */
+.t-st .st-strip .strip, .t-dp .st-strip .strip { width: 100%; height: auto; max-height: 22mm; object-fit: contain; }
+.t-st .st-titles { text-align: center; font-weight: 700; font-size: 13pt; line-height: 1.4; }
+.t-st .st-stars { font-size: 10pt; }
+.t-st .st-l { font-size: 12.5pt; margin-top: 1mm; }
+.t-st .st-l .gap { display: inline-block; width: 18mm; }
+.t-st .st-table { margin: 4mm auto 0; width: 92%; font-size: 10.5pt; }
+.t-st .st-table td { height: 7mm; }
+.t-st .st-table th { background: #e7e6e6; }
+.t-st .c-n { width: 6mm; }
+.t-st .st-foot { color: #e00000; font-weight: 800; font-size: 12.5pt; padding-inline-start: 8mm; }
+
+/* ---------- الإنجازات الأسبوعية والشهرية (نموذجا Word المرفقان) ---------- */
+.t-ach { --ach-blue: #5b9bd5; --ach-blue-soft: #ddebf7; --ach-green: #0b5e1e; }
+.t-ach .cover-blk { height: 100%; }
+.t-ach .ach-cover { height: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 5mm; padding-top: 2mm; }
+.t-ach .ach-logos { width: 100%; display: flex; justify-content: space-between; align-items: center; }
+.t-ach .ach-logos .logo { height: 26mm; max-width: 55mm; }
+.t-ach .ach-logos.two { justify-content: space-around; }
+.t-ach .ach-lines { font-weight: 800; font-size: 15pt; line-height: 1.35; margin-top: 10mm; }
+.t-ach .ach-year { font-weight: 800; font-size: 14pt; }
+.t-ach .ach-title { font-weight: 800; font-size: 15pt; }
+.t-ach .ach-red { color: #c00000; font-weight: 800; font-size: 14pt; margin-top: 8mm; }
+.t-ach .ach-green { color: var(--ach-green); font-weight: 800; font-size: 14pt; margin-top: 4mm; }
+.t-ach .ach-wk { width: 95mm; margin: 8mm auto 2mm; border: 1pt solid #000; color: var(--ach-green); font-weight: 800; font-size: 13pt; }
+.t-ach .ach-wk th, .t-ach .ach-wk td { border: 1pt solid #000; padding: .5mm 3mm; text-align: center; }
+.t-ach .ach-wk th { width: 36%; }
+.t-ach .ach-cover-sigs { width: 100%; display: flex; justify-content: space-around; gap: 10mm; margin-top: 6mm; font-size: 13.5pt; color: var(--ach-green); }
+.t-ach .ach-cover-sigs > div { display: flex; flex-direction: column; align-items: center; max-width: 75mm; font-weight: 800; }
+.t-ach .ach-contents { padding-top: 16mm; display: flex; flex-direction: column; align-items: center; gap: 8mm; }
+.t-ach .ach-contents-t { font-size: 26pt; color: #1f3864; font-weight: 700; }
+.t-ach .ach-toc { width: 125mm; font-size: 11pt; }
+.t-ach .ach-toc th { background: var(--ach-blue); color: #fff; padding: .6mm 2mm; font-weight: 600; }
+.t-ach .ach-toc td { background: var(--ach-blue-soft); padding: .6mm 2mm; text-align: center; border-bottom: 1pt solid #fff; }
+.t-ach .ach-toc tr.alt td { background: #bdd7ee; }
+.t-ach .ach-toc td:first-child, .t-ach .ach-toc th:first-child { width: 18mm; background: var(--ach-blue); color: #fff; }
+.t-ach .ach-run { display: flex; justify-content: space-between; gap: 4mm; font-size: 8.5pt; color: #444; border-bottom: .8pt solid #888; padding-bottom: 1mm; margin-bottom: 3mm; }
+.t-ach .ach-h { margin: 4mm 0 2mm; }
+.t-ach .ach-h span { background: #ffff00; font-weight: 800; font-size: 12.5pt; padding: 0 1mm; }
+.t-ach .ach-intro { font-size: 12.5pt; margin: 2mm 0 0; }
+.t-ach table.grid th, .t-ach table.grid td { font-size: 10pt; }
+.t-ach table.grid th { background: var(--ach-blue-soft); color: #1f3864; }
+.t-ach .ach-th { text-align: right !important; background: var(--ach-blue-soft) !important; }
+.t-ach td.tl { text-align: right; vertical-align: top; }
+.t-ach .ach-rows .ach-lab, .t-ach .ach-com .ach-lab { width: 34%; font-weight: 700; color: #1f3864; background: #fff; font-size: 9.5pt; }
+.t-ach .ach-rows td { height: 14mm; }
+.t-ach .ach-com .ach-name { width: 18%; }
+.t-ach .ach-com .ach-lab { width: 24%; }
+.t-ach .ach-t td { height: 8mm; }
+.t-ach .ach-sum { width: 75%; margin: 0 auto 4mm; border: 1.2pt solid #000; }
+.t-ach .ach-sum td { height: 7mm; }
+.t-ach .ach-sum td.tl { min-height: 14mm; height: auto; }
+.t-ach .ln { border-bottom: 0; min-height: 0; padding: .3mm 1mm; }
+.t-ach .ach-txt .grp-items { padding-inline: 2mm; min-height: 8mm; }
+.t-ach .ach-sub { font-weight: 800; margin-top: 1.5mm; }
+.t-ach .ach-ul { margin: 1mm 0 2mm; padding-inline-start: 8mm; }
+.t-ach .ach-photo { display: grid; grid-template-columns: 62mm 1fr; gap: 4mm; align-items: center; margin-bottom: 5mm; }
+.t-ach .ach-ph-t th { width: 40%; }
+.t-ach .ach-ph-img { display: flex; justify-content: center; }
+.t-ach .ach-ph-img .photo { max-width: 100%; max-height: 62mm; object-fit: contain; border: 1pt solid #000; }
+.t-ach .ach-endsig { margin-top: 10mm; }
+.t-ach .ach-sigs .sig-title { font-weight: 700; }
+.sheet.landscape.t-ach .ach-contents { padding-top: 4mm; }
+.sheet.landscape.t-ach .ach-lines { margin-top: 2mm; }
+.sheet.landscape.t-ach .ach-cover { gap: 2.5mm; }
+
+/* ---------- الخطة القبلية والبعدية ---------- */
+.t-wp .wp-head { display: grid; grid-template-columns: 30mm 1fr 45mm; align-items: center; gap: 4mm; }
+.t-wp .wp-head .logo { height: 17mm; }
+.t-wp .wp-titles { display: flex; flex-direction: column; align-items: center; gap: 3mm; }
+.t-wp .wp-title { border: 1.4pt solid #000; color: #e00000; font-size: 16pt; padding: 1.5mm 8mm; text-align: center; font-weight: 700; }
+.t-wp .wp-range { border: 1.4pt solid #000; font-weight: 800; font-size: 13pt; padding: 1.5mm 8mm; box-shadow: 2px 2px 0 #000; }
+.t-wp .wp-table { margin-top: 5mm; font-size: 8.5pt; table-layout: fixed; }
+.t-wp .wp-table th { background: #9cc2e5; }
+.t-wp .wp-table td { height: 7mm; }
+.t-wp .wp-table .wp-name { width: 26mm; font-weight: 700; }
+.t-wp .wp-table .wp-type { width: 15mm; font-weight: 700; white-space: nowrap; }
+.t-wp .wp-table .wp-rate { width: 14mm; }
+.t-wp .wp-table tr.post td { background: #dbe5f1; color: #e00000; font-weight: 700; }
+.t-wp .wp-table tr.post td.wp-type { color: #e00000; }
+.t-wp .wp-table td.hol { color: #e00000; }
+.t-wp .wp-foot { display: flex; justify-content: flex-start; padding-inline-start: 50mm; }
+.t-wp .wp-foot span { background: #bfbfbf; border: 1.4pt solid #000; padding: 2mm 8mm; font-weight: 800; font-size: 12pt; box-shadow: 2px 2px 0 #000; }
+
+/* ---------- الخطة الشهرية ---------- */
+.sheet.portrait.t-mp .sheet-inner { padding: 22mm 20mm 15mm; }
+.t-mp .mp-title { text-align: center; color: #44628f; font-family: "Times New Roman", Georgia, "DejaVu Serif", serif; font-size: 26pt; font-weight: 700; direction: ltr; }
+.t-mp .mp-table { table-layout: fixed; border: 1.6pt solid #000; }
+.t-mp .mp-table col { width: 15.6%; } .t-mp .mp-table col.we { width: 11%; }
+.t-mp .mp-table th { background: #f2dcdb; border: 1.4pt solid #000; height: 10mm; font-size: 12pt; font-weight: 800; }
+.t-mp .mp-table td { border: 1.4pt solid #000; height: 34mm; vertical-align: top; padding: 1mm; }
+.sheet.landscape.t-mp .sheet-inner { padding: 8mm 14mm; }
+.sheet.landscape.t-mp .mp-title { font-size: 20pt; }
+.sheet.landscape.t-mp .mp-table td { height: 25mm; }
+.sheet.landscape.t-mp .mp-t { margin-top: 1mm; }
+.t-mp .mp-n { direction: ltr; text-align: left; font-family: "Times New Roman", serif; font-size: 12pt; }
+.t-mp .mp-t { text-align: center; font-size: 10.5pt; margin-top: 4mm; overflow-wrap: anywhere; }
+.t-mp .mp-t.hol { color: #e04a3a; }
+
+/* ---------- تقرير الفعالية ---------- */
+.t-ev .ev-head { display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: start; }
+.t-ev .ev-r { text-align: center; } .t-ev .ev-r .logo { height: 22mm; margin: 0 auto; }
+.t-ev .ev-org, .t-ev .ev-school { font-weight: 700; font-size: 10.5pt; }
+.t-ev .ev-school { margin-top: 2mm; }
+.t-ev .ev-c .logo { height: 16mm; margin: 0 auto; } .t-ev .ev-l .logo { height: 18mm; margin-inline-start: auto; margin-inline-end: 0; }
+.t-ev .ev-name { border: 1pt solid #000; width: 70%; margin: 4mm auto 6mm; text-align: center; color: #e00000; font-weight: 800; font-size: 14pt; padding: 2.5mm; }
+.t-ev .ev-table { width: 92%; margin: 0 auto 6mm; border: 1pt solid #8eaadb; }
+.t-ev .ev-table th, .t-ev .ev-table td { border: 1pt solid #8eaadb; padding: 1mm 3mm; height: 7mm; }
+.t-ev .ev-table th { width: 50%; text-align: right; color: #2f5496; font-weight: 800; font-size: 12pt; }
+.t-ev .ev-table tr.alt { background: #d9e2f3; }
+.t-ev .ev-box { border: 1pt solid #000; width: 92%; margin: 0 auto; }
+.t-ev .ev-box-h { text-align: center; color: #2e74b5; font-size: 12pt; border-bottom: 1pt solid #000; }
+.t-ev .ev-box .grp-items { min-height: 32mm; padding: 2mm 3mm; }
+.t-ev .ev-p { margin-bottom: 1mm; }
+.t-ev .ev-photo { border-top: 0; }
+.t-ev .ev-img { min-height: 36mm; display: flex; justify-content: center; align-items: center; padding: 2mm; }
+.t-ev .ev-img .photo { max-width: 120mm; max-height: 80mm; object-fit: contain; }
+.t-ev .ev-sigs .sig-title { font-weight: 400; }
+
+/* ---------- بيانات الأقسام العلمية ---------- */
+.t-dp .dp-title { text-align: center; color: #e00000; font-weight: 800; text-decoration: underline; font-size: 13pt; margin: 2mm 0 2mm; }
+.t-dp .dp-h { text-align: center; color: #e00000; font-weight: 800; text-decoration: underline; margin: 2mm 0 1mm; }
+.t-dp table.grid { font-size: 9.5pt; }
+.t-dp table.grid th, .t-dp table.grid td { padding: .8mm 1mm; height: 6mm; }
+.t-dp .dp-info td { text-align: right; background: #fff; }
+.t-dp .dp-info th { background: #fff; }
+.t-dp .dp-staff { width: 70%; margin: 0 auto; }
+.t-dp .dp-teachers { margin-top: 3mm; }
+.t-dp .dp-prep, .t-dp .dp-notes { margin-top: 3mm; }
+.t-dp .dp-notes th:first-child { width: 30%; }
+.t-dp .dp-sigs .sig-title { color: #e00000; }
+
+/* ---------- الإنجازات (مؤقت) ---------- */
+.t-ac .ac-id { text-align: center; margin: 2mm 0 3mm; }
+.t-ac .ac-item { border: 1pt solid #000; padding: 2mm 3mm; margin-bottom: 3mm; }
+.t-ac .ac-h { font-weight: 800; display: flex; justify-content: space-between; }
+
+/* الطباعة بالأبيض والأسود */
+.sheet.bw, .sheet.bw * { color: #000 !important; }
+.sheet.bw th, .sheet.bw tr.post td, .sheet.bw .sec-head, .sheet.bw .sv-box-h, .sheet.bw .sv-main-h, .sheet.bw .wp-foot span, .sheet.bw tr.alt { background: #e6e6e6 !important; }
+.sheet.bw img { filter: grayscale(1); }
+
+/* نسخة التدفق المستخدمة لتصدير Word (غير مرئية) */
+.flow { position: absolute; left: -10000px; top: 0; }
+.flow .sheet { height: auto !important; }
+.flow .pg-body { overflow: visible; }
+
+@media print {
+  @page { size: A4 portrait; margin: 0; }
+  @page landscape { size: A4 landscape; margin: 0; }
+  html, body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
+  body * { visibility: hidden; }
+  .sheets, .sheets * { visibility: visible; }
+  .sheets, .preview-wrap .sheets { position: absolute; inset: 0 auto auto 0; padding: 0 !important; gap: 0; display: block; }
+  .sheet { box-shadow: none; margin: 0; break-after: page; page-break-after: always; }
+  .sheet:last-child { break-after: auto; page-break-after: auto; }
+  .sheet.landscape { page: landscape; }
+  .no-print, .flow { display: none !important; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+.sheet.bare .pg-body > .cover-blk { flex: 1 1 auto; }
+/* زيارة المدرسة بالعرض: مربعا الهدف والسجلات جنباً إلى جنب */
+.sheet.landscape.t-sv .sv-cols2 { grid-template-columns: 112mm 1fr; }
+.sheet.landscape.t-sv .sv-side { display: grid; grid-template-columns: 1fr 1fr; gap: 3mm; align-items: start; }
+.sheet.landscape.t-sv .sheet-inner { padding: 6mm 9mm 5mm; }
+.sheet.landscape.t-sv .sv-head .logo { height: 13mm; }
+.sheet.landscape.t-sv .sv-id2 { margin: 1.5mm 0 2mm; }
+.sheet.landscape.t-sv .sv-recs { margin-top: 2mm; }
+
+/* تقرير الفعالية: صور متعددة بنفس الحجم وإطار بسيط، وتوقيع الموجهة وحدها */
+.t-ev .ev-photos .grp-items { padding: 3mm; display: flex; flex-direction: column; gap: 3mm; }
+.t-ev .ev-ph-row { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
+.t-ev .ev-ph { border: 1pt solid #555; padding: 1.5mm; background: #fff; aspect-ratio: 4 / 3; display: flex; }
+.t-ev .ev-ph .photo { width: 100%; height: 100%; object-fit: cover; display: block; }
+.t-ev .ev-ph-row:has(.ev-ph:only-child) { grid-template-columns: 1fr; justify-items: center; }
+.t-ev .ev-ph-row .ev-ph:only-child { width: calc(50% - 2mm); }
+.t-ev .ev-sigs.one { justify-content: center; }
+.t-ev .ev-sigs.one .sig { flex: 0 1 70mm; }
+
+/* الإحصائيات: اسم الموجه والتخصص بالأحمر */
+.t-st .st-red { color: #e00000; }
+.t-ev .ev-photos.cont { border-top: 0; }
+.t-ev .pg-body > .blk:first-child .ev-photos.cont { border-top: 1pt solid #000; }
+
+/* ===== الإنجازات الشهرية المشتركة (t-sa) — على هيئة ملف «إنجازات التوجيه الفني للعلوم» ===== */
+.t-sa { --sa-blue: #4f81bd; --sa-blue-soft: #dbe5f1; --sa-green: #0b5e1e; --sa-red: #c00000; --sa-gray: #bfbfbf; }
+.t-sa .sheet-inner { padding: 10mm 14mm 12mm; }
+.t-sa .cover-blk { height: 100%; }
+.t-sa .sa-cover { height: 100%; display: grid; grid-template-rows: auto 1fr auto auto; text-align: center; }
+.t-sa .sa-logos { display: grid; grid-template-columns: 1fr 1fr; align-items: center; justify-items: center; }
+.t-sa .sa-logos .logo { height: 30mm; max-width: 70mm; object-fit: contain; }
+.t-sa .sa-logos > div:first-child .logo { height: 44mm; max-width: 60mm; }
+.t-sa .sa-title { align-self: center; font-weight: 700; font-size: 22pt; line-height: 1.35; }
+.t-sa .sa-month { font-weight: 700; font-size: 20pt; margin-bottom: 14mm; }
+.t-sa .sa-month span { color: var(--sa-red); }
+.t-sa .sa-obs { color: var(--sa-green); font-weight: 700; font-size: 16pt; line-height: 1.4; margin-bottom: 6mm; }
+.t-sa .sa-contents { display: flex; flex-direction: column; align-items: center; padding-top: 8mm; }
+.t-sa .sa-contents-t { font-size: 34pt; font-weight: 700; color: #1f3864; margin-bottom: 8mm; }
+.t-sa .sa-toc { width: 62%; border-collapse: collapse; font-size: 14pt; }
+.t-sa .sa-toc th { background: var(--sa-blue); color: #fff; padding: 2.2mm; border: 1pt solid var(--sa-blue); }
+.t-sa .sa-toc td { border: 1pt solid #95b3d7; padding: 2.2mm; font-weight: 700; text-align: center; }
+.t-sa .sa-toc td:first-child { width: 22%; }
+.t-sa .sa-toc tr.alt td { background: var(--sa-blue-soft); }
+.t-sa .sa-stage { text-align: center; color: var(--sa-red); font-size: 20pt; font-weight: 700; margin: 0 0 3mm; }
+.t-sa .sa-h { margin: 3mm 0 2mm; }
+.t-sa .sa-h span { background: #d9d9d9; font-size: 16pt; font-weight: 700; padding: .4mm 3mm; border-radius: 1mm; }
+.t-sa .sa-sub { color: #2f5496; font-size: 14.5pt; font-weight: 700; margin: 1.5mm 4mm 1.5mm 0; }
+.t-sa .sa-sub2 { font-size: 15pt; font-weight: 700; margin: 3mm 0 1.5mm; color: #1f3864; }
+.t-sa .sa-note { color: var(--sa-red); font-size: 12.5pt; margin-bottom: 2mm; }
+.t-sa .sa-li { display: block; font-size: 13.5pt; line-height: 1.6; padding-inline-start: 12mm; text-indent: -4mm; margin-bottom: 1mm; break-inside: avoid; }
+.t-sa .sa-dash { display: inline-block; width: 4mm; text-indent: 0; font-weight: 700; }
+.t-sa .sa-red { color: var(--sa-red); font-weight: 700; }
+/* الجداول: رأس أزرق فاتح، حدود زرقاء، خط أكبر، ومسافات مريحة */
+.t-sa table.sa-t { width: 100%; font-size: 12.5pt; table-layout: fixed; border-collapse: collapse; margin-bottom: 2mm; }
+.t-sa table.sa-t th { background: #dbe5f1; color: #1f3864; font-weight: 700; border: 1pt solid #4f81bd; padding: 1.8mm 1.2mm; font-size: 12pt; line-height: 1.35; }
+.t-sa table.sa-t td { border: 1pt solid #4f81bd; padding: 1.8mm 1.5mm; text-align: center; vertical-align: middle; overflow-wrap: anywhere; line-height: 1.45; }
+.t-sa table.sa-t tr { break-inside: avoid; }
+.t-sa table.sa-t td.c-n { font-weight: 700; color: #1f3864; background: #f2f6fb; }
+.t-sa table.sa-t td.tl { text-align: right; }
+.t-sa table.sa-t td.c-ph { padding: 1.5mm; }
+/* خانة الصور: كل صورة بالحجم المختار (--pw × --ph) تحت بعضها */
+.t-sa .sa-pstack { display: flex; flex-direction: column; align-items: center; gap: 1.2mm; }
+.t-sa .sa-pstack.none { height: 8mm; }
+.t-sa .sa-pcell { width: var(--pw, 40mm); height: var(--ph, 30mm); overflow: hidden; border: .6pt solid #9fb4d4; background: #f4f6fa; }
+.t-sa .sa-pimg { width: 100%; height: 100%; object-fit: cover; display: block; }
+.t-sa .sa-end { text-align: center; font-size: 16pt; font-weight: 700; margin-top: 10mm; color: #1f3864; }
+.sheet.portrait.t-sa .sheet-inner { padding: 12mm 12mm 14mm; }
+.sheet.portrait.t-sa table.sa-t { font-size: 11pt; } .sheet.portrait.t-sa .sa-li { font-size: 12.5pt; }
+.sheet.portrait.t-sa .sa-toc { width: 80%; }
+.t-sa.bw .sa-red, .t-sa.bw .sa-month span, .t-sa.bw .sa-stage, .t-sa.bw .sa-note, .t-sa.bw .sa-obs { color: #000; }
+
+/* ===== النماذج الرسمية: تكليف بمهمة خارج مقر العمل (نموذج رقم 4) ===== */
+.sheet.t-fm { position: relative; }
+.sheet.t-fm::after { content: ""; position: absolute; inset: 9mm; border: 1.3pt solid #000; border-radius: 7mm; pointer-events: none; }
+.sheet.portrait.t-fm .sheet-inner { padding: 13mm 17mm 12mm; }
+.t-fm { font-size: 12.5pt; line-height: 1.65; }
+.t-fm .fm-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 6mm; }
+.t-fm .fm-org { text-align: center; font-weight: 700; font-size: 11pt; line-height: 1.5; }
+.t-fm .fm-org .fm-emblem { height: 16mm; margin: 0 auto 1mm; }
+.t-fm .fm-no { display: flex; flex-direction: column; align-items: flex-end; font-size: 10.5pt; margin-top: 18mm; line-height: 1.5; }
+.t-fm .fm-title { text-align: center; font-size: 16pt; font-weight: 800; margin: 3mm 0 4mm; text-decoration: underline; text-underline-offset: 2mm; color: #000; }
+.t-fm .fm-line { margin: .6mm 0; }
+.t-fm .fm-v { font-weight: 700; }
+.t-fm .fm-para { line-height: 1.9; }
+.t-fm .fm-blank-lines .dots { display: block; margin-top: 3mm; }
+.t-fm .dots { min-width: 38mm; }
+.t-fm table.fm-people { margin: 1.5mm 0 3mm; font-size: 12pt; }
+.t-fm .fm-people th { border: 1pt solid #000; background: #eef1f7; padding: 1.2mm 2mm; font-weight: 800; }
+.t-fm .fm-people td { border: 1pt solid #000; padding: .8mm 2.5mm; height: 7.5mm; }
+.t-fm .fm-people .c-n { text-align: center; }
+.t-fm .fm-people .fm-cid { text-align: center; letter-spacing: .08em; font-family: Arial, "DejaVu Sans", sans-serif; }
+.t-fm .fm-after { margin-top: 3mm; }
+.t-fm .fm-sign { display: flex; justify-content: flex-end; margin-top: 6mm; }
+.t-fm .fm-sign > div { text-align: center; min-width: 60mm; }
+.t-fm .fm-sign-space { height: 18mm; }
+.sheet .ln.blank-ln { border-bottom: 1pt dotted #000; min-height: 7mm; }

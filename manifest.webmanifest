@@ -1,0 +1,16 @@
+{
+  "name": "سجلات الموجّه الفني",
+  "short_name": "سجلات الموجّه",
+  "description": "سجلات الموجّه الفني: المدارس والزيارات والإنجازات والتقارير",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#1b2f5c",
+  "theme_color": "#1b2f5c",
+  "icons": [
+    { "src": "assets/app-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "assets/app-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
