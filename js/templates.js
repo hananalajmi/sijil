@@ -151,6 +151,7 @@ export const STATS = {
 export const DEFAULT_OPTIONS = {
   stages: { label: "المراحل الدراسية", items: ["ثانوي", "متوسط", "ابتدائي"] },
   grades: { label: "الصفوف", items: ["العاشر", "الحادي عشر", "الثاني عشر"] },
+  material_stages: { label: "صفوف صفحة المناهج", items: ["العاشر", "الحادي عشر", "مسارات"] },
   terms: { label: "الفترة / الفصل الدراسي", items: ["الأولى", "الثانية"] },
   job_titles: { label: "المسمى الوظيفي", items: ["موجه فني", "موجه فني أول"] },
   extra_tasks: { label: "المهمة الإضافية", items: [] },
