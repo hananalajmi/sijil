@@ -95,7 +95,13 @@ export default async function (main, { name, params }) {
   // المراحل الدراسية والكتب والمناهج: كل صف مقسّم إلى الفصل الأول والفصل الثاني.
   // «مسارات» فيها أكثر من كتاب: لكل كتاب أقسامه وملفاته (تُحفظ أسماء الكتب مع بيانات الموجّه).
   const BOOKS_STAGE = "مسارات", SEP = " · ";
-  const types = opts("material_types");
+  // التوجيهات الفنية وآلية التقييم تظهر دائماً بعد الكتابين، حتى لو كانت القائمة محفوظة قبل إضافتهما
+  const types = (() => {
+    const t = [...opts("material_types")], must = ["التوجيهات الفنية", "آلية التقييم"];
+    const at = Math.min(t.length, Math.max(0, t.indexOf("كتاب المعلم") + 1) || 2);
+    t.splice(at, 0, ...must.filter((m) => !t.includes(m)));
+    return t;
+  })();
   const term = TERMS.includes(params.term) ? params.term : TERMS[0];
   const q = (g, t, b = "") => `#/materials?stage=${encodeURIComponent(g)}&term=${encodeURIComponent(t)}${b ? "&book=" + encodeURIComponent(b) : ""}`;
   const load = async () => {
@@ -116,7 +122,7 @@ export default async function (main, { name, params }) {
     const body = isBooks && !book ? `<div class="empty"><h2>لا توجد كتب بعد</h2><p>أضيفي كتاباً لكل مسار، ثم ارفعي ملفاته في كل فصل.</p></div>`
       : `<h2 class="mat-head" style="margin:14px 0 10px">${esc(book ? stage + " — " + book : stage)} — ${term}</h2>
       ${types.map((t) => `<section class="panel" data-t="${esc(t)}"><div class="page-head" style="margin-bottom:8px"><h2>${esc(t)}</h2><div class="up row"></div></div><div class="out">${fileRows(list.filter((f) => f.subcategory === t))}</div></section>`).join("")}`;
-    main.innerHTML = `<div class="container"><div class="page-head"><div><h1>المراحل الدراسية والكتب والمناهج</h1><div class="sub">لكل صف وفصل دراسي: الكتاب، كتاب المعلم، بنك الأسئلة، الملاحظات، الملخصات </div></div></div>
+    main.innerHTML = `<div class="container"><div class="page-head"><div><h1>المراحل الدراسية والكتب والمناهج</h1><div class="sub">لكل صف وفصل دراسي: الكتاب، كتاب المعلم، التوجيهات الفنية، آلية التقييم، بنك الأسئلة، الملاحظات، الملخصات</div></div></div>
       <div class="toolbar" role="group" aria-label="الصف">${grades.map((g) => `<a class="btn ${g === stage ? "primary" : ""}" href="${q(g, term)}">${esc(g)}</a>`).join("")}</div>
       ${bookBar}
       <div class="toolbar term-tabs" role="group" aria-label="الفصل الدراسي">${TERMS.map((t) => `<a class="btn ${t === term ? "primary" : ""}" href="${q(stage, t, book)}" data-term="${t}">${t}</a>`).join("")}</div>
