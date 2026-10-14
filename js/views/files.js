@@ -94,32 +94,44 @@ export default async function (main, { name, params }) {
     t.splice(at, 0, ...must.filter((m) => !t.includes(m)));
     return t;
   })();
-  const term = TERMS.includes(params.term) ? params.term : TERMS[0];
+  // الاختيار الأخير يُتذكَّر على هذا الجهاز
+  const remember = (k, v) => { try { localStorage.setItem("sijil.mat." + k, v); } catch (_) {} };
+  const recall = (k) => { try { return localStorage.getItem("sijil.mat." + k) || ""; } catch (_) { return ""; } };
+  const term = TERMS.includes(params.term) ? params.term : TERMS.includes(recall("term")) ? recall("term") : TERMS[0];
+  // أسماء قديمة للصفوف (قبل القائمة الكاملة) تُعرض ملفاتها تحت الاسم الجديد
+  const ALIAS = { "العاشر": "الصف العاشر", "الحادي عشر": "الصف الحادي عشر", "الثاني عشر": "الصف الثاني عشر" };
+  const norm = (st) => { const [b, ...r] = String(st || "").split(SEP); return [ALIAS[b] || b, ...r].join(SEP); };
   const q = (g, t, b = "") => `#/materials?stage=${encodeURIComponent(g)}&term=${encodeURIComponent(t)}${b ? "&book=" + encodeURIComponent(b) : ""}`;
   const load = async () => {
     const every = await api.files(`&category=eq.stage_material&deleted_at=is.null`);
     const baseOf = (st) => String(st || "").split(SEP)[0];
     // الصفوف: من القائمة، ويُضاف أي صف قديم له ملفات حتى لا تختفي ملفاته
     const grades = [...opts("material_stages")];
-    for (const f of every) { const b = baseOf(f.stage); if (b && !grades.includes(b)) grades.push(b); }
-    const stage = grades.includes(params.stage) ? params.stage : grades[0] || "";
+    for (const f of every) { const b = baseOf(norm(f.stage)); if (b && !grades.includes(b)) grades.push(b); }
+    const want = ALIAS[params.stage] || params.stage || recall("stage");
+    const stage = grades.includes(want) ? want : grades.find((g) => every.some((f) => baseOf(norm(f.stage)) === g)) || (grades.includes("الصف العاشر") ? "الصف العاشر" : grades[0] || "");
+    remember("stage", stage); remember("term", term);
     const isBooks = stage === BOOKS_STAGE;
     const saved = state.guide?.data?.my_options?.masarat_books || [];
     const books = [...saved];
     for (const f of every) { const [b, bk] = String(f.stage || "").split(SEP); if (b === BOOKS_STAGE && bk && !books.includes(bk)) books.push(bk); }
     const book = isBooks ? (books.includes(params.book) ? params.book : books[0] || "") : "";
     const key = book ? stage + SEP + book : stage;
-    const list = every.filter((f) => f.stage === key && (f.term || TERMS[0]) === term);
+    const list = every.filter((f) => norm(f.stage) === key && (f.term || TERMS[0]) === term);
     const bookBar = isBooks ? `<div class="toolbar book-tabs" role="group" aria-label="الكتاب">${books.map((b) => `<a class="btn ${b === book ? "primary" : ""}" href="${q(stage, term, b)}">${esc(b)}</a>`).join("")}<button class="btn" id="add-book">+ إضافة كتاب</button>${book ? '<button class="btn ghost small" id="ren-book">تعديل الاسم</button><button class="btn danger small" id="del-book">حذف الكتاب</button>' : ""}</div>` : "";
     const body = isBooks && !book ? `<div class="empty"><h2>لا توجد كتب بعد</h2><p>أضيفي كتاباً لكل مسار، ثم ارفعي ملفاته في كل فصل.</p></div>`
       : `<h2 class="mat-head" style="margin:14px 0 10px">${esc(book ? stage + " — " + book : stage)} — ${term}</h2>
       ${types.map((t) => `<section class="panel" data-t="${esc(t)}"><div class="page-head" style="margin-bottom:8px"><h2>${esc(t)}</h2><div class="up row"></div></div><div class="out">${fileRows(list.filter((f) => f.subcategory === t))}</div></section>`).join("")}`;
     main.innerHTML = `<div class="container"><div class="page-head"><div><h1>المراحل الدراسية والكتب والمناهج</h1><div class="sub">لكل صف وفصل دراسي: الكتاب، كتاب المعلم، التوجيهات الفنية، آلية التقييم، بنك الأسئلة، الملاحظات، الملخصات</div></div></div>
-      <div class="toolbar" role="group" aria-label="الصف">${grades.map((g) => `<a class="btn ${g === stage ? "primary" : ""}" href="${q(g, term)}">${esc(g)}</a>`).join("")}</div>
+      <section class="panel mat-pick"><div class="form">
+        <div class="f"><label for="mat-stage">الصف</label><select id="mat-stage">${grades.map((g) => `<option ${g === stage ? "selected" : ""}>${esc(g)}</option>`).join("")}</select></div>
+        <div class="f"><label for="mat-term">الفصل الدراسي</label><select id="mat-term">${TERMS.map((t) => `<option ${t === term ? "selected" : ""}>${t}</option>`).join("")}</select></div>
+      </div></section>
       ${bookBar}
-      <div class="toolbar term-tabs" role="group" aria-label="الفصل الدراسي">${TERMS.map((t) => `<a class="btn ${t === term ? "primary" : ""}" href="${q(stage, t, book)}" data-term="${t}">${t}</a>`).join("")}</div>
       ${body}
       <p class="hint">لمشاركة ملف مع زميل، ارفعيه من «الملفات المشتركة».</p></div>`;
+    $("#mat-stage", main).onchange = (e) => { location.hash = q(e.target.value, term); };
+    $("#mat-term", main).onchange = (e) => { location.hash = q(stage, e.target.value, book); };
     $$("section[data-t]", main).forEach((sec) => {
       const meta = { category: "stage_material", stage: key, term, subcategory: sec.dataset.t };
       const up = sec.querySelector(".up");
@@ -138,14 +150,14 @@ export default async function (main, { name, params }) {
     if (rb) rb.onclick = async () => {
       const n = await askName("تعديل اسم الكتاب", book); if (!n || n === book) return;
       if (books.includes(n)) { toast("يوجد كتاب بهذا الاسم", "error"); return; }
-      const mine = every.filter((f) => f.stage === key);
+      const mine = every.filter((f) => norm(f.stage) === key);
       try { for (const f of mine) await api.updateFile(f.id, { stage: stage + SEP + n }); }
       catch (e) { toast("تعذر نقل الملفات: " + e.message, "error"); return; }
       await setMyOptions("masarat_books", books.map((b) => (b === book ? n : b))); location.hash = q(stage, term, n);
     };
     const db = $("#del-book", main);
     if (db) db.onclick = async () => {
-      if (every.some((f) => f.stage === key)) { toast("احذفي ملفات الكتاب أولاً (في الفصلين)", "error"); return; }
+      if (every.some((f) => norm(f.stage) === key)) { toast("احذفي ملفات الكتاب أولاً (في الفصلين)", "error"); return; }
       if (!(await confirmBox("حذف الكتاب", `سيُحذف الكتاب «${book}» من القائمة.`, "حذف", true))) return;
       await setMyOptions("masarat_books", books.filter((b) => b !== book)); location.hash = q(stage, term);
     };
