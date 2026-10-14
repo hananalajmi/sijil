@@ -1,11 +1,13 @@
 // الإحصائيات: تُحسب مباشرة من السجلات الفعلية، وكل رقم مربوط بمصدره
+import { api } from "../api.js";
 import { state, opts, schoolById } from "../store.js";
-import { esc, $, $$, dayName, fmtDate } from "../ui.js";
+import { esc, $, $$, dayName, fmtDate, toast } from "../ui.js";
 import { go, schoolOptions } from "../kit.js";
 import { visitStatsContext, examStatsContext } from "../report/context.js";
 import { STATS } from "../templates.js";
 
-export default async function (main, { name, params }) {
+export default async function view(main, { name, params }) {
+  const stats = () => view(main, { name, params });
   const termParam = params.term ?? (opts("terms")[0] || "");
   const term = termParam === "all" ? "" : termParam;
   const termSel = `<select id="term" aria-label="الفترة">${[["all", "كل الفترات"], ...opts("terms").map((t) => [t, "الفترة " + t])].map(([v, l]) => `<option value="${esc(v)}" ${v === termParam ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
@@ -22,15 +24,26 @@ export default async function (main, { name, params }) {
       <div class="toolbar">${termSel}<select id="school" aria-label="المدرسة">${schoolOptions(school).replace("— اختاري المدرسة —", "كل المدارس")}</select></div>
       <div class="tiles" style="margin-bottom:14px"><div class="tile"><span class="num">${ctx.total}</span><b>زيارة محسوبة</b><span>بلا تكرار</span></div>
         <div class="tile"><span class="num">${ctx.rows.filter((r) => r.visits.length).length}</span><b>معلماً تمت زيارتهم</b></div>
-        <div class="tile"><span class="num">${ctx.rows.filter((r) => !r.visits.length).length}</span><b>لم تتم زيارتهم</b></div></div>
+        <div class="tile"><span class="num">${ctx.rows.filter((r) => !r.visits.length && !r.reason).length}</span><b>لم تتم زيارتهم</b><span>بدون سبب مسجّل</span></div>
+        <div class="tile"><span class="num">${ctx.rows.filter((r) => r.reason).length}</span><b>بعذر</b><span>إجازة، مجلس، وضع…</span></div></div>
       ${over.length ? `<div class="alert" style="margin-bottom:12px">${over.length} معلم لهم أكثر من 3 زيارات في هذه الفترة. النموذج الرسمي فيه 3 خانات فقط، فتظهر أول 3 زيارات في الطباعة، وتبقى البقية في سجل المعلم.</div>` : ""}
-      ${ctx.rows.length ? `<div class="tbl-wrap"><table class="data"><thead><tr><th>م</th><th>المدرسة</th><th>اسم المعلم</th><th>الزيارة الأولى</th><th>الزيارة الثانية</th><th>الزيارة الثالثة</th></tr></thead><tbody>
+      ${ctx.rows.length ? `<div class="tbl-wrap"><table class="data"><thead><tr><th>م</th><th>المدرسة</th><th>اسم المعلم</th><th>الزيارة الأولى</th><th>الزيارة الثانية</th><th>الزيارة الثالثة</th><th>سبب عدم الزيارة</th></tr></thead><tbody>
         ${ctx.rows.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.school)}</td><td>${esc(r.teacher)}</td>
-          ${[0, 1, 2].map((k) => { const v = r.visits[k]; return `<td>${v ? `<a class="src-link" href="#/teacher-visits/${v.id}" title="فتح الزيارة المصدر">${dayName(v.date)} ${fmtDate(v.date)}</a><br><small>${esc(v.cls)}</small>` : ""}</td>`; }).join("")}</tr>`).join("")}</tbody></table></div>`
+          ${[0, 1, 2].map((k) => { const v = r.visits[k]; return `<td>${v ? `<a class="src-link" href="#/teacher-visits/${v.id}" title="فتح الزيارة المصدر">${dayName(v.date)} ${fmtDate(v.date)}</a><br><small>${esc(v.cls)}</small>` : ""}</td>`; }).join("")}
+          <td>${r.visits.length >= 3 ? "" : term ? `<select class="why" data-t="${r.teacher_id}" aria-label="سبب عدم زيارة ${esc(r.teacher)}"><option value="">—</option>${[...new Set([...opts("no_visit_reasons"), r.reason].filter(Boolean))].map((o) => `<option ${o === r.reason ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>` : `<span class="why-t">${esc(r.reason)}</span>`}</td></tr>`).join("")}</tbody></table></div>`
         : `<div class="empty">لا توجد أسماء معلمات بعد. <a href="#/schools">أضيفيها من صفحة المدارس</a></div>`}
-      <p class="hint">اضغطي على أي تاريخ لفتح الزيارة التي جاء منها.</p></div>`;
+      <p class="hint">اضغطي على أي تاريخ لفتح الزيارة التي جاء منها. إذا لم تُزر المعلمة لسبب (إجازة دراسية، مجلس، وضع…) اختاريه من «سبب عدم الزيارة»${term ? "" : " بعد اختيار الفترة"}، فيظهر في الطباعة مكان الزيارات الناقصة.</p></div>`;
     const nav = () => go(`#/stats-visits?${qs({ term: $("#term", main).value, school: $("#school", main).value })}`);
     $("#term", main).onchange = nav; $("#school", main).onchange = nav;
+    $$("select.why", main).forEach((sel) => (sel.onchange = async () => {
+      const i = state.teachers.findIndex((t) => t.id === sel.dataset.t); if (i < 0) return;
+      const t = state.teachers[i], key = `${state.year}|${term}`;
+      const no_visit = { ...(t.data?.no_visit || {}) };
+      if (sel.value) no_visit[key] = sel.value; else delete no_visit[key];
+      sel.disabled = true;
+      try { state.teachers[i] = await api.update(t.id, { data: { ...(t.data || {}), no_visit } }, t.version); toast("حُفظ السبب"); stats(); }
+      catch (e) { toast("تعذر الحفظ: " + e.message, "error"); sel.disabled = false; }
+    }));
     return;
   }
 

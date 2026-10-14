@@ -51,7 +51,13 @@ export async function visitStatsContext({ year, term, school = "", includeUnvisi
     byTeacher.get(v.teacher_id).push({ id: v.id, date: v.record_date, cls: [v.data?.grade, v.data?.section].filter(Boolean).join("/") });
   }
   const teachers = state.teachers.filter((t) => (!school || t.school_id === school) && (includeUnvisited || byTeacher.has(t.id)));
-  const rows = teachers.map((t) => ({ teacher_id: t.id, teacher: t.title, school: schoolById(t.school_id)?.title || "", visits: byTeacher.get(t.id) || [] }))
+  // سبب عدم الزيارة (إجازة دراسية، مجلس، وضع...) يُحفظ مع المعلم لكل عام وفترة
+  const reasonOf = (t) => {
+    const nv = t.data?.no_visit || {};
+    if (term) return nv[`${year}|${term}`] || "";
+    return [...new Set(Object.entries(nv).filter(([k, v]) => k.startsWith(year + "|") && v).map(([, v]) => v))].join("، ");
+  };
+  const rows = teachers.map((t) => ({ teacher_id: t.id, teacher: t.title, school: schoolById(t.school_id)?.title || "", visits: byTeacher.get(t.id) || [], reason: reasonOf(t) }))
     .sort((a, b) => a.school.localeCompare(b.school, "ar") || a.teacher.localeCompare(b.teacher, "ar"));
   // زيارات لمعلمين نُقلوا إلى سلة المحذوفات تبقى ظاهرة في المصدر للشفافية
   return { kind: "stats_visits", year, term, termWord: termWord(term), guide: guideCtx(), rows, total: seen.size };

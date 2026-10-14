@@ -43,7 +43,14 @@ export async function paginate(rep, container) {
   await waitImages(sheet);
   let body = sheet.querySelector(".pg-body");
   pages.push(sheet);
-  const fresh = () => { sheet = newSheet(rep, container); body = sheet.querySelector(".pg-body"); pages.push(sheet); };
+  // الترويسة والتعريف والتذييل متطابقة في كل الصفحات: تُثبَّت أطوالها كما قيست في الصفحة الأولى
+  // (بعد تحميل الشعارات)، حتى لا تُحسب صفحة جديدة قبل ظهور شعاراتها فيُقص آخرها عند الطباعة
+  const fixed = [".pg-header", ".pg-identity", ".pg-footer"].map((k) => [k, sheet.querySelector(k).getBoundingClientRect().height]);
+  const fresh = () => {
+    sheet = newSheet(rep, container);
+    for (const [k, h] of fixed) { const e = sheet.querySelector(k); e.style.boxSizing = "border-box"; e.style.height = h + "px"; e.style.overflow = "hidden"; }
+    body = sheet.querySelector(".pg-body"); pages.push(sheet);
+  };
   const isEmpty = () => body.childElementCount === 0;
 
   // يضيف عنصراً ذرياً؛ إن لم يتسع ينقله كاملاً للصفحة التالية
@@ -155,6 +162,7 @@ export async function paginate(rep, container) {
     }
     place(b);
   }
+  await Promise.all(pages.map(waitImages));
   if (pages.length > 1) pages.forEach((p, i) => (p.querySelector(".pg-num").textContent = `صفحة ${i + 1} من ${pages.length}`));
   return pages;
 }
