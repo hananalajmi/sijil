@@ -8,6 +8,7 @@ import { esc, $, $$, today, fmtDate, toast, modal, confirmBox } from "../ui.js";
 import { field, bindFields, recordPage, go } from "../kit.js";
 import { listView } from "./_list.js";
 import { FORMS } from "../templates.js";
+import { openStored } from "../openfile.js";
 
 const STAGES = { draft: ["مسودة", ""], ready: ["جاهز للتوقيع", "warn"], signed: ["موقّع ومحفوظ", "ok"], sent: ["أُرسل", "ok"] };
 export const hijri = (iso) => { try { return new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura", { day: "numeric", month: "long", year: "numeric" }).format(new Date(iso + "T12:00:00")); } catch (_) { return ""; } };
@@ -148,7 +149,7 @@ export default async function (main, { id, params }) {
         const f = dd.signed_file ? await api.fileById(dd.signed_file).catch(() => null) : null;
         box.innerHTML = f ? `<div class="list" style="margin-top:10px"><div class="item"><span class="t">✓ النسخة الموقّعة: ${esc(f.title)}</span><span class="m">رُفعت ${new Date(f.created_at).toLocaleString("ar-KW")}</span>
             <span class="s"><button class="btn small" id="sopen">فتح</button></span></div></div>` : "";
-        $("#sopen", box) && ($("#sopen", box).onclick = async () => { const a = document.createElement("a"); a.href = URL.createObjectURL(await api.fileBlob(f.storage_path)); a.target = "_blank"; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove(); });
+        $("#sopen", box) && ($("#sopen", box).onclick = () => openStored(f));
         paintSend(f);
       };
       $("#signed", body).onchange = async (e) => {

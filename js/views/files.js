@@ -1,23 +1,15 @@
 // الملفات: مواد المراحل الدراسية، النشرات الراجعة، والملفات المشتركة مع مستخدمين محددين
 import { api } from "../api.js";
 import { state, opts, setMyOptions } from "../store.js";
-import { esc, $, $$, toast, confirmBox, modal, download } from "../ui.js";
+import { esc, $, $$, toast, confirmBox, modal } from "../ui.js";
+import { openStored } from "../openfile.js";
 
 const size = (n) => (n > 1048576 ? (n / 1048576).toFixed(1) + " م.ب" : Math.max(1, Math.round(n / 1024)) + " ك.ب");
 
 export const TERMS = ["الفصل الأول", "الفصل الثاني"];
 const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch (_) { return ""; } };
 
-async function openFile(f, save = false) {
-  if (f.url) { const a = document.createElement("a"); a.href = f.url; a.target = "_blank"; a.rel = "noopener noreferrer"; document.body.appendChild(a); a.click(); a.remove(); return; }
-  try {
-    const blob = await api.fileBlob(f.storage_path);
-    if (save) return download(blob, f.title || "ملف");
-    const u = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = u; a.target = "_blank"; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(u), 60000);
-  } catch (e) { toast("تعذر فتح الملف: " + e.message, "error"); }
-}
+const openFile = (f, save = false) => openStored(f, { save });
 
 async function manageShares(f) {
   const [people, shares] = await Promise.all([api.rpc("list_colleagues").catch(() => []), api.shares(f.id).catch(() => [])]);

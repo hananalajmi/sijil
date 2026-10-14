@@ -5,6 +5,7 @@ import { state, refreshPeople } from "../store.js";
 import { esc, $, $$, toast, modal, confirmBox } from "../ui.js";
 import { field, bindFields, recordPage } from "../kit.js";
 import { listView } from "./_list.js";
+import { openStored } from "../openfile.js";
 
 const FILE_KINDS = [["budget", "ميزانية المدرسة (PDF أو Word أو Excel)"], ["schedule", "جدول المدرسة (صورة أو PDF أو Word أو Excel)"], ["department", "بيانات القسم العلمي (PDF أو Word أو Excel)"]];
 const ACCEPT = ".pdf,.docx,.doc,.xlsx,.xls,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -94,7 +95,7 @@ export default async function (main, { id }) {
           const f = list.find((x) => x.id === row.dataset.f);
           const th = row.querySelector("[data-thumb]");
           if (th) api.fileBlob(f.storage_path).then((b) => { th.src = URL.createObjectURL(b); th.hidden = false; th.onclick = () => row.querySelector("[data-open]").click(); }).catch(() => {});
-          row.querySelector("[data-open]").onclick = async () => { try { const b = await api.fileBlob(f.storage_path); const u = URL.createObjectURL(b); const a = document.createElement("a"); a.href = u; a.target = "_blank"; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove(); } catch (e) { toast(e.message, "error"); } };
+          row.querySelector("[data-open]").onclick = () => openStored(f);
           const ex = row.querySelector("[data-extract]"); if (ex) ex.onclick = async () => { try { extract(await api.fileBlob(f.storage_path), f.title); } catch (e) { toast(e.message, "error"); } };
           row.querySelector("[data-rm]").onclick = async () => { if (await confirmBox("حذف الملف", `حذف «${f.title}» نهائياً؟`, "حذف", true)) { await api.deleteFile(f); paintFiles(); } };
         });

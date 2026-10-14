@@ -7,6 +7,7 @@ import { state, recordEditor } from "../store.js";
 import { esc, $, $$, toast, modal, confirmBox, academicYearOf } from "../ui.js";
 import { go, savePill } from "../kit.js";
 import { icon } from "../icons.js";
+import { openStored } from "../openfile.js";
 
 const isAdmin = () => state.profile?.role === "admin";
 const rid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random())).slice(0, 8);
@@ -73,9 +74,8 @@ async function groupPage(main, gid) {
       : `<p class="hint">لا توجد ملفات بعد.</p>`;
     $$("[data-f]", box).forEach((row) => {
       const f = list.find((x) => x.id === row.dataset.f);
-      const get = async () => URL.createObjectURL(await api.fileBlob(f.storage_path));
-      row.querySelector("[data-open]").onclick = async () => { try { const a = document.createElement("a"); a.href = await get(); a.target = "_blank"; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove(); } catch (e) { toast(e.message, "error"); } };
-      row.querySelector("[data-dl]").onclick = async () => { try { const a = document.createElement("a"); a.href = await get(); a.download = f.title; document.body.appendChild(a); a.click(); a.remove(); } catch (e) { toast(e.message, "error"); } };
+      row.querySelector("[data-open]").onclick = () => openStored(f);
+      row.querySelector("[data-dl]").onclick = () => openStored(f, { save: true });
       const rm = row.querySelector("[data-rm]");
       if (rm) rm.onclick = async () => { if (!(await confirmBox("حذف الملف", `حذف «${f.title}» من المجموعة لكل الأعضاء؟`, "حذف", true))) return; try { await api.deleteFile(f); paintFiles(); } catch (e) { toast(e.message, "error"); } };
     });

@@ -197,6 +197,15 @@ function supabaseAdapter() {
       await rest(`files?id=eq.${f.id}`, { method: "DELETE" });
     },
     async fileBlob(path) { return raw(`/storage/v1/object/authenticated/private/${path}`, { isBlob: true }); },
+    // رابط مؤقت (ساعة) يفتح الملف مباشرة من التخزين؛ مع اسم ملف يُنزَّل بدل أن يُفتح
+    async signedUrl(path, downloadName = "") {
+      const j = await raw(`/storage/v1/object/sign/private/${path}`, { method: "POST", body: { expiresIn: 3600 } });
+      const s = j?.signedURL || j?.signedUrl;
+      if (!s) throw new ApiError("تعذر تجهيز رابط الملف", "http", 0);
+      let u = SUPABASE_URL + "/storage/v1" + (s.startsWith("/") ? s : "/" + s);
+      if (downloadName) u += (u.includes("?") ? "&" : "?") + "download=" + encodeURIComponent(downloadName);
+      return u;
+    },
     async shares(fileId) { return rest(`file_shares?file_id=eq.${fileId}&select=*`); },
     async addShare(fileId, userId) { await rest("file_shares", { method: "POST", body: { file_id: fileId, user_id: userId } }); },
     async removeShare(fileId, userId) { await rest(`file_shares?file_id=eq.${fileId}&user_id=eq.${userId}`, { method: "DELETE" }); },
