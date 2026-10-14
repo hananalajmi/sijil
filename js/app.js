@@ -6,7 +6,7 @@ import { applyUI, applyCachedUI } from "./theme.js";
 import { initPWA } from "./pwa.js";
 import { showIntro, rememberWho, getWho, forgetWho } from "./intro.js";
 import { icon } from "./icons.js";
-import { SECTIONS, MORE, sectionOf } from "./nav.js";
+import { SECTIONS, MORE, sectionOf, isExternal } from "./nav.js";
 applyCachedUI();
 initPWA();
 
@@ -22,7 +22,7 @@ const ROUTES = {
   events: () => import("./views/events.js"), approved: () => import("./views/archive.js"),
   forms: () => import("./views/forms.js"), sign: () => import("./views/sign.js"),
   groups: () => import("./views/groups.js"), "group-sheet": () => import("./views/groups.js"),
-  materials: () => import("./views/files.js"), bulletins: () => import("./views/files.js"), shared: () => import("./views/files.js"),
+  bulletins: () => import("./views/files.js"), shared: () => import("./views/files.js"),
   search: () => import("./views/archive.js"), trash: () => import("./views/archive.js"), backup: () => import("./views/backup.js"),
   admin: () => import("./views/admin.js"), print: () => import("./views/print.js"), hub: () => import("./views/hub.js"),
 };
@@ -36,7 +36,9 @@ function yearOptions() {
 }
 
 function navHtml(p) {
-  const link = (r, l, i, sub = false) => `<a class="nav ${sub ? "sub" : ""}" href="#/${r}" data-r="${r}">${sub ? '<span class="dot" aria-hidden="true"></span>' : icon(i)}<span class="t">${esc(l)}</span></a>`;
+  const link = (r, l, i, sub = false) => isExternal(r)
+    ? `<a class="nav ${sub ? "sub" : ""}" href="${esc(r)}" target="_blank" rel="noopener noreferrer">${sub ? '<span class="dot" aria-hidden="true"></span>' : icon(i)}<span class="t">${esc(l)} <span aria-hidden="true">↗</span></span></a>`
+    : `<a class="nav ${sub ? "sub" : ""}" href="#/${r}" data-r="${r}">${sub ? '<span class="dot" aria-hidden="true"></span>' : icon(i)}<span class="t">${esc(l)}</span></a>`;
   const group = (s) => s.route ? link(s.route, s.label, s.icon)
     : `<div class="nav-grp" data-g="${s.id}"><button type="button" class="nav nav-h" aria-expanded="false">${icon(s.icon)}<span class="t">${esc(s.label)}</span>${icon("chevron", "chev")}</button>
        <div class="nav-items">${s.items.map(([r, l]) => link(r, l, "", true)).join("")}</div></div>`;
@@ -78,6 +80,8 @@ async function route() {
   const parts = path.split("/").filter(Boolean);
   const name = parts[0] || "";
   const params = Object.fromEntries(new URLSearchParams(qs || ""));
+  // صفحة المناهج القديمة صارت روابط مكتبة الوزارة
+  if (name === "materials") { location.replace("#/hub/curr"); return; }
   markNav(name);
   const loader = ROUTES[name];
   const token = ++navToken;

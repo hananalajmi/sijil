@@ -3,7 +3,9 @@
 export const SECTIONS = [
   { id: "data", label: "البيانات الرئيسية", icon: "user", card: "data", desc: "معلومات الموجه الفني والمدارس والمعلمات",
     items: [["guide", "بيانات الموجّه الفني", "user", "الاسم والمسمى والتخصص والتوقيع والختم"], ["schools", "المدارس والمعلمات", "school", "أسماء المدارس ومعلماتها والميزانية"]] },
-  { id: "curr", label: "المناهج التابعة للتوجيه الفني", short: "المناهج", icon: "book", card: "curr", desc: "الاطلاع على المناهج والمستندات المرتبطة", route: "materials" },
+  // المناهج: روابط مكتبة وزارة التربية الإلكترونية (تُفتح في نافذة جديدة)
+  { id: "curr", label: "المناهج التابعة للتوجيه الفني", short: "المناهج", icon: "book", card: "curr", desc: "مكتبة الطالب ومكتبة المعلم في وزارة التربية",
+    items: [["https://elibrary.moe.edu.kw/StudentsLibrary", "مكتبة الطالب", "book", "كتب الطالب من مكتبة وزارة التربية الإلكترونية"], ["https://elibrary.moe.edu.kw/TeachersLibrary", "مكتبة المعلم", "book", "كتب المعلم وأدلته من مكتبة وزارة التربية الإلكترونية"]] },
   { id: "plans", label: "الخطط", icon: "calendar", card: "plans", desc: "الخطة الشهرية والتقويم الدراسي والتواريخ الهامة",
     items: [["monthly", "الخطة الشهرية", "calendar", "تُعبأ تلقائياً من التواريخ والزيارات"], ["dates", "التقويم والتواريخ الهامة", "clock", "التقويم الدراسي الثابت وفعالياتك"]] },
   { id: "visits", label: "الزيارات الميدانية", icon: "pin", card: "visits", desc: "تسجيل ومتابعة الزيارات المدرسية",
@@ -17,4 +19,5 @@ export const SECTIONS = [
 ];
 export const MORE = { id: "more", label: "الملفات والأرشيف", icon: "folder",
   items: [["groups", "المجموعات", "user", "ملفات وجداول مشتركة لكل مجموعة"], ["shared", "الملفات المشتركة", "share", ""], ["search", "البحث والأرشيف", "search", ""], ["trash", "سلة المحذوفات", "trash", ""], ["backup", "النسخ الاحتياطي", "download", ""]] };
+export const isExternal = (r) => /^https?:\/\//.test(r);
 export const sectionOf = (route) => [...SECTIONS, MORE].find((s) => s.route === route || (s.items || []).some(([r]) => r === route));
