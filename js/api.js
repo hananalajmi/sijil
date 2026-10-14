@@ -68,6 +68,14 @@ function supabaseAdapter() {
     return t ? JSON.parse(t) : null;
   }
 
+  // حفظ سجل ملف؛ إن لم يُحدَّث جدول الملفات بعد (عمود المادة غير موجود) يُحفظ بدونه
+  async function insertFile(body) {
+    try { return await rest("files", { method: "POST", headers: { Prefer: "return=representation" }, body }); }
+    catch (e) {
+      if (body.subject !== undefined && /subject/i.test(e.message || "")) { const { subject, ...rest2 } = body; return rest("files", { method: "POST", headers: { Prefer: "return=representation" }, body: rest2 }); }
+      throw e;
+    }
+  }
   // تجديد الجلسة: عند انقطاع الإنترنت تبقى الجلسة كما هي (لا يُطلب الدخول من جديد)،
   // ولا تُلغى إلا إذا رفض الخادم التجديد (تسجيل خروج من جهاز آخر أو إيقاف الحساب)
   let refreshing = null;
@@ -179,14 +187,12 @@ function supabaseAdapter() {
       const ext = (file.name || "").split(".").pop().toLowerCase().replace(/[^a-z0-9]/g, "") || "bin";
       const path = `${uid}/${meta.category}/${crypto.randomUUID()}.${ext}`;
       await raw(`/storage/v1/object/private/${path}`, { method: "POST", body: file, headers: { "Content-Type": file.type || "application/octet-stream", "x-upsert": "false" } });
-      const r = await rest("files", { method: "POST", headers: { Prefer: "return=representation" },
-        body: { category: meta.category, stage: meta.stage || null, term: meta.term || null, subcategory: meta.subcategory || null, title: meta.title || file.name || "", storage_path: path, mime: file.type, size: file.size, record_id: meta.record_id || null, group_id: meta.group_id || null } });
+      const r = await insertFile({ category: meta.category, stage: meta.stage || null, subject: meta.subject || null, term: meta.term || null, subcategory: meta.subcategory || null, title: meta.title || file.name || "", storage_path: path, mime: file.type, size: file.size, record_id: meta.record_id || null, group_id: meta.group_id || null });
       return r[0];
     },
     // رابط من موقع خارجي: يُحفظ الرابط فقط (لا يُرفع ملف إلى التخزين)
     async addLink(meta) {
-      const r = await rest("files", { method: "POST", headers: { Prefer: "return=representation" },
-        body: { category: meta.category, stage: meta.stage || null, term: meta.term || null, subcategory: meta.subcategory || null, title: meta.title || meta.url, url: meta.url, mime: "text/uri-list", size: 0, record_id: meta.record_id || null } });
+      const r = await insertFile({ category: meta.category, stage: meta.stage || null, subject: meta.subject || null, term: meta.term || null, subcategory: meta.subcategory || null, title: meta.title || meta.url, url: meta.url, mime: "text/uri-list", size: 0, record_id: meta.record_id || null });
       return r[0];
     },
     async files(filter = "") { return rest(`files?select=*&order=created_at.desc${filter}`); },
@@ -340,7 +346,7 @@ function demoAdapter() {
     async upload(file, meta) {
       const dataUrl = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file); });
       const id = crypto.randomUUID();
-      const f = { id, owner_id: uid, category: meta.category, stage: meta.stage || null, term: meta.term || null, subcategory: meta.subcategory || null, title: meta.title || file.name || "",
+      const f = { id, owner_id: uid, category: meta.category, stage: meta.stage || null, subject: meta.subject || null, term: meta.term || null, subcategory: meta.subcategory || null, title: meta.title || file.name || "",
         storage_path: `${uid}/${meta.category}/${id}`, mime: file.type, size: file.size, record_id: meta.record_id || null, group_id: meta.group_id || null, created_at: now() };
       db.blobs[f.storage_path] = dataUrl; db.files.unshift(f);
       try { persist(); } catch (e) { fail("مساحة المتصفح ممتلئة في الوضع التجريبي"); }
@@ -348,7 +354,7 @@ function demoAdapter() {
     },
     async addLink(meta) {
       if (!/^https?:\/\/\S+$/i.test(meta.url || "")) fail("الرابط غير صالح، يجب أن يبدأ بـ https://");
-      const f = { id: crypto.randomUUID(), owner_id: uid, category: meta.category, stage: meta.stage || null, term: meta.term || null, subcategory: meta.subcategory || null,
+      const f = { id: crypto.randomUUID(), owner_id: uid, category: meta.category, stage: meta.stage || null, subject: meta.subject || null, term: meta.term || null, subcategory: meta.subcategory || null,
         title: meta.title || meta.url, url: meta.url, storage_path: null, mime: "text/uri-list", size: 0, record_id: meta.record_id || null, created_at: now() };
       db.files.unshift(f); persist(); return clone(f);
     },
