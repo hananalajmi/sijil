@@ -19,12 +19,24 @@ export default async function (main, { params }) {
 
 async function users(out) {
   const list = await api.rpc("admin_list_users");
-  out.innerHTML = `<div class="tbl-wrap"><table class="data"><tr><th>الاسم</th><th>اسم المستخدم</th><th>البريد</th><th>مفعّل</th><th>المسؤول عن التجميع</th><th>الدور</th><th></th></tr>
+  const auto = (state.options.auto_approve?.items || []).includes("on");
+  out.innerHTML = `<section class="panel"><label class="row" style="gap:10px;align-items:center"><input type="checkbox" id="auto-ap" ${auto ? "checked" : ""}> <b>تفعيل الحسابات الجديدة تلقائياً</b></label>
+      <p class="hint" style="margin:6px 0 0">${auto ? "مفعّل: كل من يسجّل يدخل مباشرة دون انتظار. يمكنك إيقاف أي حساب من الجدول بإلغاء «مفعّل»." : "موقوف: الحسابات الجديدة تنتظر تفعيلك هنا."}</p></section>
+    <div class="tbl-wrap"><table class="data"><tr><th>الاسم</th><th>اسم المستخدم</th><th>البريد</th><th>مفعّل</th><th>المسؤول عن التجميع</th><th>الدور</th><th></th></tr>
     ${list.map((u) => `<tr data-id="${u.id}"><td>${esc(u.full_name)}</td><td dir="ltr">${esc(u.username)}</td><td dir="ltr">${esc(u.email || "")}</td>
       <td><input type="checkbox" data-f="approved" ${u.approved ? "checked" : ""} aria-label="مفعّل"></td><td><input type="checkbox" data-f="is_collector" ${u.is_collector ? "checked" : ""} aria-label="المسؤول عن التجميع"></td>
       <td><select data-f="role"><option value="guide" ${u.role === "guide" ? "selected" : ""}>موجّه</option><option value="admin" ${u.role === "admin" ? "selected" : ""}>مشرف</option></select></td>
       <td><button class="btn small primary" data-save>حفظ</button></td></tr>`).join("")}</table></div>
-    <p class="hint">الحسابات الجديدة تنتظر التفعيل هنا. المسؤول عن التجميع يرى فقط الخطط الأسبوعية التي يرسلها أصحابها إليه.</p>`;
+    <p class="hint">${auto ? "الحسابات الجديدة تُفعَّل تلقائياً." : "الحسابات الجديدة تنتظر التفعيل هنا."} المسؤول عن التجميع يرى فقط الخطط الأسبوعية التي يرسلها أصحابها إليه.</p>`;
+  $("#auto-ap", out).onchange = async (e) => {
+    const on = e.target.checked;
+    try {
+      await api.saveOption("auto_approve", "تفعيل الحسابات الجديدة تلقائياً", on ? ["on"] : []);
+      // عند التشغيل: تُفعَّل أيضاً الحسابات المنتظرة حالياً
+      if (on) for (const u of list.filter((x) => !x.approved)) await api.rpc("admin_set_user", { p_id: u.id, p_approved: true, p_is_collector: !!u.is_collector, p_role: u.role || "guide" });
+      await loadOptions(); toast(on ? "صار التفعيل تلقائياً" : "أُوقف التفعيل التلقائي"); users(out);
+    } catch (err) { toast(err.message, "error"); e.target.checked = !on; }
+  };
   $$("[data-save]", out).forEach((b) => (b.onclick = async () => {
     const tr = b.closest("tr"), f = (n) => tr.querySelector(`[data-f=${n}]`);
     try { await api.rpc("admin_set_user", { p_id: tr.dataset.id, p_approved: f("approved").checked, p_is_collector: f("is_collector").checked, p_role: f("role").value }); toast("تم الحفظ"); }
