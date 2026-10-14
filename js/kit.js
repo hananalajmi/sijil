@@ -131,8 +131,8 @@ export async function recordPage(main, { rec, title, render, beforeApprove, newR
       <button class="btn icon-btn" id="next" title="السجل التالي" aria-label="التالي" ${idx >= 0 && idx < listIds.length - 1 ? "" : "disabled"}>›</button>
       <button class="btn" id="new">+ جديد</button>
       <span class="grow"></span>
-      ${PRINTABLE.has(r.kind) ? `<button class="btn" id="print" ${r.id ? "" : "disabled"} title="يفتح المعاينة ثم نافذة الطباعة واختيار الطابعة">طباعة / PDF</button><button class="btn" id="preview" ${r.id ? "" : "disabled"}>معاينة</button><button class="btn" id="word" ${r.id ? "" : "disabled"}>Word</button>` : ""}
-      ${PRINTABLE.has(r.kind) ? (appr ? `<button class="btn" id="unapprove">إلغاء الاعتماد</button>` : `<button class="btn primary" id="approve" ${r.id ? "" : "disabled"}>اعتماد</button>`) : ""}
+      ${PRINTABLE.has(r.kind) ? `<button class="btn" id="print" title="يفتح المعاينة ثم نافذة الطباعة واختيار الطابعة">طباعة / PDF</button><button class="btn" id="preview">معاينة</button><button class="btn" id="word">Word</button>` : ""}
+      ${PRINTABLE.has(r.kind) ? (appr ? `<button class="btn" id="unapprove">إلغاء الاعتماد</button>` : `<button class="btn primary" id="approve">اعتماد</button>`) : ""}
       <button class="btn danger" id="trash" ${r.id && !appr ? "" : "disabled"} title="${appr ? "التقرير المعتمد لا يُحذف" : ""}">حذف</button>
       ${BLANKABLE[r.kind] ? `<a class="btn ghost" href="#/print/${BLANKABLE[r.kind](r)}" title="النموذج فارغاً للطباعة أو لإرساله لمعلم آخر">نسخة فارغة</a>` : ""}
       <button class="btn ghost" id="log" ${r.id ? "" : "disabled"}>سجل العمليات</button>`;
@@ -140,9 +140,11 @@ export async function recordPage(main, { rec, title, render, beforeApprove, newR
     $("#prev", bar).onclick = () => go(`#/${route}/${listIds[idx - 1]}`);
     $("#next", bar).onclick = () => go(`#/${route}/${listIds[idx + 1]}`);
     $("#new", bar).onclick = () => go(`#/${route}/new`);
-    $("#print", bar) && ($("#print", bar).onclick = async () => { await ed.save(); go(`#/print/${ed.rec.id}?auto=1`); });
-    $("#preview", bar) && ($("#preview", bar).onclick = async () => { await ed.save(); go(`#/print/${ed.rec.id}`); });
-    $("#word", bar) && ($("#word", bar).onclick = async () => { await ed.save(); go(`#/print/${ed.rec.id}?word=1`); });
+    // سجل جديد لم يُكتب فيه شيء (مثل الخطة الشهرية المعبأة تلقائياً): يُحفظ أولاً ثم يُطبع
+    const ensureSaved = async () => { if (!ed.rec.id) ed.change(() => {}); await ed.save(); if (!ed.rec.id) { toast("تعذر حفظ السجل، حاولي مرة أخرى", "error"); return false; } return true; };
+    $("#print", bar) && ($("#print", bar).onclick = async () => { if (await ensureSaved()) go(`#/print/${ed.rec.id}?auto=1`); });
+    $("#preview", bar) && ($("#preview", bar).onclick = async () => { if (await ensureSaved()) go(`#/print/${ed.rec.id}`); });
+    $("#word", bar) && ($("#word", bar).onclick = async () => { if (await ensureSaved()) go(`#/print/${ed.rec.id}?word=1`); });
     $("#approve", bar) && ($("#approve", bar).onclick = approve);
     $("#unapprove", bar) && ($("#unapprove", bar).onclick = unapprove);
     $("#trash", bar).onclick = trash;
@@ -151,7 +153,9 @@ export async function recordPage(main, { rec, title, render, beforeApprove, newR
     $("#approved", main).innerHTML = appr ? `<div class="approved-banner"><b>تقرير معتمد</b><span class="grow">اعتُمد في ${new Date(r.approved_at).toLocaleString("ar-KW")}. النسخة المطبوعة ثابتة ولا تتغير بتعديل بيانات المدرسة أو المعلم.</span></div>` : "";
   }
   async function approve() {
+    if (!ed.rec.id) ed.change(() => {});
     await ed.save();
+    if (!ed.rec.id) return;
     const missing = beforeApprove ? beforeApprove(ed.rec) : [];
     if (missing.length) { await modal({ title: "حقول إلزامية ناقصة", body: `<p>أكملي قبل الاعتماد:</p><ul>${missing.map((m) => `<li>${esc(m)}</li>`).join("")}</ul>` }); return; }
     if (!(await confirmBox("اعتماد التقرير", "بعد الاعتماد تُحفظ نسخة ثابتة من التقرير، ولا يمكن تعديله أو حذفه إلا بإلغاء الاعتماد.", "اعتماد"))) return;
