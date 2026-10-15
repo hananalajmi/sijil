@@ -11,7 +11,7 @@ export function printOptionsPanel(ed, { sigsEveryPage = false } = {}) {
   const p = ed.rec.data.print || {};
   const g = state.guide?.data || {};
   return `<section class="panel"><h2>خيارات الطباعة لهذا التقرير</h2><div class="print-opts">
-    ${sigsEveryPage ? `<label><input type="checkbox" data-p="sigsEveryPage" ${p.sigsEveryPage ? "checked" : ""}> تكرار التوقيعات في كل صفحة (الأصل: في آخر التقرير)</label>` : ""}
+    ${sigsEveryPage ? `<label><input type="checkbox" data-p="sigsEveryPage" ${p.sigsEveryPage !== false ? "checked" : ""}> تكرار التوقيعات في كل صفحة</label>` : ""}
     <label><input type="checkbox" data-p="showSignature" ${p.showSignature ? "checked" : ""} ${g.signature ? "" : "disabled"}> إظهار توقيعي</label>
     <label><input type="checkbox" data-p="showStamp" ${p.showStamp ? "checked" : ""} ${g.stamp ? "" : "disabled"}> إظهار ختمي</label>
     <label><input type="checkbox" data-p="showDate" ${p.showDate ? "checked" : ""}> إظهار تاريخ التوقيع</label>

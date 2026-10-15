@@ -67,7 +67,7 @@
 .t-sv .sv-id2 th { width: 16%; } .t-sv .sv-id2 td { width: 34%; }
 .t-sv .sv-cols2 { display: grid; grid-template-columns: 54mm 1fr; gap: 4mm; align-items: stretch; }
 .t-sv .sv-cols2 .sv-main { display: flex; flex-direction: column; }
-.t-sv .sv-fill { flex: 1 1 auto; min-height: 6.2mm; margin-inline: 2mm; background: repeating-linear-gradient(to bottom, transparent 0 calc(6.2mm - 1pt), #555 calc(6.2mm - 1pt) 6.2mm); -webkit-mask: repeating-linear-gradient(to left, #000 0 1.2pt, transparent 1.2pt 3pt); mask: repeating-linear-gradient(to left, #000 0 1.2pt, transparent 1.2pt 3pt); }
+.t-sv .sv-fill { flex: 1 1 auto; min-height: 6.2mm; margin-inline: 2mm; background: repeating-linear-gradient(to bottom, transparent 0 calc(6.2mm - .8pt), #9a9a9a calc(6.2mm - .8pt) 6.2mm); }
 .t-sv .sv-cols2.side-only { grid-template-columns: 1fr; }
 .t-sv .sv-cols2.side-only .sv-side { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
 .t-sv .sv-side { display: flex; flex-direction: column; gap: 3mm; }
@@ -350,14 +350,24 @@
 .t-fm .fm-sign-space { height: 18mm; }
 .sheet .ln.blank-ln { border-bottom: 1pt dotted #000; min-height: 7mm; }
 
-/* ===== الآيباد والآيفون: الطباعة طولية دائماً؛ كل صفحة في إطار ورقة A4 بهامش أمان، والعرضية تُدار 90° ===== */
-.ios-page { display: contents; }
+/* ===== ورقة الطباعة: كل صفحة داخل إطار ورقة A4 =====
+   p: طولية، l: عرضية، r: عرضية تُدار 90° لتطبع على ورقة طولية (الآيباد والآيفون يطبعان طولياً فقط).
+   «هامش أمان للطباعة» (body.print-fit): تُصغَّر الصفحة إلى 76% داخل مساحة 176×226 مم، فتدخل كاملة في ورقة A4
+   أو Letter حتى مع هوامش سفاري الآيباد ورأسه وتذييله (الرابط والتاريخ ورقم الصفحة)، فلا تُقص ولا تنقسم على ورقتين. */
+.fit-page { display: contents; }
 @keyframes pulse-print { 0%,100% { box-shadow: 0 0 0 0 rgba(201,162,79,.0); } 50% { box-shadow: 0 0 0 6px rgba(201,162,79,.55); } }
 .btn.pulse { animation: pulse-print 1.4s ease-in-out 4; }
 @media print {
-  .ios-page { display: block; position: relative; width: 200mm; height: 285mm; margin: 5mm auto 0; overflow: hidden; break-after: page; page-break-after: always; }
-  .ios-page:last-child { break-after: auto; page-break-after: auto; }
-  .ios-page > .sheet { position: absolute; top: 0; left: 0; margin: 0; break-after: auto; page-break-after: auto; page: auto; transform-origin: 0 0; }
-  .ios-page > .sheet.portrait { transform: translate(2.35mm, 4.4mm) scale(.93); }
-  .ios-page > .sheet.landscape { transform: translate(197.65mm, 4.4mm) rotate(90deg) scale(.93); }
+  .fit-page { display: block; position: relative; overflow: hidden; margin: 0 auto; break-after: page; page-break-after: always; break-inside: avoid; page-break-inside: avoid; }
+  .fit-page:last-child { break-after: auto; page-break-after: auto; }
+  .fit-page > .sheet { position: absolute; top: 0; left: 0; margin: 0; break-after: auto; page-break-after: auto; transform-origin: 0 0; }
+  .fit-page.p, .fit-page.r { width: 210mm; height: 296mm; }
+  .fit-page.l { width: 297mm; height: 209mm; }
+  .fit-page.l > .sheet { page: auto; }
+  .fit-page.r > .sheet { page: auto; transform: translate(210mm, 0) rotate(90deg); }
+  body.print-fit .fit-page.p, body.print-fit .fit-page.r { width: 176mm; height: 226mm; }
+  body.print-fit .fit-page.l { width: 226mm; height: 176mm; }
+  body.print-fit .fit-page.p > .sheet { transform: translate(8.2mm, .1mm) scale(.76); }
+  body.print-fit .fit-page.l > .sheet { transform: translate(.1mm, 8.2mm) scale(.76); }
+  body.print-fit .fit-page.r > .sheet { transform: translate(167.8mm, .1mm) rotate(90deg) scale(.76); }
 }

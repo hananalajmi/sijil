@@ -9,6 +9,8 @@ import { KIND_LABEL, KIND_ROUTE } from "../kit.js";
 
 // الآيباد والآيفون (سفاري): لا يدعمان اتجاه الصفحة العرضي في الطباعة ولا الطباعة التلقائية
 const IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) || /[?&]ios=1\b/.test(location.search);
+// سفاري (ماك) أيضاً يضيف هوامشه للطباعة؛ فيُفعَّل له «هامش الأمان» افتراضياً
+const SAFARI = IOS || /^((?!chrome|chromium|crios|fxios|edg|android).)*safari/i.test(navigator.userAgent);
 
 async function monthlyContext(rec) {
   const derived = await monthlyDerived(rec.data.month);
@@ -58,6 +60,7 @@ export default async function (main, { id, params }) {
       <b style="flex:1;min-width:0">${esc(name)}${rec?.status === "approved" ? ' <span class="pill ok">نسخة معتمدة</span>' : id.startsWith("blank-") ? "" : ' <span class="pill">مسودة</span>'}</b>
       <label class="row" style="font-size:13.5px">اتجاه الصفحة <select id="orient" aria-label="اتجاه الصفحة"><option value="">حسب القالب (${rep.orientation === "landscape" ? "عرضي" : "طولي"})</option><option value="portrait">طولي</option><option value="landscape">عرضي</option></select></label>
       <label class="row" style="font-size:13.5px"><input type="checkbox" id="bw"> أبيض وأسود</label>
+      <label class="row" style="font-size:13.5px" title="يصغّر الصفحة قليلاً داخل الورقة حتى لا تقص الطابعة أطرافها ولا تنقسم الصفحة على ورقتين"><input type="checkbox" id="fit"> هامش أمان للطباعة</label>
       <button class="btn primary" id="print">طباعة / حفظ PDF</button>
       <button class="btn" id="word">تصدير Word</button>
       <button class="btn" id="share" title="يرسل الملف (Word) عبر واتساب أو البريد من جهازك">إرسال</button>
@@ -72,13 +75,23 @@ export default async function (main, { id, params }) {
   try { const o = localStorage.getItem(oKey); if (o) $("#orient", main).value = o; } catch (_) {}
   let pageStyle = document.getElementById("page-style");
   if (!pageStyle) { pageStyle = document.createElement("style"); pageStyle.id = "page-style"; document.head.appendChild(pageStyle); }
+  const fitKey = "sijil.printfit";
+  try { const v = localStorage.getItem(fitKey); $("#fit", main).checked = v === null ? SAFARI : v === "1"; } catch (_) { $("#fit", main).checked = SAFARI; }
+  const applyFit = () => document.body.classList.toggle("print-fit", $("#fit", main).checked);
+  applyFit();
+  $("#fit", main).onchange = () => { try { localStorage.setItem(fitKey, $("#fit", main).checked ? "1" : "0"); } catch (_) {} applyFit(); };
   const render = async () => {
     rep.bw = $("#bw", main).checked;
     rep.orientation = $("#orient", main).value || templateOrientation;
     // اتجاه ورقة الطباعة يتبع الاختيار. الآيباد والآيفون يطبعان طولياً دائماً، فتُدار الصفحة العرضية وتُصغَّر قليلاً لتدخل كاملة في الورقة
     pageStyle.textContent = IOS ? `@media print { @page { size: A4 portrait; margin: 0; } }` : `@media print { @page { size: A4 ${rep.orientation}; margin: 0; } }`;
     await paginate(rep, sheets); const p = auditPages(sheets); if (p.length) console.warn(p); window.__printAudit = p;
-    if (IOS) [...sheets.querySelectorAll(":scope > .sheet")].forEach((s) => { const w = document.createElement("div"); w.className = "ios-page"; s.replaceWith(w); w.appendChild(s); });
+    // كل صفحة داخل «ورقة» للطباعة: تُصغَّر بهامش الأمان، وفي الآيباد تُدار الصفحة العرضية لتطبع على ورقة طولية
+    [...sheets.querySelectorAll(":scope > .sheet")].forEach((s) => {
+      const land = s.classList.contains("landscape");
+      const w = document.createElement("div"); w.className = "fit-page " + (land ? (IOS ? "r" : "l") : "p");
+      s.replaceWith(w); w.appendChild(s);
+    });
   };
   await render();
   $("#bw", main).onchange = render;

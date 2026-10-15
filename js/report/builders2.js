@@ -55,8 +55,8 @@ export async function weeklyReport(ctx) {
   const pns = [["الإيجابيات", d.positives], ["السلبيات", d.negatives], ["المقترحات", d.suggestions]].filter(([, t]) => (t || "").trim());
   blocks.push({ group: { cls: "ach-txt", head: H("رابعاً", "الإيجابيات والسلبيات والمقترحات"), items: pns.flatMap(([k, t]) => [`<div class="ach-sub">${k}:</div>`, ...nl(t).map((x) => `<div class="ln">${x}</div>`)]) } });
   const sigs = await finalSigs(ctx, "الموجه الفني");
-  if (!ctx.print?.sigsEveryPage) blocks.push({ html: `<div class="ach-endsig">${sigs}</div>` });
-  return { orientation: "portrait", cls: "t-ach", covers: [cover, toc], header: running(ctx, WEEKLY_REPORT.title, period), identity: "", footer: ctx.print?.sigsEveryPage ? sigs : "", blocks };
+  if (ctx.print?.sigsEveryPage === false) blocks.push({ html: `<div class="ach-endsig">${sigs}</div>` });
+  return { orientation: "portrait", cls: "t-ach", covers: [cover, toc], header: running(ctx, WEEKLY_REPORT.title, period), identity: "", footer: ctx.print?.sigsEveryPage === false ? "" : sigs, blocks };
 }
 
 /* ============================== الإنجازات الشهرية ============================== */
@@ -119,7 +119,7 @@ export async function monthlyAchievements(ctx) {
     }
   }
   const sigs = await sigRow([{ ...mySig(ctx, compiled ? "الموجه الفني ( مقرر)" : "الموجه الفني", compiled ? ctx.coordinator : undefined), prefix: "أ." }, { title: fs.title, name: fs.name, prefix: "أ." }], "ach-sigs");
-  if (!ctx.print?.sigsEveryPage) blocks.push({ html: `<div class="ach-endsig">${sigs}</div>` });
+  if (ctx.print?.sigsEveryPage === false) blocks.push({ html: `<div class="ach-endsig">${sigs}</div>` });
   const period = `شهر ${mName} ${(d.month || "").split("-")[0] || ""}`;
-  return { orientation: "portrait", cls: "t-ach", covers: [cover, toc], header: running(ctx, MONTHLY_ACH.title, period), identity: "", footer: ctx.print?.sigsEveryPage ? sigs : "", blocks };
+  return { orientation: "portrait", cls: "t-ach", covers: [cover, toc], header: running(ctx, MONTHLY_ACH.title, period), identity: "", footer: ctx.print?.sigsEveryPage === false ? "" : sigs, blocks };
 }
