@@ -350,24 +350,20 @@
 .t-fm .fm-sign-space { height: 18mm; }
 .sheet .ln.blank-ln { border-bottom: 1pt dotted #000; min-height: 7mm; }
 
-/* ===== ورقة الطباعة: كل صفحة داخل إطار ورقة A4 =====
+/* ===== ورقة الطباعة: كل صفحة داخل إطار ورقة =====
    p: طولية، l: عرضية، r: عرضية تُدار 90° لتطبع على ورقة طولية (الآيباد والآيفون يطبعان طولياً فقط).
-   «هامش أمان للطباعة» (body.print-fit): تُصغَّر الصفحة إلى 76% داخل مساحة 176×226 مم، فتدخل كاملة في ورقة A4
-   أو Letter حتى مع هوامش سفاري الآيباد ورأسه وتذييله (الرابط والتاريخ ورقم الصفحة)، فلا تُقص ولا تنقسم على ورقتين. */
+   «حجم الطباعة» (--print-s من 0.70 إلى 1): تُصغَّر الصفحة داخل الورقة بهذه النسبة وتتوسطها، فتكبر الهوامش أو تصغر.
+   هوامش سفاري الآيباد كبيرة (رأس وتذييل فيهما الرابط والتاريخ)، فيكفيه عادة 82% (ورق A4)، و76% لورق Letter؛ وإن قُصّت الأطراف يُصغَّر أكثر. */
+:root { --print-s: 1; }
 .fit-page { display: contents; }
 @keyframes pulse-print { 0%,100% { box-shadow: 0 0 0 0 rgba(201,162,79,.0); } 50% { box-shadow: 0 0 0 6px rgba(201,162,79,.55); } }
 .btn.pulse { animation: pulse-print 1.4s ease-in-out 4; }
 @media print {
   .fit-page { display: block; position: relative; overflow: hidden; margin: 0 auto; break-after: page; page-break-after: always; break-inside: avoid; page-break-inside: avoid; }
   .fit-page:last-child { break-after: auto; page-break-after: auto; }
-  .fit-page > .sheet { position: absolute; top: 0; left: 0; margin: 0; break-after: auto; page-break-after: auto; transform-origin: 0 0; }
-  .fit-page.p, .fit-page.r { width: 210mm; height: 296mm; }
-  .fit-page.l { width: 297mm; height: 209mm; }
-  .fit-page.l > .sheet { page: auto; }
-  .fit-page.r > .sheet { page: auto; transform: translate(210mm, 0) rotate(90deg); }
-  body.print-fit .fit-page.p, body.print-fit .fit-page.r { width: 176mm; height: 226mm; }
-  body.print-fit .fit-page.l { width: 226mm; height: 176mm; }
-  body.print-fit .fit-page.p > .sheet { transform: translate(8.2mm, .1mm) scale(.76); }
-  body.print-fit .fit-page.l > .sheet { transform: translate(.1mm, 8.2mm) scale(.76); }
-  body.print-fit .fit-page.r > .sheet { transform: translate(167.8mm, .1mm) rotate(90deg) scale(.76); }
+  .fit-page > .sheet { position: absolute; top: 0; left: 0; margin: 0; break-after: auto; page-break-after: auto; page: auto; transform-origin: 0 0; }
+  .fit-page.p, .fit-page.r { width: calc(210mm * var(--print-s)); height: calc(296mm * var(--print-s)); }
+  .fit-page.l { width: calc(297mm * var(--print-s)); height: calc(209mm * var(--print-s)); }
+  .fit-page.p > .sheet, .fit-page.l > .sheet { transform: scale(var(--print-s)); }
+  .fit-page.r > .sheet { transform: translateX(calc(210mm * var(--print-s))) rotate(90deg) scale(var(--print-s)); }
 }

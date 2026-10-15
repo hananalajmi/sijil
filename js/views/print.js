@@ -60,7 +60,7 @@ export default async function (main, { id, params }) {
       <b style="flex:1;min-width:0">${esc(name)}${rec?.status === "approved" ? ' <span class="pill ok">نسخة معتمدة</span>' : id.startsWith("blank-") ? "" : ' <span class="pill">مسودة</span>'}</b>
       <label class="row" style="font-size:13.5px">اتجاه الصفحة <select id="orient" aria-label="اتجاه الصفحة"><option value="">حسب القالب (${rep.orientation === "landscape" ? "عرضي" : "طولي"})</option><option value="portrait">طولي</option><option value="landscape">عرضي</option></select></label>
       <label class="row" style="font-size:13.5px"><input type="checkbox" id="bw"> أبيض وأسود</label>
-      <label class="row" style="font-size:13.5px" title="يصغّر الصفحة قليلاً داخل الورقة حتى لا تقص الطابعة أطرافها ولا تنقسم الصفحة على ورقتين"><input type="checkbox" id="fit"> هامش أمان للطباعة</label>
+      <label class="row" style="font-size:13.5px" title="تصغير الصفحة داخل الورقة: صغّريه إذا قُصّت الأطراف أو انقسمت الصفحة على ورقتين، وكبّريه إذا كانت الهوامش كبيرة">حجم الطباعة <select id="pscale" aria-label="حجم الطباعة">${[100, 97, 94, 91, 88, 85, 82, 79, 76, 73, 70].map((v) => `<option value="${v}">${v}%${v === 100 ? " (كامل)" : ""}</option>`).join("")}</select></label>
       <button class="btn primary" id="print">طباعة / حفظ PDF</button>
       <button class="btn" id="word">تصدير Word</button>
       <button class="btn" id="share" title="يرسل الملف (Word) عبر واتساب أو البريد من جهازك">إرسال</button>
@@ -75,11 +75,15 @@ export default async function (main, { id, params }) {
   try { const o = localStorage.getItem(oKey); if (o) $("#orient", main).value = o; } catch (_) {}
   let pageStyle = document.getElementById("page-style");
   if (!pageStyle) { pageStyle = document.createElement("style"); pageStyle.id = "page-style"; document.head.appendChild(pageStyle); }
-  const fitKey = "sijil.printfit";
-  try { const v = localStorage.getItem(fitKey); $("#fit", main).checked = v === null ? SAFARI : v === "1"; } catch (_) { $("#fit", main).checked = SAFARI; }
-  const applyFit = () => document.body.classList.toggle("print-fit", $("#fit", main).checked);
-  applyFit();
-  $("#fit", main).onchange = () => { try { localStorage.setItem(fitKey, $("#fit", main).checked ? "1" : "0"); } catch (_) {} applyFit(); };
+  // حجم الطباعة (تصغير الصفحة داخل الورقة): يُحفظ على هذا الجهاز. الافتراضي في الآيباد وسفاري 82%، وفي غيرهما كامل
+  const scKey = "sijil.printscale", sel = $("#pscale", main);
+  let sc = SAFARI ? 82 : 100;
+  try { const v = Number(localStorage.getItem(scKey)); if (v >= 70 && v <= 100) sc = v; } catch (_) {}
+  if (![...sel.options].some((o) => Number(o.value) === sc)) sel.insertAdjacentHTML("beforeend", `<option value="${sc}">${sc}%</option>`);
+  sel.value = String(sc);
+  const applyScale = () => document.documentElement.style.setProperty("--print-s", String(Number(sel.value) / 100));
+  applyScale();
+  sel.onchange = () => { try { localStorage.setItem(scKey, sel.value); } catch (_) {} applyScale(); };
   const render = async () => {
     rep.bw = $("#bw", main).checked;
     rep.orientation = $("#orient", main).value || templateOrientation;
