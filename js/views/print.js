@@ -28,6 +28,7 @@ export async function resolveReport(id, params) {
   if (id === "stats-exams") return [await examStatsContext({ year: params.year || state.year, term: params.term, examType: params.type, version: params.version }), params.type === "practical" ? "إحصائية الامتحان العملي" : "إحصائية الامتحان النظري", `#/stats-${params.type}`, null];
   if (id === "compiled-ach") return [await compiledMonthlyContext(params.month), "الإنجازات الشهرية المجمعة", "#/compile?month=" + params.month, null];
   // نسخة فارغة من أي نموذج (للطباعة أو لإرسالها لمعلم/زميلة يعبّئها بيده): بلا اسمي وتوقيعي وختمي
+  if (id === "blank-criteria") { const c = await recordContext({ kind: "form", title: "بطاقة قياس المعايير الفنية", academic_year: state.year, data: { type: "criteria", blank: true } }); c.print = {}; return [c, "بطاقة قياس المعايير الفنية (فارغة)", "#/forms", null]; }
   if (id === "blank-takleef") return [await recordContext({ kind: "form", title: "تكليف بمهمة خارج مقر العمل", academic_year: state.year, data: { type: "takleef", blank: true } }), "نموذج تكليف بمهمة (فارغ)", "#/forms", null];
   const bk = (id.match(/^blank-(teacher_visit|school_visit|event_report)$/) || [])[1];
   if (bk) {

@@ -17,7 +17,7 @@ export const KIND_ROUTE = {
 export const PRINTABLE = new Set(["teacher_visit", "school_visit", "event_report", "weekly_report", "monthly_achievements", "monthly_plan", "shared_achievements", "form"]);
 
 // النماذج التي لها نسخة فارغة (للطباعة أو الإرسال)
-export const BLANKABLE = { teacher_visit: (r) => "blank-teacher_visit" + (r.data?.visitee === "head" ? "?head=1" : ""), school_visit: () => "blank-school_visit", event_report: () => "blank-event_report", form: () => "blank-takleef" };
+export const BLANKABLE = { teacher_visit: (r) => "blank-teacher_visit" + (r.data?.visitee === "head" ? "?head=1" : ""), school_visit: () => "blank-school_visit", event_report: () => "blank-event_report", form: (r) => (r.data?.type === "criteria" ? "blank-criteria" : "blank-takleef") };
 export const go = (h) => { if (location.hash === h) window.dispatchEvent(new HashChangeEvent("hashchange")); else location.hash = h; };
 
 /* ---------------- الحقول ---------------- */

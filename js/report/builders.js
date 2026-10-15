@@ -22,6 +22,13 @@ async function sigSlot(s) {
 }
 export const sigRow = async (slots, cls = "") => `<div class="sigs ${cls}">${(await Promise.all(slots.map(sigSlot))).join("")}</div>`;
 // توقيع الموجّه: الصورة والختم يظهران فقط إذا اختار المستخدم ذلك لهذا التقرير
+// توقيع وختم الموجه (حسب خيارات الطباعة) بشكل مختصر داخل سطر
+export async function sigSlotHtml(ctx) {
+  const p = ctx.print || {};
+  const sig = p.showSignature && ctx.guide?.signature ? await img(ctx.guide.signature, "sig-img") : "";
+  const stamp = p.showStamp && ctx.guide?.stamp ? await img(ctx.guide.stamp, "stamp-img") : "";
+  return sig || stamp ? `<span class="cr-sigimg">${sig}${stamp}</span>` : "";
+}
 export const mySig = (ctx, title, name) => ({
   title, name: name ?? ctx.guide?.full_name,
   sigFile: ctx.print?.showSignature ? ctx.guide?.signature : null,
@@ -242,5 +249,5 @@ export async function departments(ctx) {
 
 import { weeklyReport, monthlyAchievements } from "./builders2.js";
 import { sharedAchievements } from "./builders3.js";
-export const BUILDERS = { form: (...a) => import("./builders4.js").then((m) => m.formTakleef(...a)), teacher_visit: teacherVisit, school_visit: schoolVisit, stats_visits: statsVisits, stats_exams: statsExams,
+export const BUILDERS = { form: (ctx) => import("./builders4.js").then((m) => (ctx.rec?.data?.type === "criteria" ? m.criteriaCard(ctx) : m.formTakleef(ctx))), teacher_visit: teacherVisit, school_visit: schoolVisit, stats_visits: statsVisits, stats_exams: statsExams,
   monthly_plan: monthlyPlan, event_report: eventReport, department: departments, weekly_report: weeklyReport, monthly_achievements: monthlyAchievements, shared_achievements: sharedAchievements };

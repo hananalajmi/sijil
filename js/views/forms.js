@@ -9,6 +9,7 @@ import { field, bindFields, recordPage, go } from "../kit.js";
 import { listView } from "./_list.js";
 import { FORMS } from "../templates.js";
 import { openStored } from "../openfile.js";
+import { criteriaEditor, newCriteria, criteriaSummary } from "./criteria.js";
 
 const STAGES = { draft: ["مسودة", ""], ready: ["جاهز للتوقيع", "warn"], signed: ["موقّع ومحفوظ", "ok"], sent: ["أُرسل", "ok"] };
 export const hijri = (iso) => { try { return new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura", { day: "numeric", month: "long", year: "numeric" }).format(new Date(iso + "T12:00:00")); } catch (_) { return ""; } };
@@ -27,10 +28,14 @@ const rid = () => Math.random().toString(36).slice(2, 10);
 const fillLink = (t) => `${location.href.split("#")[0]}#/f/${t}`;
 
 export default async function (main, { id, params }) {
-  if (!id) return listView(main, { kind: "form", title: "النماذج والتكاليف", sub: "نماذج رسمية تُعبّأ وتُطبع للتوقيع، وتُحفظ نسختها الموقّعة وتُرسل. ويمكن إرسال رابط للمكلَّفين ليكتبوا أسماءهم وأرقامهم المدنية.", newLabel: "+ تكليف بمهمة",
-    extraHead: `<a class="btn" href="#/print/blank-takleef">نموذج فارغ للطباعة</a><a class="btn ghost" href="assets/forms/takleef-form4.docx" download="تكليف بمهمة خارج مقر العمل - نموذج 4.docx">النموذج الأصلي (Word)</a>`,
-    columns: [{ label: "التاريخ", get: (r) => fmtDate(r.record_date) }, { label: "المهمة", get: (r) => r.data.task || "" }, { label: "المكلَّفون", get: (r) => (r.data.people || []).length, cls: "num" },
-      { label: "الحالة", get: (r) => (STAGES[r.data.stage] || STAGES.draft)[0] }] });
+  if (!id) return listView(main, { kind: "form", title: "النماذج والتكاليف", sub: "نماذج رسمية تُعبّأ وتُطبع للتوقيع: التكليف بمهمة، وبطاقة قياس المعايير الفنية. ويمكن إرسال رابط للمكلَّفين ليكتبوا أسماءهم وأرقامهم المدنية.", newLabel: "+ تكليف بمهمة",
+    extraHead: `<a class="btn primary" href="#/forms/new?type=criteria">+ بطاقة قياس المعايير</a><a class="btn" href="#/print/blank-takleef">تكليف فارغ</a><a class="btn" href="#/print/blank-criteria">بطاقة معايير فارغة</a><a class="btn ghost" href="assets/forms/takleef-form4.docx" download="تكليف بمهمة خارج مقر العمل - نموذج 4.docx">التكليف الأصلي (Word)</a>`,
+    columns: [{ label: "التاريخ", get: (r) => fmtDate(r.record_date) }, { label: "النموذج", get: (r) => (r.data.type === "criteria" ? "بطاقة قياس المعايير" : "تكليف بمهمة") },
+      { label: "التفاصيل", get: (r) => (r.data.type === "criteria" ? criteriaSummary(r) : r.data.task || "") }, { label: "المكلَّفون", get: (r) => (r.data.type === "criteria" ? "" : (r.data.people || []).length), cls: "num" },
+      { label: "المرحلة", get: (r) => (r.data.type === "criteria" ? "" : (STAGES[r.data.stage] || STAGES.draft)[0]) }] });
+  // بطاقة قياس المعايير الفنية
+  if ((id === "new" && params.type === "criteria")) return criteriaEditor(main, newCriteria());
+  if (id !== "new") { const r0 = await api.get(id); if (r0?.data?.type === "criteria") return criteriaEditor(main, r0); }
   const T = FORMS.takleef;
   const rec = id === "new"
     ? { kind: "form", title: T.label, record_date: today(), academic_year: state.year, data: { type: "takleef", date: today(), hijri: hijri(today()), addressee: T.addressee, task: "", from: "", to: "", sign_at: "", people: [], stage: "draft", open: false } }

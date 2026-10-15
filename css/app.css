@@ -563,3 +563,13 @@ input.cid-ok { border-color: var(--good) !important; background: var(--good-soft
 .sign-mark .sm-text { display: block; color: #1a237e; font-weight: 700; font-family: Arial, sans-serif; white-space: nowrap; line-height: 1; }
 .sign-mark .sm-x { position: absolute; top: -14px; right: -14px; width: 26px; height: 26px; border-radius: 50%; border: 0; background: var(--bad); color: #fff; font-size: 13px; cursor: pointer; line-height: 26px; padding: 0; }
 .sign-mark .sm-r { position: absolute; bottom: -10px; left: -10px; width: 22px; height: 22px; border-radius: 50%; background: var(--gold, #b8913f); border: 2px solid #fff; cursor: nesw-resize; touch-action: none; }
+
+/* بطاقة قياس المعايير (المحرر) */
+.cr-edit .cr-gh th { background: var(--accent-soft, #f4ead2); text-align: right; }
+.cr-edit td select { min-width: 84px; }
+.cr-total { font-size: 17px; padding: 6px 14px; border-radius: 999px; background: var(--accent-soft, #f4ead2); }
+.cr-recs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.cr-recbox h3 { margin: 0 0 8px; font-size: 16px; }
+.cr-reclist { list-style: none; padding: 0; margin: 0 0 8px; display: flex; flex-direction: column; gap: 6px; }
+.cr-reclist li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid var(--line, #e3d9c4); border-radius: 10px; }
+.cr-recbox select[data-addrec] { width: 100%; }

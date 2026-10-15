@@ -367,3 +367,26 @@
   .fit-page.p > .sheet, .fit-page.l > .sheet { transform: scale(var(--print-s)); }
   .fit-page.r > .sheet { transform: translateX(calc(210mm * var(--print-s))) rotate(90deg) scale(var(--print-s)); }
 }
+
+/* ===== بطاقة قياس المعايير الفنية ===== */
+.t-cr .cr-head { display: grid; grid-template-columns: 50mm 1fr 45mm; align-items: center; gap: 3mm; }
+.t-cr .cr-org { display: flex; align-items: center; gap: 2mm; font-size: 11pt; line-height: 1.5; }
+.t-cr .cr-emblem { height: 17mm; }
+.t-cr .cr-title { margin: 0; text-align: center; font-size: 15pt; font-weight: 800; }
+.t-cr .cr-date { text-align: left; font-size: 11pt; }
+.t-cr .cr-id { display: flex; justify-content: space-between; gap: 6mm; margin-top: 3mm; font-size: 11.5pt; }
+.t-cr .cr-table { margin-top: 3mm; font-size: 10pt; line-height: 1.25; table-layout: fixed; }
+.t-cr .cr-table th { background: #d9d9d9; font-size: 9.5pt; overflow-wrap: normal; }
+.sheet.t-cr table.cr-table td, .sheet.t-cr table.cr-table th { padding: .7mm 1.5mm; }
+.t-cr .cr-g { font-weight: 800; background: #f2f2f2; }
+.sheet.t-cr table.cr-table td.cr-i { text-align: right; }
+.t-cr .cr-m { font-weight: 700; }
+.t-cr .cr-s { font-weight: 800; color: #0b3d91; }
+.t-cr .cr-tot td { font-weight: 800; background: #ececec; }
+.t-cr .cr-box { border: 1pt solid #000; margin-top: 3mm; min-height: 16mm; }
+.t-cr .cr-box-h { font-weight: 800; padding: 1mm 2mm; border-bottom: 1pt solid #000; background: #f2f2f2; }
+.t-cr .cr-recs { margin: 1mm 6mm 1mm 2mm; padding-inline-start: 5mm; font-size: 10pt; line-height: 1.45; }
+.t-cr .cr-recs-empty { padding: 2mm; display: flex; flex-direction: column; gap: 4mm; }
+.t-cr .cr-sign { display: flex; justify-content: space-between; align-items: center; gap: 6mm; margin-top: 3mm; font-size: 11pt; }
+.t-cr .cr-sigimg { display: inline-flex; align-items: center; gap: 2mm; vertical-align: middle; }
+.t-cr .cr-sigimg img { max-height: 14mm; max-width: 32mm; object-fit: contain; }

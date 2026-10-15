@@ -2,7 +2,7 @@
 // يُطبع مُعبّأً من بيانات النموذج، أو فارغاً (blank) للتعبئة باليد.
 import { esc, fmtDateSlash } from "../ui.js";
 import { FORMS, FIRST_SUPERVISOR } from "../templates.js";
-import { logo } from "./builders.js";
+import { logo, sigSlotHtml } from "./builders.js";
 
 const dots = (w = 38) => `<span class="dots" style="min-width:${w}mm"></span>`;
 const v = (x, w) => (x ? `<b class="fm-v">${esc(x)}</b>` : dots(w));
@@ -29,4 +29,41 @@ export async function formTakleef(ctx) {
     <div class="fm-sign"><div><b>${esc(T.manager)} في منطقة ${esc(region)} التعليمية</b>${FIRST_SUPERVISOR.name ? `<div><b>أ. ${esc(FIRST_SUPERVISOR.name)}</b></div>` : ""}<div class="fm-sign-space"></div></div></div>`;
   return { orientation: "portrait", cls: "t-fm", header: "", identity: "", footer: "",
     blocks: [{ html: head }, { table: { cls: "fm-people", colgroup: `<colgroup><col style="width:12mm"><col><col style="width:52mm"></colgroup>`, thead: `<tr><th class="c-n">م</th><th>الاسم</th><th>الرقم المدني</th></tr>`, rows } }, { html: tail }] };
+}
+
+// ---------------- بطاقة قياس المعايير الفنية للمواد الأساسية ----------------
+export const criteriaKey = (gi, ii) => `c${gi}_${ii}`;
+export const criteriaMax = () => FORMS.criteria.groups.reduce((a, g) => a + g.items.reduce((b, [, m]) => b + m, 0), 0);
+export function criteriaTotal(scores = {}) {
+  let t = 0, any = false;
+  FORMS.criteria.groups.forEach((g, gi) => g.items.forEach(([, m], ii) => { const v = scores[criteriaKey(gi, ii)]; if (v !== "" && v != null && !isNaN(v)) { any = true; t += Math.min(Number(v), m); } }));
+  return any ? t : null;
+}
+const num = (x) => (x == null || x === "" ? "" : String(x));
+export async function criteriaCard(ctx) {
+  const T = FORMS.criteria, d = ctx.rec.data || {}, blank = !!d.blank;
+  const region = ctx.guide?.region || "الأحمدي";
+  const sc = blank ? {} : d.scores || {};
+  const total = blank ? null : criteriaTotal(sc);
+  const head = `<div class="cr-head">
+      <div class="cr-org">${await logo("emblem", "cr-emblem")}<div><b>وزارة التربية</b><br><b>منطقة ${esc(region)} التعليمية</b></div></div>
+      <h1 class="cr-title">${esc(T.label)}</h1>
+      <div class="cr-date"><b>التاريخ :</b> ${blank ? dots(30) : v(fmtDateSlash(d.date || ctx.rec.record_date), 30)}</div></div>
+    <div class="cr-id"><div><b>اسم المدرسة :</b> ${blank ? dots(70) : v(ctx.school?.title, 70)}</div><div><b>العام الدراسي :</b> ${v((ctx.rec.academic_year || "").replace("-", "/"), 25)}</div></div>
+    <div class="cr-id"><div><b>المادة :</b> ${blank ? v(T.subject, 40) : v(d.subject || T.subject, 40)}</div></div>`;
+  const rows = [];
+  T.groups.forEach((g, gi) => g.items.forEach(([t, m], ii) => {
+    rows.push(`<tr>${ii === 0 ? `<td class="cr-g" rowspan="${g.items.length}">${esc(g.t)}</td>` : ""}<td class="cr-i">${esc(t)}</td><td class="cr-m">${m}</td><td class="cr-s">${esc(num(sc[criteriaKey(gi, ii)]))}</td></tr>`);
+  }));
+  rows.push(`<tr class="cr-tot"><td colspan="2">الدرجة النهائية</td><td class="cr-m">${criteriaMax()}</td><td class="cr-s">${total == null ? "" : esc(String(total))}</td></tr>`);
+  const recs = (list, note) => { const all = [...(list || []), ...String(note || "").split(/\n+/)].map((x) => String(x).trim()).filter(Boolean);
+    return all.length ? `<ol class="cr-recs">${all.map((x) => `<li>${esc(x)}</li>`).join("")}</ol>` : `<div class="cr-recs-empty">${dots(150)}${dots(150)}</div>`; };
+  const guideSig = blank ? "" : await sigSlotHtml(ctx);
+  const tail = `<div class="cr-box"><div class="cr-box-h">توصيات الموجه الفني :</div>${blank ? recs() : recs(d.recs_guide, d.recs_guide_note)}</div>
+    <div class="cr-sign"><div><b>اسم الموجه الفني :</b> ${blank ? dots(60) : v(ctx.guide?.full_name, 60)}</div><div><b>التوقيع :</b> ${guideSig || dots(45)}</div></div>
+    <div class="cr-box"><div class="cr-box-h">توصيات الموجه الأول :</div>${blank ? recs() : recs(d.recs_first, d.recs_first_note)}</div>
+    <div class="cr-sign"><div><b>اسم الموجه الفني الأول :</b> ${v(ctx.guide?.first_supervisor, 60)}</div><div><b>التوقيع :</b> ${dots(45)}</div></div>`;
+  return { orientation: "portrait", cls: "t-cr", header: "", identity: "", footer: "",
+    blocks: [{ html: head }, { table: { cls: "grid cr-table", colgroup: `<colgroup><col style="width:32mm"><col><col style="width:23mm"><col style="width:18mm"></colgroup>`,
+      thead: `<tr><th>المعيار</th><th>بنود المعيار</th><th>الدرجة التفصيلية</th><th>الدرجة</th></tr>`, rows, keepTogether: true } }, { html: tail }] };
 }
