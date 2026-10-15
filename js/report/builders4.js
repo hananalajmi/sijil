@@ -1,7 +1,7 @@
 // النماذج الرسمية للتوقيع — «تكليف بمهمة خارج مقر العمل» (نموذج رقم 4، صفحة 14 من القرار 41/2006)
 // يُطبع مُعبّأً من بيانات النموذج، أو فارغاً (blank) للتعبئة باليد.
 import { esc, fmtDateSlash } from "../ui.js";
-import { FORMS } from "../templates.js";
+import { FORMS, FIRST_SUPERVISOR } from "../templates.js";
 import { logo } from "./builders.js";
 
 const dots = (w = 38) => `<span class="dots" style="min-width:${w}mm"></span>`;
@@ -26,7 +26,7 @@ export async function formTakleef(ctx) {
   const rows = people.map((p, i) => `<tr><td class="c-n">${i + 1}</td><td class="fm-name">${esc(p.name)}</td><td class="fm-cid" dir="ltr">${esc(p.civil_id)}</td></tr>`);
   for (let i = rows.length; i < T.minLines; i++) rows.push(`<tr><td class="c-n">${i + 1}</td><td class="fm-name">&nbsp;</td><td class="fm-cid"></td></tr>`);
   const tail = `<div class="fm-line fm-after">رجاء العلم حيث يتعذر عليهم الحضور الى مقر العمل للتوقيع عند ( ${!blank && d.sign_at ? `<b class="fm-v">${esc(d.sign_at)}</b>` : dots(40)} )</div>
-    <div class="fm-sign"><div><b>${esc(T.manager)}</b><div>${esc(T.managerNote)}</div><div class="fm-sign-space"></div></div></div>`;
+    <div class="fm-sign"><div><b>${esc(T.manager)} في منطقة ${esc(region)} التعليمية</b>${FIRST_SUPERVISOR.name ? `<div><b>أ. ${esc(FIRST_SUPERVISOR.name)}</b></div>` : ""}<div class="fm-sign-space"></div></div></div>`;
   return { orientation: "portrait", cls: "t-fm", header: "", identity: "", footer: "",
     blocks: [{ html: head }, { table: { cls: "fm-people", colgroup: `<colgroup><col style="width:12mm"><col><col style="width:52mm"></colgroup>`, thead: `<tr><th class="c-n">م</th><th>الاسم</th><th>الرقم المدني</th></tr>`, rows } }, { html: tail }] };
 }

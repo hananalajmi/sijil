@@ -346,7 +346,7 @@
 .t-fm .fm-people .fm-cid { text-align: center; letter-spacing: .08em; font-family: Arial, "DejaVu Sans", sans-serif; }
 .t-fm .fm-after { margin-top: 3mm; }
 .t-fm .fm-sign { display: flex; justify-content: flex-end; margin-top: 6mm; }
-.t-fm .fm-sign > div { text-align: center; min-width: 60mm; }
+.t-fm .fm-sign > div { text-align: center; min-width: 60mm; max-width: 85mm; line-height: 1.6; }
 .t-fm .fm-sign-space { height: 18mm; }
 .sheet .ln.blank-ln { border-bottom: 1pt dotted #000; min-height: 7mm; }
 
