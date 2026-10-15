@@ -7,6 +7,9 @@ import { paginate, auditPages } from "../report/paginate.js";
 import { recordContext, visitStatsContext, examStatsContext, compiledMonthlyContext, monthlyDerived } from "../report/context.js";
 import { KIND_LABEL, KIND_ROUTE } from "../kit.js";
 
+// الآيباد والآيفون (سفاري): لا يدعمان اتجاه الصفحة العرضي في الطباعة ولا الطباعة التلقائية
+const IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) || /[?&]ios=1\b/.test(location.search);
+
 async function monthlyContext(rec) {
   const derived = await monthlyDerived(rec.data.month);
   const days = {};
@@ -72,9 +75,10 @@ export default async function (main, { id, params }) {
   const render = async () => {
     rep.bw = $("#bw", main).checked;
     rep.orientation = $("#orient", main).value || templateOrientation;
-    // اتجاه ورقة الطباعة يتبع الاختيار
-    pageStyle.textContent = `@media print { @page { size: A4 ${rep.orientation}; margin: 0; } }`;
+    // اتجاه ورقة الطباعة يتبع الاختيار. الآيباد والآيفون يطبعان طولياً دائماً، فتُدار الصفحة العرضية وتُصغَّر قليلاً لتدخل كاملة في الورقة
+    pageStyle.textContent = IOS ? `@media print { @page { size: A4 portrait; margin: 0; } }` : `@media print { @page { size: A4 ${rep.orientation}; margin: 0; } }`;
     await paginate(rep, sheets); const p = auditPages(sheets); if (p.length) console.warn(p); window.__printAudit = p;
+    if (IOS) [...sheets.querySelectorAll(":scope > .sheet")].forEach((s) => { const w = document.createElement("div"); w.className = "ios-page"; s.replaceWith(w); w.appendChild(s); });
   };
   await render();
   $("#bw", main).onchange = render;
@@ -82,6 +86,7 @@ export default async function (main, { id, params }) {
 
   // فتح نافذة الطباعة (اختيار الطابعة أو الحفظ PDF). بعض الصفحات المضمّنة تمنعها، فنكتشف ذلك ونوضّح البديل
   const doPrint = () => {
+    if (IOS) { try { window.print(); } catch (_) {} return; } // سفاري الآيباد: لا تُعرف حالة النافذة، فلا تظهر رسالة بديلة
     let opened = false;
     const mark = () => (opened = true);
     window.addEventListener("beforeprint", mark, { once: true });
@@ -100,7 +105,12 @@ export default async function (main, { id, params }) {
     }, 700);
   };
   $("#print", main).onclick = doPrint;
-  if (params.auto === "1") { history.replaceState(null, "", location.hash.replace(/([?&])auto=1&?/, "$1").replace(/[?&]$/, "")); setTimeout(doPrint, 300); }
+  // الطباعة التلقائية عند فتح المعاينة: سفاري الآيباد يمنعها ويعرض رسالة حظر، فيكتفى فيه بتنبيه للضغط على زر الطباعة
+  if (params.auto === "1") {
+    history.replaceState(null, "", location.hash.replace(/([?&])auto=1&?/, "$1").replace(/[?&]$/, ""));
+    if (IOS) { $("#print", main).classList.add("pulse"); toast("المعاينة جاهزة — اضغطي «طباعة / حفظ PDF»"); }
+    else setTimeout(doPrint, 300);
+  }
   const word = async (mode = "download") => {
     try {
       toast("جارٍ تجهيز ملف Word…");

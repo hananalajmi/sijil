@@ -130,15 +130,23 @@ export async function statsVisits(ctx) {
   const thead = `<tr><th rowspan="2" class="c-n">م</th><th rowspan="2">المدرسة</th><th rowspan="2">اسم المعلم</th><th colspan="2">الزيارة الأولى</th><th colspan="2">الزيارة الثانية</th><th colspan="2">الزيارة الثالثة</th></tr>
     <tr><th>اليوم والتاريخ</th><th>الفصل</th><th>اليوم والتاريخ</th><th>الفصل</th><th>اليوم والتاريخ</th><th>الفصل</th></tr>`;
   // معلم بلا زيارة لسبب (إجازة دراسية، مجلس، وضع...): يُكتب السبب في الخانات الفارغة
-  const rows = ctx.rows.map((r, i) => {
+  const rowOf = (r, i) => {
     const n = Math.min(r.visits.length, 3);
     const done = r.visits.slice(0, 3).map((v) => `<td>${val(dayName(v.date))} ${val(fmtDate(v.date))}</td><td>${val(v.cls)}</td>`).join("");
     const rest = n < 3 ? (r.reason ? `<td colspan="${2 * (3 - n)}" class="st-why">${val(r.reason)}</td>` : "<td></td><td></td>".repeat(3 - n)) : "";
     return `<tr><td>${i + 1}</td><td>${val(r.school)}</td><td>${val(r.teacher)}</td>${done}${rest}</tr>`;
-  });
-  if (!rows.length) rows.push(`<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`);
+  };
   const colgroup = `<colgroup><col style="width:9mm"><col style="width:16%"><col style="width:18%">${'<col style="width:13%"><col>'.repeat(3)}</colgroup>`;
-  return { orientation: "landscape", cls: "t-st", ...f, blocks: [{ table: { cls: "grid st-table", colgroup, thead, rows } }] };
+  // كل مدرسة في صفحة مستقلة (الترويسة والتذييل يتكرران في كل صفحة)، والترقيم يبدأ من 1 لكل مدرسة
+  const bySchool = new Map();
+  for (const r of ctx.rows) { if (!bySchool.has(r.school)) bySchool.set(r.school, []); bySchool.get(r.school).push(r); }
+  const blocks = [];
+  for (const list of bySchool.values()) {
+    if (blocks.length) blocks.push({ pageBreak: true });
+    blocks.push({ table: { cls: "grid st-table", colgroup, thead, rows: list.map(rowOf) } });
+  }
+  if (!blocks.length) blocks.push({ table: { cls: "grid st-table", colgroup, thead, rows: [`<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`] } });
+  return { orientation: "landscape", cls: "t-st", ...f, blocks };
 }
 export async function statsExams(ctx) {
   const v = STATS[ctx.examType].versions.find((x) => x.id === ctx.version) || STATS[ctx.examType].versions[0];
