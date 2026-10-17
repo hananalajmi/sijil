@@ -4,6 +4,7 @@ import { state, opts, schoolById, teacherById } from "../store.js";
 import { esc, $, $$, today, dayName, fmtDate, academicYearOf } from "../ui.js";
 import { field, bindFields, recordPage, schoolOptions, teacherOptions, photoSlots, promptNewOption, addTeacherName } from "../kit.js";
 import { SCHOOL_VISIT } from "../templates.js";
+import { goalsText, recordsText } from "../svtext.js";
 import { listView } from "./_list.js";
 import { printOptionsPanel, bindPrintOptions } from "./teacherVisit.js";
 import { linkedRowsFor, mergeLinked, sameRows, schoolVisitLinker, weeklyFor } from "../svlink.js";
@@ -47,8 +48,12 @@ export default async function (main, { id, params }) {
         ${field({ label: "مدير المدرسة (للتوقيع)", key: "principal_name", value: d.principal_name })}
       </div><div class="sv-link" id="wklink" role="status"></div></section>
       <div class="grid2">
-        <section class="panel"><h2>الهدف من الزيارة</h2>${checks("goals", SCHOOL_VISIT.goals, d.goals)}${field({ label: "أخرى", key: "goals_other", value: d.goals_other })}</section>
-        <section class="panel"><h2>السجلات التي تمت متابعتها</h2>${checks("records", SCHOOL_VISIT.records, d.records)}${field({ label: "أخرى", key: "records_other", value: d.records_other })}</section>
+        <section class="panel"><h2>الهدف من الزيارة</h2>${checks("goals", SCHOOL_VISIT.goals, d.goals)}${field({ label: "أخرى", key: "goals_other", value: d.goals_other })}
+          ${field({ label: "نص الهدف من الزيارة (يُكتب تلقائياً، ويمكنك تعديله)", key: "goals_text", type: "textarea", rows: 3, wide: true, value: d.goals_text || "" })}
+          <button type="button" class="btn small ghost" data-regen="goals">↻ إعادة كتابة النص من الاختيارات</button></section>
+        <section class="panel"><h2>السجلات التي تمت متابعتها</h2>${checks("records", SCHOOL_VISIT.records, d.records)}${field({ label: "أخرى", key: "records_other", value: d.records_other })}
+          ${field({ label: "نص السجلات (يُكتب تلقائياً، ويمكنك تعديله)", key: "records_text", type: "textarea", rows: 3, wide: true, value: d.records_text || "" })}
+          <button type="button" class="btn small ghost" data-regen="records">↻ إعادة كتابة النص من الاختيارات</button></section>
       </div>
       <section class="panel"><h2>زيارة معلم + ما تم إنجازه</h2><p class="hint" style="margin-top:0">زيارات المعلمين في هذه المدرسة بنفس التاريخ تُضاف هنا تلقائياً (المظلّلة)، وتُعدَّل من صفحة زيارة المعلم. ويمكن إضافة صف يدوي.</p><div class="tbl-wrap"><table class="data" id="trows"><thead><tr><th>اسم المعلم</th><th>الصف</th><th>الفصل</th><th>الحصة</th><th>عنوان الدرس</th><th></th></tr></thead><tbody></tbody></table></div>
         <div class="row" style="margin-top:8px"><button class="btn small" id="addrow">+ صف معلم</button></div>
@@ -56,7 +61,19 @@ export default async function (main, { id, params }) {
       <section class="panel"><h2>ما يستجد من أعمال / التوصيات</h2>${field({ label: "كل توصية في سطر", key: "recommendations", type: "textarea", value: d.recommendations, wide: true, rows: 5 })}</section>
       <section class="panel"><h2>صور (اختياري)</h2><div id="photos"></div></section>
       ${printOptionsPanel(ed)}`;
+      // النص التلقائي: يُعاد كتابته عند تغيير الاختيارات ما لم تعدّليه بنفسك
+      const GEN = { goals: goalsText, records: recordsText };
+      const regen = (which, force = false) => {
+        const d2 = ed.rec.data;
+        if (!force && d2[which + "_text_manual"]) return;
+        const t = GEN[which](d2);
+        ed.change((x) => { x.data[which + "_text"] = t; if (force) x.data[which + "_text_manual"] = false; });
+        const ta = $(`[data-key='${which}_text']`, body); if (ta) ta.value = t;
+      };
+      $$("[data-regen]", body).forEach((b) => (b.onclick = () => regen(b.dataset.regen, true)));
       bindFields(body, (k, v) => {
+        if (k === "goals_text" || k === "records_text") { ed.change((x) => { x.data[k] = v; x.data[k + "_manual"] = true; }); return; }
+        if (k === "goals_other" || k === "records_other") { ed.change((x) => { x.data[k] = v; }); regen(k.split("_")[0]); return; }
         ed.change((x) => {
           if (k === "school_id") x.school_id = v || null;
           else if (k === "record_date") { x.record_date = v || null; x.academic_year = academicYearOf(v || undefined); }
@@ -67,10 +84,10 @@ export default async function (main, { id, params }) {
         if (k === "school_id") { prefillNames(); }
         if (k === "school_id" || k === "record_date") resync().then(() => paintRows());
       });
-      $$("[data-list]", body).forEach((cb) => (cb.onchange = () => ed.change((x) => {
+      $$("[data-list]", body).forEach((cb) => (cb.onchange = () => { ed.change((x) => {
         const L = new Set(x.data[cb.dataset.list] || []); cb.checked ? L.add(cb.value) : L.delete(cb.value);
         const order = cb.dataset.list === "goals" ? SCHOOL_VISIT.goals : SCHOOL_VISIT.records; x.data[cb.dataset.list] = order.filter((g) => L.has(g));
-      })));
+      }); regen(cb.dataset.list); }));
       const tb = $("#trows tbody", body);
       function paintRows() {
         const rows = ed.rec.data.teacher_rows?.length ? ed.rec.data.teacher_rows : [{}];

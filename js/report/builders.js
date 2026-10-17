@@ -87,7 +87,7 @@ export async function schoolVisit(ctx) {
       <tbody><tr><td>${val(ctx.school?.title)}</td><td>${val(dayName(ctx.rec.record_date))}</td><td>${val(fmtDate(ctx.rec.record_date))}</td>
       <td>${term ? val(term) : "الأولى / الثانية"}</td></tr></tbody></table>
     <table class="grid sv-id2"><tr><th>الموجه الفني</th><td>${val(ctx.guide?.full_name)}</td><th>نوع الزيارة</th><td>${val(d.visit_type)}</td></tr></table>`;
-  const box = (title, list, chosen, other) => `<div class="sv-box"><div class="sv-box-h">${title}</div><div class="sv-checks">
+  const box = (title, list, chosen, other, text) => `<div class="sv-box"><div class="sv-box-h">${title}</div><div class="sv-checks">
       ${list.map((g) => `<div class="ck"><span class="cb">${chosen?.includes(g) ? "☑" : "☐"}</span>${esc(g)}</div>`).join("")}
       <div class="ck"><span class="cb">${other ? "☑" : "☐"}</span>أخرى ${other ? `<span class="other">${esc(other)}</span>` : '<span class="dots"></span>'}</div>
     </div></div>`;
@@ -95,6 +95,8 @@ export async function schoolVisit(ctx) {
   const done = nl(d.achieved);
   const visitLines = [
     ...rows.map((r) => `<div class="ln sv-tr"><span>${val(r.teacher_name)}</span><span>${val(r.grade)}</span><span>${val(r.section)}</span><span>${val(r.period)}</span><span>${val(r.lesson)}</span></div>`),
+    // نص الهدف ونص السجلات (يُكتب تلقائياً في الشاشة) على الأسطر المنقطة
+    ...[["الهدف من الزيارة", d.goals_text], ["السجلات", d.records_text]].filter(([, t]) => t && t.trim()).map(([h, t]) => `<div class="sv-para"><b>${h}:</b> ${esc(t.trim())}</div>`),
     ...done.map((v) => `<div class="ln">${v}</div>`),
   ];
   const minLines = 22;

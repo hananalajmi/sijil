@@ -390,3 +390,6 @@
 .t-cr .cr-sign { display: flex; justify-content: space-between; align-items: center; gap: 6mm; margin-top: 3mm; font-size: 11pt; }
 .t-cr .cr-sigimg { display: inline-flex; align-items: center; gap: 2mm; vertical-align: middle; }
 .t-cr .cr-sigimg img { max-height: 14mm; max-width: 32mm; object-fit: contain; }
+
+/* نص الهدف والسجلات أسفل مربع الاختيارات */
+.t-sv .sv-para { margin-inline: 2mm; line-height: 6.2mm; text-align: justify; background: repeating-linear-gradient(to bottom, transparent 0 calc(6.2mm - .8pt), #9a9a9a calc(6.2mm - .8pt) 6.2mm); }
