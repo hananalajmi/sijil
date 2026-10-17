@@ -1,7 +1,7 @@
 // المشرف: تفعيل الحسابات، تحديد المسؤول عن التجميع، القوائم المنسدلة، وصلاحيات الملفات المشتركة.
 // المشرف لا يرى سجلات الموجّهين ولا يعدّلها — هذا مطبّق في قاعدة البيانات وليس في الواجهة فقط.
 import { api } from "../api.js";
-import { state, loadOptions } from "../store.js";
+import { state, loadOptions, sharedEditors } from "../store.js";
 import { esc, $, $$, toast, modal } from "../ui.js";
 import { go } from "../kit.js";
 import { DEFAULT_OPTIONS, TEACHER_VISIT, tvOptionKey } from "../templates.js";
@@ -68,9 +68,22 @@ async function sharedFiles(out) {
   const files = (await api.files("&category=eq.shared&deleted_at=is.null")).filter((f) => f.owner_id !== state.profile.id);
   const people = await api.rpc("admin_list_users").catch(() => []);
   const name = (id) => people.find((p) => p.id === id)?.full_name || "—";
-  out.innerHTML = files.length ? `<p class="hint">تظهر هنا أسماء الملفات المشتركة وأصحابها فقط، ولا يستطيع المشرف فتح محتواها. يمكنه إضافة أو إزالة من يصل إليها.</p>
+  await loadOptions();
+  const eds = new Set(sharedEditors()), guides = people.filter((p) => p.approved);
+  out.innerHTML = `<section class="panel" id="sae"><h2>من يعبّي ملف الإنجازات الشهرية المشترك</h2>
+      <p class="hint" style="margin-top:0">حدّدي الموجهين المسؤولين عن التعبئة (مثلاً موجه من كل مرحلة). غير المحددين يطّلعون على الملف ويطبعونه فقط. إذا لم تحددي أحداً يعبّيه كل الموجهين المفعّلين.</p>
+      <div class="checks">${guides.map((p) => `<label><input type="checkbox" value="${p.id}" ${eds.has(p.id) ? "checked" : ""}>${esc(p.full_name || p.username)}</label>`).join("") || '<span class="hint">لا توجد حسابات مفعّلة.</span>'}</div>
+      <div class="row" style="margin-top:10px"><button class="btn primary" id="sae-save">حفظ</button><span class="hint" id="sae-n">${eds.size ? `المحددون الآن: ${eds.size}` : "الآن: كل الموجهين يعبّون"}</span></div></section>
+    <section class="panel"><h2>جداول المجموعات</h2><p class="hint" style="margin:0">ملفات وجداول كل مجموعة يعبّيها أعضاؤها فقط، وتحددين الأعضاء من صفحة <a href="#/groups">المجموعات</a>.</p></section>
+    <h2 style="margin-top:18px">ملفات شاركها الموجهون</h2>` + (files.length ? `<p class="hint">تظهر هنا أسماء الملفات المشتركة وأصحابها فقط، ولا يستطيع المشرف فتح محتواها. يمكنه إضافة أو إزالة من يصل إليها.</p>
     <div class="tbl-wrap"><table class="data"><tr><th>الملف</th><th>صاحبه</th><th></th></tr>${files.map((f) => `<tr data-id="${f.id}"><td>${esc(f.title)}</td><td>${esc(name(f.owner_id))}</td><td><button class="btn small" data-m>إدارة الوصول</button></td></tr>`).join("")}</table></div>`
-    : `<div class="empty">لا توجد ملفات مشتركة من الموجّهين.</div>`;
+    : `<div class="empty">لا توجد ملفات مشتركة من الموجّهين.</div>`);
+  $("#sae-save", out).onclick = async () => {
+    const ids = $$("#sae input:checked", out).map((c) => c.value);
+    try { await api.saveOption("shared_ach_editors", "من يعبّي ملف الإنجازات الشهرية المشترك", ids); await loadOptions();
+      $("#sae-n", out).textContent = ids.length ? `المحددون الآن: ${ids.length}` : "الآن: كل الموجهين يعبّون"; toast("تم الحفظ"); }
+    catch (e) { toast(e.message, "error"); }
+  };
   $$("[data-m]", out).forEach((b) => (b.onclick = async () => {
     const f = files.find((x) => x.id === b.closest("tr").dataset.id);
     const shares = await api.shares(f.id); const has = new Set(shares.map((s) => s.user_id));

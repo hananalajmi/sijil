@@ -58,6 +58,9 @@ export async function refreshPeople() {
   state.schools = s.sort((a, b) => a.title.localeCompare(b.title, "ar"));
   state.teachers = t.sort((a, b) => a.title.localeCompare(b.title, "ar"));
 }
+// من يعبّي ملف الإنجازات الشهرية المشترك: يحدده المشرف (القائمة فارغة = كل الموجهين)
+export const sharedEditors = () => (state.options?.shared_ach_editors?.items || []).filter((x) => typeof x === "string");
+export const canFillShared = () => state.profile?.role === "admin" || !sharedEditors().length || sharedEditors().includes(state.profile?.id);
 export const schoolById = (id) => state.schools.find((s) => s.id === id);
 export const teacherById = (id) => state.teachers.find((t) => t.id === id);
 export function setYear(y) { state.year = y; try { localStorage.setItem("sijil.year", y); } catch (_) {} }

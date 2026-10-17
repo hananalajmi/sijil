@@ -1,7 +1,7 @@
 // الإنجازات الشهرية المشتركة — «إنجازات التوجيه الفني للعلوم» (ملف واحد لكل شهر يعدّله كل الموجهين)
 // كل بند وكل صف قابل للتعديل من أي موجه؛ تُدمج التعديلات المتزامنة تلقائياً، ويُسجَّل من عدّل في سجل العمليات.
 import { api } from "../api.js";
-import { state, G, fileUrl } from "../store.js";
+import { state, G, fileUrl, canFillShared } from "../store.js";
 import { esc, $, $$, today, fmtDate, academicYearOf, MONTHS_AR, toast, modal, shrinkImage, confirmBox } from "../ui.js";
 import { recordPage, go } from "../kit.js";
 import { SHARED_ACH, FIRST_SUPERVISOR } from "../templates.js";
@@ -30,6 +30,7 @@ export default async function (main, { id, params }) {
     const month = params.month || today().slice(0, 7);
     const ex = (await api.list({ kind: KIND })).find((r) => r.data?.month === month);
     if (ex) { location.replace(`#/monthly-ach/${ex.id}`); return; }
+    if (!canFillShared()) { main.innerHTML = `<div class="container"><div class="empty"><h2>لا يوجد ملف لهذا الشهر بعد</h2><p>إنشاء ملف الإنجازات المشترك وتعبئته لمن يحددهم المشرف فقط.</p><p><a href="#/monthly-ach">العودة للقائمة</a></p></div></div>`; return; }
     try {
       rec = await api.create({ kind: KIND, title: `إنجازات ${mLabel(month)}`, record_date: month + "-01", academic_year: academicYearOf(month + "-01"), data: emptySharedData(month) });
     } catch (e) { // أنشأته زميلة في اللحظة نفسها
@@ -68,7 +69,7 @@ export default async function (main, { id, params }) {
 
     body.innerHTML = `
       <section class="panel sa-top"><div class="row" style="flex-wrap:wrap;gap:10px;align-items:center">
-        <span class="pill acc">ملف مشترك بين كل الموجهين</span><b>شهر ${esc(mLabel(d.month))}</b>
+        <span class="pill acc">ملف مشترك بين الموجهين</span>${canFillShared() ? "" : '<span class="pill">للاطلاع فقط</span>'}<b>شهر ${esc(mLabel(d.month))}</b>
         <span class="hint">أي تعديل يظهر للجميع، وتُدمج التعديلات المتزامنة تلقائياً. سجل العمليات يبيّن من عدّل ومتى.</span></div>
         <div class="form" style="margin-top:12px">
           <div class="f"><label for="sa-stage">المرحلة</label><input id="sa-stage" data-path="stage" value="${esc(d.stage || "")}"></div>
@@ -83,6 +84,14 @@ export default async function (main, { id, params }) {
           : `<h3 class="sa-sub">${esc(p.head)}${p.note ? ` <small class="sa-note">${esc(p.note)}</small>` : ""}</h3>${tableEditor(p)}`).join('<div class="sa-gap"></div>')}</section>`).join("")}
       <datalist id="sa-names">${[...new Set(colleagues)].map((n) => `<option value="${esc(n)}">`).join("")}</datalist>`;
 
+    if (!canFillShared()) { // غير محدد من المشرف: يقرأ الملف ولا يعدّله
+      $(".sa-top", body).insertAdjacentHTML("afterbegin", `<div class="alert" style="margin-bottom:10px"><span>تعبئة هذا الملف لمن يحددهم المشرف. يمكنك الاطلاع والطباعة فقط.</span></div>`);
+      $$("input, select, textarea", body).forEach((x) => { x.disabled = true; });
+      $$("[data-addb], [data-addr], [data-del], .sa-x, .sa-add, #mine, #seed", body).forEach((x) => x.remove());
+      const hideBar = () => document.querySelectorAll("#approve, #unapprove, #trash").forEach((x) => { x.hidden = true; x.style.display = "none"; });
+      hideBar(); setTimeout(hideBar, 0); setTimeout(hideBar, 300);
+      return;
+    }
     if (approved) return;
     // الحقول العامة
     $$("[data-path='stage'], [data-path='observer_name']", body).forEach((el) => el.addEventListener("input", () => ed.change((x) => (x.data[el.dataset.path] = el.value))));
@@ -199,8 +208,8 @@ async function addMine(ed) {
 async function list(main) {
   const all = (await api.list({ kind: KIND })).sort((a, b) => (b.data?.month || "").localeCompare(a.data?.month || ""));
   const cur = today().slice(0, 7);
-  main.innerHTML = `<div class="container"><div class="page-head"><div><h1>الإنجازات الشهرية</h1><div class="sub">ملف «إنجازات التوجيه الفني للعلوم» مشترك بين كل الموجهين: ملف واحد لكل شهر يعدّله الجميع</div></div>
-      <div class="row"><input type="month" id="m" value="${cur}" aria-label="الشهر"><button class="btn primary" id="open">فتح / إنشاء ملف الشهر</button></div></div>
+  main.innerHTML = `<div class="container"><div class="page-head"><div><h1>الإنجازات الشهرية</h1><div class="sub">ملف «إنجازات التوجيه الفني للعلوم» مشترك: ملف واحد لكل شهر ${canFillShared() ? "تعبّينه مع زميلاتك وزملائك المحددين" : "— تعبئته لمن يحددهم المشرف، ويمكنك الاطلاع عليه وطباعته"}</div></div>
+      <div class="row"><input type="month" id="m" value="${cur}" aria-label="الشهر"><button class="btn primary" id="open">${canFillShared() ? "فتح / إنشاء ملف الشهر" : "فتح ملف الشهر"}</button></div></div>
     ${all.length ? `<div class="list">${all.map((r) => `<a class="item" href="#/monthly-ach/${r.id}"><span class="t">${esc(mLabel(r.data?.month))}</span>
       <span class="m">آخر تعديل ${esc(new Date(r.updated_at).toLocaleString("ar-KW"))}</span><span class="s">${r.status === "approved" ? '<span class="pill ok">معتمد</span>' : '<span class="pill">مسودة</span>'}</span></a>`).join("")}</div>`
       : `<div class="empty">لا توجد ملفات بعد. اختاري الشهر ثم «فتح / إنشاء ملف الشهر».</div>`}</div>`;

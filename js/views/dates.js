@@ -1,6 +1,6 @@
 // التواريخ الهامة (إجازات، اجتماعات، دورات) — تُعبأ تلقائياً في الخطة الشهرية والإنجازات الشهرية
 import { api } from "../api.js";
-import { state, opts, officialDates } from "../store.js";
+import { state, opts, officialDates, schoolById } from "../store.js";
 import { today, fmtDate, academicYearOf, esc, $, $$, DAYS, MONTHS_AR, pad2, addDays, modal, toast } from "../ui.js";
 import { field, bindFields, recordPage, go } from "../kit.js";
 import { listView } from "./_list.js";
@@ -32,9 +32,11 @@ const TYPE_CLS = { "إجازة": "bad", "اجتماع": "acc", "دورة": "ok",
 async function calendar(main, params) {
   const month = params.month || today().slice(0, 7);
   const [y, m] = month.split("-").map(Number);
-  const all = await api.list({ kind: "important_date" });
+  const [all, svs] = await Promise.all([api.list({ kind: "important_date" }), api.list({ kind: "school_visit" }).catch(() => [])]);
   const first = `${month}-01`, last = `${month}-${pad2(new Date(y, m, 0).getDate())}`;
   const inMonth = all.filter((d) => d.record_date && d.record_date <= last && (d.data.end_date || d.record_date) >= first);
+  // زيارات الموجه للمدارس: تظهر باسم المدرسة في يومها
+  const visits = svs.filter((v) => v.record_date && v.record_date >= first && v.record_date <= last && !v.deleted_at);
   const pinned = officialDates().filter((o) => o.from <= last && o.to >= first);
   const prev = m === 1 ? `${y - 1}-12` : `${y}-${pad2(m - 1)}`, next = m === 12 ? `${y + 1}-01` : `${y}-${pad2(m + 1)}`;
   const startDow = new Date(y, m - 1, 1).getDay(), days = new Date(y, m, 0).getDate();
@@ -50,10 +52,11 @@ async function calendar(main, params) {
         const iso = `${month}-${pad2(d)}`;
         const evs = inMonth.filter((e) => e.record_date <= iso && (e.data.end_date || e.record_date) >= iso);
         const pins = pinned.filter((o) => o.from <= iso && o.to >= iso);
+        const vis = visits.filter((v) => v.record_date === iso);
         return `<div class="cal-d ${iso === t ? "today" : ""} ${k % 7 >= 5 ? "we" : ""} ${pins.some((o) => o.holiday) ? "hol" : ""}" data-date="${iso}" tabindex="0" role="button" aria-label="إضافة على ${d} ${MONTHS_AR[m - 1]}">
-          <span class="cal-n">${d}</span>${pins.map((o) => `<span class="cal-ev cal-pin ${o.holiday ? "hol" : ""} ${o.subject ? "subj" : ""}" data-pin="${o.id}" role="button" tabindex="0" title="${esc(o.details || o.title)}">${o.subject ? "⚗️" : "📌"} ${esc(o.title)}</span>`).join("")}${evs.map((e) => `<a class="cal-ev pill ${TYPE_CLS[e.data.type] ?? ""}" href="#/dates/${e.id}" title="${esc(e.data.type || "")}">${esc(e.title || e.data.type)}</a>`).join("")}</div>`;
+          <span class="cal-n">${d}</span>${pins.map((o) => `<span class="cal-ev cal-pin ${o.holiday ? "hol" : ""} ${o.subject ? "subj" : ""}" data-pin="${o.id}" role="button" tabindex="0" title="${esc(o.details || o.title)}">${o.subject ? "⚗️" : "📌"} ${esc(o.title)}</span>`).join("")}${evs.map((e) => `<a class="cal-ev pill ${TYPE_CLS[e.data.type] ?? ""}" href="#/dates/${e.id}" title="${esc(e.data.type || "")}">${esc(e.title || e.data.type)}</a>`).join("")}${vis.map((v) => `<a class="cal-ev cal-visit" href="#/school-visits/${v.id}" title="زيارة مدرسة${v.data?.visit_type ? " — " + esc(v.data.visit_type) : ""}">🏫 ${esc(schoolById(v.school_id)?.title || "زيارة مدرسة")}</a>`).join("")}</div>`;
       }).join("")}</div>
-    <p class="hint">📌 التواريخ الثابتة من التقويم الدراسي و⚗️ تواريخ مادتك (الإنماء المهني والتدريب الميداني) تظهر تلقائياً ولا تُحذف، والعطل منها تُعلَّم تلقائياً في الخطة الشهرية. ولكل فعالية أضفتِها: اضغطي عليها لتعديلها أو حذفها.</p></div>`;
+    <p class="hint">🏫 زياراتك للمدارس تظهر تلقائياً باسم المدرسة في يوم الزيارة (اضغطي عليها لفتح الزيارة). 📌 التواريخ الثابتة من التقويم الدراسي و⚗️ تواريخ مادتك (الإنماء المهني والتدريب الميداني) تظهر تلقائياً ولا تُحذف، والعطل منها تُعلَّم تلقائياً في الخطة الشهرية. ولكل فعالية أضفتِها: اضغطي عليها لتعديلها أو حذفها.</p></div>`;
   $$(".cal-d[data-date]", main).forEach((c) => {
     const open = async (e) => {
       if (e.target.closest("a.cal-ev")) return;
