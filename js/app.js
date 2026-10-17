@@ -133,7 +133,7 @@ function authForm(host, { msg = "", username = "", passwordOnly = false, onDone 
       <div class="err" id="err">${esc(msg)}</div>
       <button class="btn primary" type="submit" id="go">دخول</button>
       <button class="btn ghost in" type="button" id="forgot">نسيت كلمة المرور</button>
-      <p class="hint up" hidden>بعد إنشاء الحساب يفعّله المشرف، ثم يمكنك الدخول. أول حساب يُنشأ في النظام يصبح هو المشرف.</p>
+      <p class="hint up" hidden>بعد إنشاء الحساب تدخلين مباشرة (أو بعد تفعيل المشرف إن كان التفعيل يدوياً). وبعدها يفتح الموقع مباشرة على هذا الجهاز دون تسجيل دخول.</p>
     </form>`;
   const q = (x) => host.querySelector(x), qa = (x) => [...host.querySelectorAll(x)];
   let mode = "in";
