@@ -1,7 +1,8 @@
 // الإنجازات الشهرية المشتركة — «إنجازات التوجيه الفني للعلوم» (ملف واحد لكل شهر يعدّله كل الموجهين)
 // كل بند وكل صف قابل للتعديل من أي موجه؛ تُدمج التعديلات المتزامنة تلقائياً، ويُسجَّل من عدّل في سجل العمليات.
 import { api } from "../api.js";
-import { state, G, fileUrl, canFillShared } from "../store.js";
+import { state, G, fileUrl, canFillShared, inSection, canFillSection, isSectionSup } from "../store.js";
+import { sectionMembersModal } from "./sections.js";
 import { esc, $, $$, today, fmtDate, academicYearOf, MONTHS_AR, toast, modal, shrinkImage, confirmBox } from "../ui.js";
 import { recordPage, go } from "../kit.js";
 import { SHARED_ACH, FIRST_SUPERVISOR } from "../templates.js";
@@ -28,13 +29,17 @@ export default async function (main, { id, params }) {
   let rec;
   if (id === "new") {
     const month = params.month || today().slice(0, 7);
-    const ex = (await api.list({ kind: KIND })).find((r) => r.data?.month === month);
+    const secs = await api.sections().catch(() => []);
+    const sec = params.section ? secs.find((x) => x.id === params.section) : null;
+    if (params.section && !sec) { main.innerHTML = `<div class="container"><div class="empty">القسم غير موجود</div></div>`; return; }
+    const ex = (await api.list({ kind: KIND })).find((r) => r.data?.month === month && (r.section_id || null) === (sec?.id || null));
     if (ex) { location.replace(`#/monthly-ach/${ex.id}`); return; }
-    if (!canFillShared()) { main.innerHTML = `<div class="container"><div class="empty"><h2>لا يوجد ملف لهذا الشهر بعد</h2><p>إنشاء ملف الإنجازات المشترك وتعبئته لمن يحددهم المشرف فقط.</p><p><a href="#/monthly-ach">العودة للقائمة</a></p></div></div>`; return; }
+    if (sec ? !canFillSection(sec) : !canFillShared()) { main.innerHTML = `<div class="container"><div class="empty"><h2>لا يوجد ملف لهذا الشهر بعد</h2><p>إنشاء ملف الإنجازات المشترك وتعبئته لمن يحددهم المشرف فقط.</p><p><a href="#/monthly-ach">العودة للقائمة</a></p></div></div>`; return; }
     try {
-      rec = await api.create({ kind: KIND, title: `إنجازات ${mLabel(month)}`, record_date: month + "-01", academic_year: academicYearOf(month + "-01"), data: emptySharedData(month) });
+      const data = emptySharedData(month); if (sec) { data.section_name = sec.name; if (sec.stage) data.stage = sec.stage; }
+      rec = await api.create({ kind: KIND, title: `إنجازات ${mLabel(month)}${sec ? " — " + sec.name : ""}`, record_date: month + "-01", academic_year: academicYearOf(month + "-01"), data, ...(sec ? { section_id: sec.id } : {}) });
     } catch (e) { // أنشأته زميلة في اللحظة نفسها
-      const again = (await api.list({ kind: KIND })).find((r) => r.data?.month === month);
+      const again = (await api.list({ kind: KIND })).find((r) => r.data?.month === month && (r.section_id || null) === (sec?.id || null));
       if (again) { location.replace(`#/monthly-ach/${again.id}`); return; }
       throw e;
     }
@@ -42,6 +47,8 @@ export default async function (main, { id, params }) {
   } else rec = await api.get(id);
   if (!rec) { main.innerHTML = `<div class="container"><div class="empty">الملف غير موجود</div></div>`; return; }
 
+  const recSec = rec.section_id ? (await api.sections().catch(() => [])).find((x) => x.id === rec.section_id) : null;
+  const canFill = rec.section_id ? canFillSection(recSec) : canFillShared();
   const colleagues = [myName(), ...((await api.rpc("list_colleagues").catch(() => [])) || []).map((p) => p.full_name)].filter(Boolean);
 
   const ed = await recordPage(main, { rec, title: "الإنجازات الشهرية — إنجازات التوجيه الفني للعلوم", merge: true, render(body, ed, approved) {
@@ -69,7 +76,7 @@ export default async function (main, { id, params }) {
 
     body.innerHTML = `
       <section class="panel sa-top"><div class="row" style="flex-wrap:wrap;gap:10px;align-items:center">
-        <span class="pill acc">ملف مشترك بين الموجهين</span>${canFillShared() ? "" : '<span class="pill">للاطلاع فقط</span>'}<b>شهر ${esc(mLabel(d.month))}</b>
+        <span class="pill acc">${recSec ? "ملف قسم: " + esc(recSec.name) : "ملف مشترك بين الموجهين"}</span>${canFill ? "" : '<span class="pill">للاطلاع فقط</span>'}<b>شهر ${esc(mLabel(d.month))}</b>
         <span class="hint">أي تعديل يظهر للجميع، وتُدمج التعديلات المتزامنة تلقائياً. سجل العمليات يبيّن من عدّل ومتى.</span></div>
         <div class="form" style="margin-top:12px">
           <div class="f"><label for="sa-stage">المرحلة</label><input id="sa-stage" data-path="stage" value="${esc(d.stage || "")}"></div>
@@ -84,8 +91,8 @@ export default async function (main, { id, params }) {
           : `<h3 class="sa-sub">${esc(p.head)}${p.note ? ` <small class="sa-note">${esc(p.note)}</small>` : ""}</h3>${tableEditor(p)}`).join('<div class="sa-gap"></div>')}</section>`).join("")}
       <datalist id="sa-names">${[...new Set(colleagues)].map((n) => `<option value="${esc(n)}">`).join("")}</datalist>`;
 
-    if (!canFillShared()) { // غير محدد من المشرف: يقرأ الملف ولا يعدّله
-      $(".sa-top", body).insertAdjacentHTML("afterbegin", `<div class="alert" style="margin-bottom:10px"><span>تعبئة هذا الملف لمن يحددهم المشرف. يمكنك الاطلاع والطباعة فقط.</span></div>`);
+    if (!canFill) { // غير محدد من المشرف: يقرأ الملف ولا يعدّله
+      $(".sa-top", body).insertAdjacentHTML("afterbegin", `<div class="alert" style="margin-bottom:10px"><span>تعبئة هذا الملف لمن يحددهم ${recSec ? "مشرف القسم" : "المشرف"}. يمكنك الاطلاع والطباعة فقط.</span></div>`);
       $$("input, select, textarea", body).forEach((x) => { x.disabled = true; });
       $$("[data-addb], [data-addr], [data-del], .sa-x, .sa-add, #mine, #seed", body).forEach((x) => x.remove());
       const hideBar = () => document.querySelectorAll("#approve, #unapprove, #trash").forEach((x) => { x.hidden = true; x.style.display = "none"; });
@@ -204,14 +211,28 @@ async function addMine(ed) {
   toast(`أُضيف ${n} من إنجازاتك`);
 }
 
-/* ---------------- قائمة الأشهر ---------------- */
+/* ---------------- قائمة الأشهر (لكل قسم ملفه) ---------------- */
 async function list(main) {
-  const all = (await api.list({ kind: KIND })).sort((a, b) => (b.data?.month || "").localeCompare(a.data?.month || ""));
+  const [allRecs, secsAll] = await Promise.all([api.list({ kind: KIND }), api.sections().catch(() => [])]);
+  const secs = secsAll.filter(inSection);
+  let pref = ""; try { pref = localStorage.getItem("sijil.sa.section") || ""; } catch (_) {}
   const cur = today().slice(0, 7);
-  main.innerHTML = `<div class="container"><div class="page-head"><div><h1>الإنجازات الشهرية</h1><div class="sub">ملف «إنجازات التوجيه الفني للعلوم» مشترك: ملف واحد لكل شهر ${canFillShared() ? "تعبّينه مع زميلاتك وزملائك المحددين" : "— تعبئته لمن يحددهم المشرف، ويمكنك الاطلاع عليه وطباعته"}</div></div>
-      <div class="row"><input type="month" id="m" value="${cur}" aria-label="الشهر"><button class="btn primary" id="open">${canFillShared() ? "فتح / إنشاء ملف الشهر" : "فتح ملف الشهر"}</button></div></div>
-    ${all.length ? `<div class="list">${all.map((r) => `<a class="item" href="#/monthly-ach/${r.id}"><span class="t">${esc(mLabel(r.data?.month))}</span>
+  const paint = (sid) => {
+    try { localStorage.setItem("sijil.sa.section", sid); } catch (_) {}
+    const sec = secs.find((x) => x.id === sid) || null;
+    const fill = sec ? canFillSection(sec) : canFillShared();
+    const all = allRecs.filter((r) => (r.section_id || "") === (sec?.id || "")).sort((a, b) => (b.data?.month || "").localeCompare(a.data?.month || ""));
+    const supBtn = sec && (isSectionSup(sec) || state.profile?.role === "admin") ? `<button class="btn" id="sec-m">أعضاء القسم ومن يعبّي</button>` : "";
+    main.innerHTML = `<div class="container"><div class="page-head"><div><h1>الإنجازات الشهرية</h1><div class="sub">ملف «إنجازات التوجيه الفني للعلوم» مشترك: ملف واحد لكل شهر ${fill ? (sec ? "لقسم " + esc(sec.name) + "، تعبّينه مع المحددين من القسم" : "تعبّينه مع زميلاتك وزملائك المحددين") : `— تعبئته لمن يحددهم ${sec ? "مشرف القسم" : "المشرف"}، ويمكنك الاطلاع عليه وطباعته`}</div></div>
+      <div class="row">${secs.length ? `<select id="sec" aria-label="القسم"><option value="">عام — كل الموجهين</option>${secs.map((x) => `<option value="${x.id}" ${x.id === sid ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select>` : ""}
+        <input type="month" id="m" value="${cur}" aria-label="الشهر"><button class="btn primary" id="open">${fill ? "فتح / إنشاء ملف الشهر" : "فتح ملف الشهر"}</button>${supBtn}</div></div>
+    ${all.length ? `<div class="list">${all.map((r) => `<a class="item" href="#/monthly-ach/${r.id}"><span class="t">${esc(mLabel(r.data?.month))}${sec ? ` <small class="hint">${esc(sec.name)}</small>` : ""}</span>
       <span class="m">آخر تعديل ${esc(new Date(r.updated_at).toLocaleString("ar-KW"))}</span><span class="s">${r.status === "approved" ? '<span class="pill ok">معتمد</span>' : '<span class="pill">مسودة</span>'}</span></a>`).join("")}</div>`
       : `<div class="empty">لا توجد ملفات بعد. اختاري الشهر ثم «فتح / إنشاء ملف الشهر».</div>`}</div>`;
-  $("#open", main).onclick = () => { const m = $("#m", main).value; if (!m) return; const ex = all.find((r) => r.data?.month === m); go(ex ? `#/monthly-ach/${ex.id}` : `#/monthly-ach/new?month=${m}`); };
+    const sel = $("#sec", main); if (sel) sel.onchange = () => paint(sel.value);
+    const sm = $("#sec-m", main); if (sm) sm.onclick = async () => { if (await sectionMembersModal(sec)) { const fresh = (await api.sections()).find((x) => x.id === sec.id); if (fresh) Object.assign(sec, fresh); paint(sec.id); } };
+    $("#open", main).onclick = () => { const m = $("#m", main).value; if (!m) return; const ex = all.find((r) => r.data?.month === m); go(ex ? `#/monthly-ach/${ex.id}` : `#/monthly-ach/new?month=${m}${sec ? "&section=" + sec.id : ""}`); };
+  };
+  const mine = secs.filter((x) => isSectionSup(x) || (x.members || []).includes(state.profile?.id));
+  paint(secs.some((x) => x.id === pref) ? pref : (mine[0]?.id || ""));
 }

@@ -224,6 +224,11 @@ function supabaseAdapter() {
     async groupMembers(id) { return raw("/rest/v1/rpc/group_member_names", { method: "POST", body: { p_group: id } }); },
     async addMember(groupId, userId) { await rest("group_members", { method: "POST", body: { group_id: groupId, user_id: userId } }); },
     async removeMember(groupId, userId) { await rest(`group_members?group_id=eq.${groupId}&user_id=eq.${userId}`, { method: "DELETE" }); },
+    // ---- أقسام التوجيه (لكل قسم مشرف وأعضاء وملف إنجازات)
+    async sections() { try { return await rest("sections?select=*&order=created_at.asc"); } catch (e) { if (/sections|relation|schema cache|404/i.test(e.message || "")) return []; throw e; } },
+    async createSection(body) { const r = await rest("sections", { method: "POST", body, headers: { Prefer: "return=representation" } }); return r[0]; },
+    async updateSection(id, patch) { const r = await rest(`sections?id=eq.${id}`, { method: "PATCH", body: patch, headers: { Prefer: "return=representation" } }); if (!r.length) throw new ApiError("ليست لديك صلاحية تعديل هذا القسم", "forbidden", 403); return r[0]; },
+    async deleteSection(id) { await rest(`sections?id=eq.${id}`, { method: "DELETE" }); },
 
     // ---- النماذج: صندوق ما أرسله المكلَّفون (لصاحبة النموذج فقط)، والتعبئة العامة برابط
     async formInbox(formId) { return rest(`form_inbox?form_id=eq.${formId}&select=*&order=created_at.asc`); },
@@ -242,7 +247,7 @@ function demoAdapter() {
   let db;
   try { db = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (_) {}
   db = db || { records: [], files: [], options: [], audit: [], blobs: {}, profile: null };
-  db.groups ||= []; db.members ||= []; db.inbox ||= [];
+  db.groups ||= []; db.members ||= []; db.inbox ||= []; db.sections ||= [];
   const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (_) {} };
   const listeners = new Set();
   let session = db.profile ? { user: { id: uid } } : null;
@@ -287,7 +292,7 @@ function demoAdapter() {
       const n = { id: rec.id || crypto.randomUUID(), owner_id: uid, kind: rec.kind, academic_year: rec.academic_year || null, term: rec.term || null,
         record_date: rec.record_date || null, school_id: rec.school_id || null, teacher_id: rec.teacher_id || null, title: rec.title || "",
         data: rec.data || {}, status: rec.status || "draft", snapshot: rec.snapshot || null, deleted_at: rec.deleted_at || null, group_id: rec.group_id || null,
-        version: 1, created_at: now(), updated_at: now(), approved_at: null };
+        section_id: rec.section_id || null, version: 1, created_at: now(), updated_at: now(), approved_at: null };
       if (db.records.some((x) => x.id === n.id)) fail("duplicate key value");
       if ((n.kind === "group_sheet") !== !!n.group_id) fail("جدول المجموعة يجب أن يرتبط بمجموعة");
       if (n.status === "approved") { if (!n.snapshot) fail("لا يمكن اعتماد تقرير بدون نسخة ثابتة"); n.approved_at = now(); }
@@ -301,6 +306,7 @@ function demoAdapter() {
       if (!o || o.version !== version) throw new ApiError("تم تعديل هذا السجل من جهاز أو نافذة أخرى", "conflict", 409);
       const n = { ...o, ...clone(patch) };
       if (n.group_id !== o.group_id) fail("لا يمكن نقل الجدول إلى مجموعة أخرى");
+      if ((n.section_id || null) !== (o.section_id || null)) fail("لا يمكن نقل الملف إلى قسم آخر");
       const changed = (k) => JSON.stringify(n[k]) !== JSON.stringify(o[k]);
       let action = "تعديل";
       if (o.status === "approved") {
@@ -394,6 +400,10 @@ function demoAdapter() {
     async groupMembers(id) { return db.members.filter((m) => m.group_id === id).map((m) => ({ id: m.user_id, username: db.profile.username, full_name: db.profile.full_name })); },
     async addMember(groupId, userId) { if (!db.members.some((m) => m.group_id === groupId && m.user_id === userId)) db.members.push({ group_id: groupId, user_id: userId }); persist(); },
     async removeMember(groupId, userId) { db.members = db.members.filter((m) => !(m.group_id === groupId && m.user_id === userId)); persist(); },
+    async sections() { return clone(db.sections); },
+    async createSection(body) { if (!String(body.name || "").trim()) fail("اكتبي اسم القسم"); const x = { id: crypto.randomUUID(), members: [], editors: [], supervisor_id: null, created_at: now(), ...body }; db.sections.push(x); persist(); return clone(x); },
+    async updateSection(id, patch) { const x = db.sections.find((y) => y.id === id); if (!x) fail("القسم غير موجود"); Object.assign(x, clone(patch)); persist(); return clone(x); },
+    async deleteSection(id) { if (db.records.some((r) => r.section_id === id)) fail("لا يمكن حذف قسم فيه ملفات"); db.sections = db.sections.filter((y) => y.id !== id); persist(); },
     // النماذج (في الوضع التجريبي: الرابط يعمل في هذا المتصفح فقط)
     async formInbox(formId) { return clone(db.inbox.filter((x) => x.form_id === formId)); },
     async clearInbox(ids) { db.inbox = db.inbox.filter((x) => !ids.includes(x.id)); persist(); },

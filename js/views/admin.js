@@ -10,10 +10,11 @@ export default async function (main, { params }) {
   if (state.profile.role !== "admin") { main.innerHTML = `<div class="container"><div class="empty">هذه الصفحة للمشرف فقط.</div></div>`; return; }
   const tab = params.tab || "users";
   main.innerHTML = `<div class="container"><div class="page-head"><div><h1>إدارة الحسابات والصلاحيات</h1><div class="sub">المشرف يدير الصلاحيات فقط، ولا يطّلع على سجلات الموجّهين</div></div></div>
-    <div class="toolbar">${[["users", "الحسابات"], ["options", "القوائم المنسدلة"], ["files", "صلاحيات الملفات المشتركة"]].map(([k, l]) => `<a class="btn ${k === tab ? "primary" : ""}" href="#/admin?tab=${k}">${l}</a>`).join("")}</div><div id="out"></div></div>`;
+    <div class="toolbar">${[["users", "الحسابات"], ["options", "القوائم المنسدلة"], ["sections", "أقسام التوجيه"], ["files", "صلاحيات الملفات المشتركة"]].map(([k, l]) => `<a class="btn ${k === tab ? "primary" : ""}" href="#/admin?tab=${k}">${l}</a>`).join("")}</div><div id="out"></div></div>`;
   const out = $("#out", main);
   if (tab === "users") return users(out);
   if (tab === "options") return options(out, params);
+  if (tab === "sections") { const { sectionsAdmin } = await import("./sections.js"); return sectionsAdmin(out); }
   return sharedFiles(out);
 }
 
@@ -70,8 +71,8 @@ async function sharedFiles(out) {
   const name = (id) => people.find((p) => p.id === id)?.full_name || "—";
   await loadOptions();
   const eds = new Set(sharedEditors()), guides = people.filter((p) => p.approved);
-  out.innerHTML = `<section class="panel" id="sae"><h2>من يعبّي ملف الإنجازات الشهرية المشترك</h2>
-      <p class="hint" style="margin-top:0">حدّدي الموجهين المسؤولين عن التعبئة (مثلاً موجه من كل مرحلة). غير المحددين يطّلعون على الملف ويطبعونه فقط. إذا لم تحددي أحداً يعبّيه كل الموجهين المفعّلين.</p>
+  out.innerHTML = `<section class="panel" id="sae"><h2>من يعبّي ملف الإنجازات الشهرية العام</h2>
+      <p class="hint" style="margin-top:0">حدّدي الموجهين المسؤولين عن التعبئة (مثلاً موجه من كل مرحلة). غير المحددين يطّلعون على الملف ويطبعونه فقط. إذا لم تحددي أحداً يعبّيه كل الموجهين المفعّلين. ولكل قسم ملفه الخاص ومشرفه من تبويب <a href="#/admin?tab=sections">أقسام التوجيه</a>.</p>
       <div class="checks">${guides.map((p) => `<label><input type="checkbox" value="${p.id}" ${eds.has(p.id) ? "checked" : ""}>${esc(p.full_name || p.username)}</label>`).join("") || '<span class="hint">لا توجد حسابات مفعّلة.</span>'}</div>
       <div class="row" style="margin-top:10px"><button class="btn primary" id="sae-save">حفظ</button><span class="hint" id="sae-n">${eds.size ? `المحددون الآن: ${eds.size}` : "الآن: كل الموجهين يعبّون"}</span></div></section>
     <section class="panel"><h2>جداول المجموعات</h2><p class="hint" style="margin:0">ملفات وجداول كل مجموعة يعبّيها أعضاؤها فقط، وتحددين الأعضاء من صفحة <a href="#/groups">المجموعات</a>.</p></section>

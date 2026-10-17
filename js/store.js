@@ -61,6 +61,11 @@ export async function refreshPeople() {
 // من يعبّي ملف الإنجازات الشهرية المشترك: يحدده المشرف (القائمة فارغة = كل الموجهين)
 export const sharedEditors = () => (state.options?.shared_ach_editors?.items || []).filter((x) => typeof x === "string");
 export const canFillShared = () => state.profile?.role === "admin" || !sharedEditors().length || sharedEditors().includes(state.profile?.id);
+// أقسام التوجيه: مشرف القسم وأعضاؤه ومن يعبّي ملفه
+export const SECTION_DEFAULTS = [["ابتدائي", "ابتدائي", ""], ["متوسط", "متوسط", ""], ["ثانوي — كيمياء", "ثانوي", "كيمياء"], ["ثانوي — فيزياء", "ثانوي", "فيزياء"], ["ثانوي — أحياء", "ثانوي", "أحياء"], ["ثانوي — جيولوجيا", "ثانوي", "جيولوجيا"], ["المحضرات", "", ""]];
+export const isSectionSup = (s) => !!s && s.supervisor_id === state.profile?.id;
+export const inSection = (s) => !!s && (state.profile?.role === "admin" || isSectionSup(s) || (s.members || []).includes(state.profile?.id));
+export const canFillSection = (s) => !!s && (state.profile?.role === "admin" || isSectionSup(s) || ((s.members || []).includes(state.profile?.id) && (!(s.editors || []).length || s.editors.includes(state.profile?.id))));
 export const schoolById = (id) => state.schools.find((s) => s.id === id);
 export const teacherById = (id) => state.teachers.find((t) => t.id === id);
 export function setYear(y) { state.year = y; try { localStorage.setItem("sijil.year", y); } catch (_) {} }
