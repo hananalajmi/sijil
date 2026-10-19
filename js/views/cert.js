@@ -7,7 +7,7 @@ import { field, bindFields, recordPage, schoolOptions } from "../kit.js";
 import { FORMS, FIRST_SUPERVISOR } from "../templates.js";
 import { printOptionsPanel, bindPrintOptions } from "./teacherVisit.js";
 import { CERT_TYPE, RUQAA_MAX, titleStyleOf } from "../report/builders4.js";
-import { goldDefaults, goldSVG, goldResources } from "../report/certGolden.js";
+import { goldDefaults, goldSVG, goldResources, GOLD_BGS, TITLE_COLORS } from "../report/certGolden.js";
 import { modal, toast } from "../ui.js";
 
 const C = FORMS.cert;
@@ -69,9 +69,12 @@ function goldenEditor(body, ed, designSel) {
       <p class="hint">الخطوط محفوظة داخل الموقع وتُضمَّن في ملف PDF. أماكن الشعارين والعنوان والتوقيع ثابتة في كل الشهادات.</p></section>
     <section class="panel"><h2>التصميم والشعاران</h2><div class="form">
       <div class="f"><label for="ct-design">تصميم الشهادة</label>${designSel}</div>
+      <div class="f"><label for="cg-bg">الخلفية</label><select id="cg-bg">${Object.entries(GOLD_BGS).map(([k, b]) => opt(k, d.bg || "frame", b.label)).join("")}</select></div>
       ${logoCtl("R", "الشعار الأيمن")}${logoCtl("L", "الشعار الأيسر")}</div></section>
     <section class="panel"><h2>العنوان والسطران التعريفيان</h2><div class="form" style="grid-template-columns:1fr">
       ${field({ label: "عنوان الشهادة (خط زخرفي)", key: "titleText", value: d.titleText || "شكر وتقدير" })}
+      <div class="form" style="margin:0"><div class="f"><label for="cg-art">شكل العنوان</label><select id="cg-art">${opt("art", d.titleArt || "art", "الخط الديواني المرسوم (لعبارة «شكر وتقدير»)")}${opt("font", d.titleArt, "خط الرقعة (لأي عنوان)")}</select></div>
+        <div class="f"><label for="cg-tc">لون العنوان</label><select id="cg-tc">${Object.entries(TITLE_COLORS).map(([k, l]) => opt(k, d.titleColor || "auto", l)).join("")}</select></div></div>
       ${field({ label: "السطر التعريفي الأول (اختياري)", key: "line1", value: d.line1 || "", placeholder: "اتركيه فارغاً أو اكتبي ما تريدين" })}
       ${field({ label: "السطر التعريفي الثاني (اختياري)", key: "line2", value: d.line2 || "" })}</div></section>
     <section class="panel"><h2>الجهة والمكرَّمة</h2><div class="form">
@@ -97,6 +100,12 @@ function goldenEditor(body, ed, designSel) {
   paint();
   const paintCount = () => { const n = certNames(ed.rec.data).length; $("#ct-count", body).textContent = n ? `سيُطبع ${n} ${n === 1 ? "شهادة" : n === 2 ? "شهادتان" : n <= 10 ? "شهادات" : "شهادة"} بحجم A4 أفقي (شهادة لكل اسم). المعاينة تعرض الاسم الأول.` : "بدون اسم تُطبع شهادة بسطر فارغ للكتابة باليد."; };
   paintCount();
+  $("#cg-bg", body).onchange = (e) => { const v = e.target.value, P = GOLD_BGS[v];
+    ed.change((x) => { const prev = GOLD_BGS[x.data.bg || "frame"]; x.data.bg = v;
+      if (P.defLogoR && (x.data.gLogoR || "ministry") === "ministry") x.data.gLogoR = P.defLogoR; else if (!P.defLogoR && prev?.defLogoR && x.data.gLogoR === prev.defLogoR) x.data.gLogoR = "ministry"; });
+    $("#cg-R", body).value = ed.rec.data.gLogoR || ""; repaint(); };
+  $("#cg-art", body).onchange = (e) => { ed.change((x) => { x.data.titleArt = e.target.value; }); repaint(); };
+  $("#cg-tc", body).onchange = (e) => { ed.change((x) => { x.data.titleColor = e.target.value; }); repaint(); };
   $$("[data-side]", body).forEach((sel) => (sel.onchange = () => { const s = sel.dataset.side;
     if (sel.value === "custom" && !ed.rec.data["gLogo" + s + "_img"]) { $(`[data-up='${s}']`, body).click(); sel.value = ed.rec.data["gLogo" + s] || ""; return; }
     ed.change((x) => { x.data["gLogo" + s] = sel.value; }); repaint(); }));

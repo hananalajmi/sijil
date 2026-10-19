@@ -280,6 +280,7 @@ TEACHER_VISIT.sections.forEach((s) => s.items.forEach((label, i) => {
 
 // الشعارات الافتراضية المستخرجة من الملفات الرسمية المرفقة (قابلة للاستبدال من الإعدادات)
 export const LOGOS = {
+  seal_gold: { label: "ختم وزارة التربية الذهبي (من نموذج الشهادة)", src: "assets/logos/ministry-seal-gold.png" },
   emblem: { label: "شعار الوزارة (الواجهة الافتتاحية والصفحة الرئيسية)", src: "assets/logos/ministry-emblem.png" },
   ministry_hd: { label: "شعار وزارة التربية بدقة عالية (غلاف الإنجازات الشهرية)", src: "assets/logos/ministry-hd.png" },
   ministry: { label: "شعار وزارة التربية", src: "assets/logos/ministry-wide.png" },
@@ -315,7 +316,7 @@ export const FORMS = {
     prefixes: { f: ["الأستاذة", "المعلمة", "رئيسة القسم", "الطالبة", ""], m: ["الأستاذ", "المعلم", "رئيس القسم", "الطالب", ""] },
     designs: { golden: "الرسمية الذهبية (إطار ذهبي وزخارف)", waves: "أمواج كحلية وذهبية" },
     titleFonts: { ruqaa: "خط رقعة (مزخرف)", kufi: "خط كوفي", naskh: "خط نسخ (أميري)" },
-    logos: { ministry: ["ministry_hd", "شعار وزارة التربية"], seal: ["emblem", "ختم الوزارة الذهبي (الشعار داخل دائرة ذهبية)"], directorate: ["directorate", "الإدارة العامة لمنطقة الأحمدي — التوجيه الفني للعلوم"], science: ["science_guidance", "إدارة التوجيه الفني للعلوم"], new_kuwait: ["new_kuwait", "كويت جديدة"] },
+    logos: { ministry: ["ministry_hd", "شعار وزارة التربية"], seal: ["emblem", "ختم الوزارة الذهبي (الشعار داخل دائرة ذهبية)"], directorate: ["directorate", "الإدارة العامة لمنطقة الأحمدي — التوجيه الفني للعلوم"], science: ["science_guidance", "إدارة التوجيه الفني للعلوم"], new_kuwait: ["new_kuwait", "كويت جديدة"], gold_seal: ["seal_gold", "ختم الوزارة الذهبي (دائري)"] },
   },
   // بطاقة قياس المعايير الفنية للمواد الأساسية (منطقة الأحمدي التعليمية) — من الملف المرفق.
   // [البند، الدرجة التفصيلية]، والمجموع 45 كما في الملف الأصلي.
