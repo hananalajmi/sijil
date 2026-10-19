@@ -7,7 +7,7 @@ import { field, bindFields, recordPage, schoolOptions } from "../kit.js";
 import { FORMS, FIRST_SUPERVISOR } from "../templates.js";
 import { printOptionsPanel, bindPrintOptions } from "./teacherVisit.js";
 import { CERT_TYPE, RUQAA_MAX, titleStyleOf } from "../report/builders4.js";
-import { goldDefaults, goldSVG, goldResources, GOLD_BGS, TITLE_COLORS, TEXT_FONTS } from "../report/certGolden.js";
+import { goldDefaults, goldSVG, goldResources, GOLD_BGS, TITLE_COLORS, TEXT_FONTS, loadTextFont } from "../report/certGolden.js";
 import { modal, toast } from "../ui.js";
 
 const C = FORMS.cert;
@@ -92,7 +92,9 @@ function goldenEditor(body, ed, designSel) {
       <div class="f"><label for="cg-nf">خط المسمى والاسم</label><select id="cg-nf">${Object.entries(TEXT_FONTS).map(([k, [, l]]) => opt(k, d.nameFont || "plex", l)).join("")}</select></div>
       <div class="f"><label for="cg-nc">لون المسمى والاسم</label><input type="color" id="cg-nc" value="${esc(d.nameColor || GOLD_BGS[d.bg || "frame"].nameColor || "#14254a")}"></div>
       <div class="f"><label for="cg-tf">خط العبارات</label><select id="cg-tf">${Object.entries(TEXT_FONTS).map(([k, [, l]]) => opt(k, d.textFont || "notosans", l)).join("")}</select></div>
-      <div class="f"><label for="cg-tcol">لون العبارات</label><input type="color" id="cg-tcol" value="${esc(d.textColor || "#1d2333")}"></div></div></section>
+      <div class="f"><label for="cg-tcol">لون العبارات</label><input type="color" id="cg-tcol" value="${esc(d.textColor || "#1d2333")}"></div>
+      <div class="f"><label for="cg-size">حجم الخط</label><select id="cg-size">${[85, 90, 95, 100, 105, 110, 115, 120].map((n) => opt(String(n), String(d.sizeK || 100), n === 100 ? "100% (متناسق مع A4)" : n + "%")).join("")}</select></div></div>
+      <p class="hint">إذا زاد الكلام يصغر الخط تلقائياً حتى يبقى بعيداً عن الزخارف والتوقيع.</p></section>
     <section class="panel"><h2>التوقيع (أسفل اليسار)</h2><div class="form">
       <div class="f"><label>المسمى</label><input value="الموجه الأول للعلوم" disabled></div>
       ${field({ label: "اسم الموجه الأول (اختياري)", key: "firstSupName", value: d.firstSupName || "" })}</div>
@@ -102,6 +104,7 @@ function goldenEditor(body, ed, designSel) {
   const live = $("#cg-live", body);
   const paint = async () => { const x = { ...goldDefaults(), ...ed.rec.data }, key = [x.gLogoR, x.gLogoL, (x.gLogoR_img || "").length, (x.gLogoL_img || "").length].join("|");
     if (!res || key !== resKey) { res = await goldResources(x); resKey = key; }
+    await Promise.all([loadTextFont(x.nameFont), loadTextFont(x.textFont)]);
     live.innerHTML = goldSVG(x, certNames(x)[0] || "", res); };
   const repaint = () => { clearTimeout(tm); tm = setTimeout(paint, 120); };
   paint();
@@ -133,8 +136,9 @@ function goldenEditor(body, ed, designSel) {
       if (ph && [genderize(ph, "f"), genderize(ph, "m")].includes(cur)) setBody(genderize(ph, gOf(v))); }
     repaint(); });
   $("#cg-body", body).addEventListener("input", (e) => { ed.change((x) => { x.data.body = e.target.value; }); repaint(); });
-  $("#cg-nf", body).onchange = (e) => { ed.change((x) => { x.data.nameFont = e.target.value; }); repaint(); };
-  $("#cg-tf", body).onchange = (e) => { ed.change((x) => { x.data.textFont = e.target.value; }); repaint(); };
+  $("#cg-nf", body).onchange = async (e) => { ed.change((x) => { x.data.nameFont = e.target.value; }); await loadTextFont(e.target.value); repaint(); };
+  $("#cg-tf", body).onchange = async (e) => { ed.change((x) => { x.data.textFont = e.target.value; }); await loadTextFont(e.target.value); repaint(); };
+  $("#cg-size", body).onchange = (e) => { ed.change((x) => { x.data.sizeK = Number(e.target.value); }); repaint(); };
   $("#cg-nc", body).oninput = (e) => { ed.change((x) => { x.data.nameColor = e.target.value; }); repaint(); };
   $("#cg-tcol", body).oninput = (e) => { ed.change((x) => { x.data.textColor = e.target.value; }); repaint(); };
   $("#cg-preview", body).onclick = () => ed.openPrint?.("");

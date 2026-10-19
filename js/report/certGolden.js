@@ -24,7 +24,19 @@ const genderClosing = (t, job) => (/ة(\s|$)/.test(String(job || "").split("/")[
 const isShukr = (t) => String(t || "").replace(/[\sـ]/g, "") === "شكروتقدير";
 
 // خطوط قابلة للاختيار للاسم والنص (كلها مضمّنة في الموقع)
-export const TEXT_FONTS = { notosans: ["Sijil Sans", "نوتو سانس — Noto Sans Arabic"], plex: ["Sijil Plex", "بلكس — IBM Plex Sans Arabic"], naskh: ["Sijil Naskh", "نسخ — Noto Naskh Arabic"], ruqaa: ["Sijil Ruqaa", "رقعة — Aref Ruqaa"] };
+// خطوط قابلة للاختيار للاسم والعبارات (كلها مجانية OFL ومضمّنة في الموقع؛ الإضافية تُحمَّل عند اختيارها فقط)
+const F = (f, w) => ["fonts/" + f + ".woff", w];
+export const TEXT_FONTS = {
+  notosans: ["Sijil Sans", "نوتو سانس (Noto Sans)"], plex: ["Sijil Plex", "بلكس (IBM Plex)"], cairo: ["Sijil Cairo", "القاهرة (Cairo)", [F("Cairo-VF", "400 700")]],
+  tajawal: ["Sijil Tajawal", "تجوال (Tajawal)", [F("Tajawal-Medium", "400 600"), F("Tajawal-Bold", "700 900")]], almarai: ["Sijil Almarai", "المراعي (Almarai)", [F("Almarai-Regular", "400 600"), F("Almarai-Bold", "700 900")]],
+  changa: ["Sijil Changa", "شانجا (Changa)", [F("Changa-VF", "400 700")]], kufi: ["Sijil Kufi", "كوفي (Noto Kufi)", [F("NotoKufiArabic-VF", "400 700")]], reemkufi: ["Sijil ReemKufi", "ريم كوفي (Reem Kufi)", [F("ReemKufi-VF", "400 700")]],
+  messiri: ["Sijil Messiri", "المسيري (El Messiri)", [F("ElMessiri-VF", "400 700")]], naskh: ["Sijil Naskh", "نسخ (Noto Naskh)"], amiri: ["Sijil Amiri", "أميري — نسخ كلاسيكي (Amiri)", [F("Amiri-Regular", "400 600"), F("Amiri-Bold", "700 900")]],
+  markazi: ["Sijil Markazi", "مركزي — نسخ (Markazi)", [F("MarkaziText-VF", "400 700")]], mirza: ["Sijil Mirza", "ميرزا — نسخ (Mirza)", [F("Mirza-Medium", "400 600"), F("Mirza-Bold", "700 900")]],
+  ruqaa: ["Sijil Ruqaa", "رقعة (Aref Ruqaa)"], lalezar: ["Sijil Lalezar", "لاله‌زار — عريض للعناوين (Lalezar)", [F("Lalezar-Regular", "100 900")]], rakkas: ["Sijil Rakkas", "ركاس — زخرفي (Rakkas)", [F("Rakkas-Regular", "100 900")]],
+};
+const fontJobs = {};
+export const loadTextFont = (k) => { const e = TEXT_FONTS[k]; if (!e?.[2]) return Promise.resolve(); if (fontJobs[k]) return fontJobs[k];
+  return (fontJobs[k] = Promise.all(e[2].map(async ([url, weight]) => { try { const f = new FontFace(e[0], `url("${new URL(url, document.baseURI).href}") format("woff")`, { weight }); await f.load(); document.fonts.add(f); } catch (_) { delete fontJobs[k]; } }))); };
 const fontOf = (k, w) => { const f = (TEXT_FONTS[k] || TEXT_FONTS.notosans)[0]; return [f, f === "Sijil Ruqaa" ? 700 : f === "Sijil Plex" ? (w >= 600 ? 700 : 400) : w]; };
 export const GOLD_FONTS = { title: ["Sijil Ruqaa", 700], name: ["Sijil Plex", 700], text: ["Sijil Sans", 500], strong: ["Sijil Sans", 700] };
 const C = { ivory: "#fbf6ea", gold: "#b08a3c", gold2: "#d9b867", goldDark: "#8a6a2e", navy: "#14254a", ink: "#1d2333" };
@@ -36,8 +48,8 @@ export const GOLD_BOX = {
   intro: { y: 80, lh: 9.4 }, name: { y: 101, pt: 26 }, phrase: { y: 121, lh: 9.4, maxW: 232 }, sign: { x: 72, y: 163 },
 };
 export const goldDefaults = () => ({ bg: "frame", titleArt: "art", titleColor: "auto", titleText: "شكر وتقدير", line1: "", line2: "",
-  intro: "يتقدم التوجيه الفني للعلوم بمنطقة الأحمدي التعليمية بخالص الشكر والتقدير إلى", jobTitle: "المعلمة", phrase: "لجهودها المتميزة وعطائها وإخلاصها في العمل", body: "لجهودها المتميزة وعطائها وإخلاصها في العمل", closing: "",
-  nameFont: "plex", nameColor: "", textFont: "notosans", textColor: "#1d2333",
+  intro: "يتقدم التوجيه الفني للعلوم بمنطقة الأحمدي التعليمية بخالص الشكر والتقدير إلى", jobTitle: "المعلمة", phrase: "لجهودها المتميزة وعطائها وإخلاصها في العمل", body: "لجهودها المتميزة وعطائها وإخلاصها في العمل", closing: "مع تمنياتنا لكم بمزيد من التقدم والازدهار",
+  nameFont: "plex", nameColor: "", textFont: "notosans", textColor: "#1d2333", sizeK: 100,
   gLogoR: "ministry", gLogoL: "directorate", gLogoR_img: "", gLogoL_img: "", firstSupName: "" });
 
 // قياس النص بنفس الخط المستعمل في الرسم
@@ -79,7 +91,7 @@ const imgSize = (src) => new Promise((res) => { if (!src) return res(null); cons
 export async function goldResources(d) {
   const { logoSrc } = await import("../store.js");
   const one = async (k, img) => { const src = k === "custom" ? img : k && FORMS.cert.logos[k] ? await logoSrc(FORMS.cert.logos[k][0]) : ""; const u = await toDataUrl(src); return u ? { src: u, size: await imgSize(u) } : null; };
-  await loadCertFonts();
+  await loadCertFonts(); await Promise.all([loadTextFont(d.nameFont), loadTextFont(d.textFont)]);
   const P = GOLD_BGS[d.bg] || GOLD_BGS.frame;
   if (P.img) await new Promise((r) => { const im = new Image(); im.onload = im.onerror = r; im.src = P.img; }); // في الذاكرة قبل المعاينة والطباعة
   return { R: await one(d.gLogoR, d.gLogoR_img), L: await one(d.gLogoL, d.gLogoL_img) };
@@ -90,13 +102,11 @@ export function goldSVG(d, name, res, { portrait = false, blank = false, cls = "
   const P = GOLD_BGS[d.bg] || GOLD_BGS.frame, dy = P.dy || 0, out = [];
   const B = { ...GOLD_BOX, logoR: P.logoR, logoL: P.logoL, sign: P.sign };
   // بدون السطرين التعريفيين يرتفع باقي الكلام ليملأ المساحة (الشعاران والعنوان والتوقيع ثابتة)
-  const lift = String(d.line1 || "").trim() || String(d.line2 || "").trim() ? (String(d.line2 || "").trim() ? 0 : -6) : -13;
-  const Y = (k) => GOLD_BOX[k].y + dy + (k === "line1" || k === "line2" ? 0 : lift);
   // المساحة المتاحة للسطر حول المنتصف: داخل المنطقة البيضاء للخلفية وبعيداً عن التوقيع
   const free = BG_FREE[d.bg] || null;
   const room = (y, h = 8) => { let l = 0, r = W;
     if (free) for (let yy = Math.max(0, Math.floor((y - h / 2) / 2)); yy <= Math.min(free[0].length - 1, Math.floor((y + h / 2) / 2)); yy++) { l = Math.max(l, free[0][yy]); r = Math.min(r, free[1][yy]); }
-    return Math.max(60, 2 * Math.min(CX - l, r - CX) - 10); };
+    return Math.max(80, 2 * Math.min(CX - l, r - CX) - 26); }; // هامش 13 مم على الأقل من زخارف الخلفية
   // الخلفية
   if (P.img) out.push(`<image href="${P.img}" x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="none"/>`);
   else out.push(`<rect width="${W}" height="${H}" fill="${C.ivory}"/>`, rosette(),
@@ -120,31 +130,44 @@ export function goldSVG(d, name, res, { portrait = false, blank = false, cls = "
   }
   if (P.divider) { const ly = TB.y + TB.h / 2 + 1;
     out.push(`<path d="M${CX - tw / 2 - 6} ${ly}H${CX - 4}M${CX + 4} ${ly}H${CX + tw / 2 + 6}" stroke="url(#cgL)" stroke-width=".45"/>`, diamond(CX, ly, 1.6), diamond(CX - tw / 2 - 7.5, ly, .8), diamond(CX + tw / 2 + 7.5, ly, .8)); }
-  // السطران التعريفيان (فارغان افتراضياً)
-  for (const k of ["line1", "line2"]) { const t = String(d[k] || "").trim(); if (t) out.push(T(CX, Y(k), t, GOLD_FONTS.strong, fitPt(t, GOLD_FONTS.strong, 15, Math.min(210, room(Y(k))), 10), C.navy)); }
-  const TF = fontOf(d.textFont, 500), NF = fontOf(d.nameFont, 700), tcol = d.textColor || C.ink, ncol = d.nameColor || P.nameColor || C.navy;
-  // العبارة الأولى (فوق الاسم): سطر أو سطران متوازنان
-  const intro = String(d.intro ?? (d.giver ? "تتقدم " + d.giver : "")).trim(), IY = Y("intro");
-  if (intro) { let ipt = 17, il = balanced(intro, TF, ipt, room(IY, 18)); while (il.length > 2 && ipt > 11) { ipt -= .5; il = balanced(intro, TF, ipt, room(IY, 18)); }
-    const lh = B.intro.lh * ipt / 17, y0 = IY - (il.length - 1) * lh / 2; il.slice(0, 2).forEach((ln, i) => out.push(T(CX, y0 + i * lh, ln, TF, ipt, tcol, 'class="cg-intro"'))); }
-  // المسمى الوظيفي + الاسم في سطر واحد (بدون إطار)
-  const NY = Y("name"), job = String(d.jobTitle || "").trim(), nm = blank ? "" : String(name || "").trim(), nmax = Math.min(240, room(NY, 12));
-  if (nm) { const t = (job ? job + " " : "") + nm; out.push(T(CX, NY, t, NF, fitPt(t, NF, B.name.pt, nmax, 15), ncol, 'class="cg-name"')); }
-  else { if (job) out.push(T(CX + 45, NY, job, NF, B.name.pt * .8, ncol)); out.push(`<path d="M${CX - 80} ${NY + 4}H${CX + 25}" stroke="#777" stroke-width=".3" stroke-dasharray="1 1.6"/>`); }
-  const oy = NY + 9; out.push(`<path d="M${CX - 62} ${oy}H${CX - 3.5}M${CX + 3.5} ${oy}H${CX + 62}" stroke="url(#cgL)" stroke-width=".4"/>`, diamond(CX, oy, 1.4));
-  // العبارة تحت الاسم (حسب الموضوع) + الختام — تصغر تلقائياً لتبقى فوق التوقيع
-  const PY = Y("phrase"), bottom = B.sign.y - 6, src = [...String(d.body ?? d.phrase ?? "").split(/\n+/), genderClosing(d.closing || "", d.jobTitle)].map((x) => x.trim()).filter(Boolean);
-  let ppt = 17, lines = [];
-  const w0 = Math.min(B.phrase.maxW, room((PY + bottom) / 2, bottom - PY + 6));
-  const build = (p) => src.flatMap((x) => balanced(x, TF, p, w0));
-  if (!blank) { lines = build(ppt); while (PY + (lines.length - 1) * B.phrase.lh * ppt / 17 > bottom && ppt > 11) { ppt -= .5; lines = build(ppt); } }
-  const lh = B.phrase.lh * ppt / 17;
-  if (lines.length) lines.forEach((ln, i) => out.push(T(CX, PY + i * lh, ln, TF, ppt, tcol, 'class="cg-body"')));
-  else for (const [i, w] of [[0, 200], [1, 150]]) out.push(`<path d="M${CX - w / 2} ${PY + 3 + i * 10}H${CX + w / 2}" stroke="#777" stroke-width=".3" stroke-dasharray="1 1.6"/>`);
+  // المحتوى: السطران التعريفيان ← العبارة فوق الاسم ← المسمى والاسم ← العبارة تحت الاسم والختام
+  // أحجام متناسقة مع A4 (تُضبط من «حجم الخط»)، ويتوسط الكلام المساحة بين العنوان والتوقيع؛ يصغر بنسبة واحدة إن زاد
+  const TF = fontOf(d.textFont, 500), NF = fontOf(d.nameFont, 700), LF = fontOf(d.textFont, 700), tcol = d.textColor || C.ink, ncol = d.nameColor || P.nameColor || C.navy;
+  const job = String(d.jobTitle || "").trim(), nm = blank ? "" : String(name || "").trim();
+  const intro = String(d.intro ?? (d.giver ? "تتقدم " + d.giver : "")).trim();
+  const bodySrc = blank ? [] : [...String(d.body ?? d.phrase ?? "").split(/\n+/), genderClosing(d.closing || "", d.jobTitle)].map((x) => x.trim()).filter(Boolean);
+  const top = TB.y + TB.h / 2 + (P.divider ? 5 : 3), bottom = B.sign.y - 9, K = (Number(d.sizeK) || 100) / 100;
+  const layout = (f) => { const it = [], wAt = (y, h) => room(y, h);
+    const add = (text, font, pt, col, cls, gapB) => it.push({ text, font, pt, col, cls, h: pt * PT * 1.62, gapB });
+    for (const k of ["line1", "line2"]) { const t = String(d[k] || "").trim(); if (t) add(t, LF, 17 * K * f, C.navy, "", 1); }
+    if (it.length) it[it.length - 1].gapB = 5;
+    if (intro) balanced(intro, TF, 21 * K * f, wAt(top + 15, 20)).forEach((ln) => add(ln, TF, 21 * K * f, tcol, "cg-intro", 0));
+    if (it.length) it[it.length - 1].gapB = 6;
+    it.push({ name: true, h: 34 * K * f * PT * 1.45, pt: 34 * K * f, gapB: 9 });
+    if (bodySrc.length) bodySrc.forEach((x) => balanced(x, TF, 21 * K * f, wAt((top + bottom) / 2 + 20, 40)).forEach((ln) => add(ln, TF, 21 * K * f, tcol, "cg-body", 0)));
+    else it.push({ dots: true, h: 22, gapB: 0 });
+    it[it.length - 1].gapB = 0; return it; };
+  const total = (it) => it.reduce((a, x) => a + x.h + x.gapB, 0);
+  let f = 1, items = layout(f); while (total(items) > bottom - top && f > .55) { f -= .03; items = layout(f); }
+  // المساحة الزائدة: تُوسَّع الفراغات بين المجموعات قليلاً ثم يتوسط الكلام
+  const extra = Math.max(0, bottom - top - total(items)), groups = items.filter((x) => x.gapB >= 5), add1 = groups.length ? Math.min(7, extra * .45 / groups.length) : 0;
+  groups.forEach((x) => (x.gapB += add1));
+  let y = top + Math.max(0, (bottom - top - total(items)) / 2);
+  for (const x of items) {
+    const cy = y + x.h / 2;
+    if (x.name) {
+      const t = (job ? job + " " : "") + nm, nmax = Math.min(250, room(cy, x.h));
+      if (nm) out.push(T(CX, cy, t, NF, fitPt(t, NF, x.pt, nmax, 14), ncol, 'class="cg-name"'));
+      else { if (job) out.push(T(CX + 50, cy, job, NF, x.pt * .8, ncol)); out.push(`<path d="M${CX - 85} ${cy + 5}H${CX + 28}" stroke="#777" stroke-width=".3" stroke-dasharray="1 1.6"/>`); }
+      const oy = y + x.h + 2.5; out.push(`<path d="M${CX - 70} ${oy}H${CX - 3.5}M${CX + 3.5} ${oy}H${CX + 70}" stroke="url(#cgL)" stroke-width=".45"/>`, diamond(CX, oy, 1.5));
+    } else if (x.dots) { for (const [i, w] of [[0, 200], [1, 150]]) out.push(`<path d="M${CX - w / 2} ${y + 6 + i * 11}H${CX + w / 2}" stroke="#777" stroke-width=".3" stroke-dasharray="1 1.6"/>`); }
+    else out.push(T(CX, cy, x.text, x.font, fitPt(x.text, x.font, x.pt, room(cy, x.h), 10), x.col, x.cls ? `class="${x.cls}"` : ""));
+    y += x.h + x.gapB;
+  }
   // التوقيع: أسفل اليسار دائماً
   const S = B.sign, sup = blank ? "" : String(d.firstSupName || "").trim();
-  out.push(T(S.x, S.y, "الموجه الأول للعلوم", GOLD_FONTS.strong, 15, C.goldDark));
-  if (sup) out.push(T(S.x, S.y + 8, "أ/ " + sup, GOLD_FONTS.name, 13.5, C.navy));
+  out.push(T(S.x, S.y, "الموجه الأول للعلوم", GOLD_FONTS.strong, 17, C.goldDark));
+  if (sup) out.push(T(S.x, S.y + 9, "أ/ " + sup, GOLD_FONTS.name, 15.5, C.navy));
   out.push(`<path d="M${S.x - 30} ${S.y + 26}H${S.x + 30}" stroke="${C.goldDark}" stroke-width=".3" stroke-dasharray="1 1.4"/>`, T(S.x, S.y + 30.5, "التوقيع", GOLD_FONTS.text, 9.5, "#8b7d63"));
   const defs = `<defs><linearGradient id="cgG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9cf86"/><stop offset=".5" stop-color="${C.gold}"/><stop offset="1" stop-color="#8a6526"/></linearGradient>
     <linearGradient id="cgL" gradientUnits="userSpaceOnUse" x1="${CX - 100}" y1="0" x2="${CX + 100}" y2="0"><stop offset="0" stop-color="${C.gold}" stop-opacity="0"/><stop offset=".5" stop-color="${C.gold}"/><stop offset="1" stop-color="${C.gold}" stop-opacity="0"/></linearGradient></defs>`;
