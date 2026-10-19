@@ -70,15 +70,31 @@ export async function criteriaCard(ctx) {
 
 // ---------------- الشهادات الجاهزة ----------------
 // شهادة A4 أفقية لكل اسم، بتصميم الخلفية والخطوط المختارة. بدون أسماء تُطبع شهادة واحدة بسطر فارغ.
-const certFontsLoaded = new Set();
-async function loadCertFonts(fams) {
-  const need = fams.filter((f) => f && !certFontsLoaded.has(f));
-  if (need.length) {
-    const href = "https://fonts.googleapis.com/css2?" + need.map((f) => "family=" + f.replace(/ /g, "+") + ":wght@400;700").join("&") + "&display=swap";
-    await new Promise((res) => { const l = document.createElement("link"); l.rel = "stylesheet"; l.href = href; l.onload = l.onerror = res; document.head.appendChild(l); setTimeout(res, 4000); });
-    need.forEach((f) => certFontsLoaded.add(f));
-  }
-  try { await Promise.race([Promise.all(fams.map((f) => document.fonts.load(`700 40px "${f}"`, "شهادة شكر"))), new Promise((r) => setTimeout(r, 4000))]); } catch (_) {}
+// نظام خطوط ثابت لكل الشهادات (ملفات الخطوط مضمّنة في الموقع نفسه — رخصة OFL — فلا تعتمد على خدمة خارجية):
+//   العنوان: Noto Naskh Arabic عريض (رسمي)، أو Aref Ruqaa للعناوين الزخرفية القصيرة فقط
+//   اسم المكرّم: IBM Plex Sans Arabic Bold — النص والتفاصيل: Noto Sans Arabic (عادي/متوسط)
+export const CERT_TYPE = {
+  naskh: { fam: "Sijil Naskh", w: 700, pt: 40, lh: 1.45, label: "نسخ رسمي — Noto Naskh Arabic" },
+  ruqaa: { fam: "Sijil Ruqaa", w: 700, pt: 44, lh: 1.5, label: "رقعة زخرفي — Aref Ruqaa (للعناوين القصيرة)" },
+  name: { fam: "Sijil Plex", w: 700 }, body: { fam: "Sijil Sans", w: 500 }, small: { fam: "Sijil Sans", w: 400 },
+};
+export const RUQAA_MAX = 22; // أطول عنوان يُسمح فيه بخط الرقعة (بدون المسافات والتطويل)
+export const titleStyleOf = (d, title) => ((d.titleStyle || (d.fTitle === "ruqaa" ? "ruqaa" : "naskh")) === "ruqaa" && String(title || "").replace(/[\sـ]/g, "").length <= RUQAA_MAX ? "ruqaa" : "naskh");
+const CERT_FONT_FILES = [
+  ["Sijil Naskh", "fonts/NotoNaskhArabic-VF.woff", "400 700"], ["Sijil Sans", "fonts/NotoSansArabic-VF.woff", "400 700"],
+  ["Sijil Plex", "fonts/IBMPlexSansArabic-Bold.woff", "700"], ["Sijil Ruqaa", "fonts/ArefRuqaa-Bold.woff", "700"],
+];
+let certFontsP = null;
+// تحميل الخطوط فعلياً والتحقق منها قبل الرسم؛ تُرجع قائمة الخطوط التي تعذّر تحميلها
+export function loadCertFonts() {
+  if (!certFontsP) certFontsP = Promise.all(CERT_FONT_FILES.map(async ([fam, url, weight]) => {
+    try {
+      const f = new FontFace(fam, `url("${new URL(url, document.baseURI).href}") format("woff")`, { weight, style: "normal" });
+      await f.load(); document.fonts.add(f);
+      return document.fonts.check(`${weight.split(" ").pop()} 20px "${fam}"`, "شهادة") ? null : fam;
+    } catch (_) { return fam; }
+  })).then((r) => { const bad = r.filter(Boolean); if (bad.length) certFontsP = null; return bad; });
+  return certFontsP;
 }
 const RIBBONS_SVG = `<svg class="ce-bg" viewBox="0 0 297 210" preserveAspectRatio="none" aria-hidden="true"><defs>
   <linearGradient id="ceg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7a5a1c"/><stop offset=".25" stop-color="#f6e3a1"/><stop offset=".5" stop-color="#b8892f"/><stop offset=".75" stop-color="#fff1c2"/><stop offset="1" stop-color="#8f6a24"/></linearGradient>
@@ -98,11 +114,13 @@ const WAVES_SVG = `<svg class="ce-bg" viewBox="0 0 297 210" preserveAspectRatio=
   <path d="M297 178C262 192 214 199 170 201C130 203 96 205 70 210H297Z" fill="url(#cew)"/><path d="M0 210C40 196 96 192 150 191C210 190 254 182 297 168" stroke="#f2c55c" stroke-width="1.6" fill="none"/>
   <path d="M0 210C30 200 64 197 98 198" stroke="#f2c55c" stroke-width="1" fill="none"/></svg>`;
 export async function certificate(ctx) {
-  const { certLines, certIntro, certNames, certTitle, CERT_FONTS, DESIGN_DEFAULTS } = await import("../views/cert.js");
-  const d = ctx.rec.data || {}, blank = !!d.blank, design = FORMS.cert.designs[d.design] ? d.design : "waves", D = DESIGN_DEFAULTS[design] || DESIGN_DEFAULTS.navy;
-  const fam = (k, def) => (CERT_FONTS[k || def] || CERT_FONTS.amiri)[0];
-  const fT = fam(d.fTitle, D.fTitle), fB = fam(d.fBody, D.fBody), fN = fam(d.fName, D.fName);
-  await loadCertFonts([...new Set([fT, fB, fN])]);
+  const { certLines, certIntro, certNames, certTitle, DESIGN_DEFAULTS } = await import("../views/cert.js");
+  const d = ctx.rec.data || {}, blank = !!d.blank, design = FORMS.cert.designs[d.design] ? d.design : "waves", D = DESIGN_DEFAULTS[design] || DESIGN_DEFAULTS.waves;
+  const titleText = blank ? (FORMS.cert.types[d.ctype] || FORMS.cert.types.thanks).title : certTitle(d);
+  const TS = CERT_TYPE[titleStyleOf(d, titleText)];
+  const fT = TS.fam, fB = CERT_TYPE.body.fam, fN = CERT_TYPE.name.fam;
+  const badFonts = await loadCertFonts();
+  if (badFonts.length) { try { (await import("../ui.js")).toast("تعذّر تحميل خطوط الشهادة — تأكدي من الاتصال ثم أعيدي المعاينة قبل الطباعة", "err"); } catch (_) {} }
   const names = blank ? [] : certNames(d);
   const hijri = (iso) => { try { return new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura", { day: "numeric", month: "long", year: "numeric" }).format(new Date(iso + "T12:00:00")); } catch (_) { return ""; } };
   const date = d.date || ctx.rec.record_date;
@@ -134,13 +152,13 @@ export async function certificate(ctx) {
   // الشهادة تُرسم صورةً واحدة بدقة الطباعة: ما يظهر في المعاينة هو ما يُطبع بالضبط، بلا تداخل على أي جهاز.
   // في الآيباد والآيفون (طباعة طولية فقط) تُرسم الصورة مُدارة داخل صفحة طولية.
   try {
-    const R = await certRenderer({ d, blank, design, fT, fB, fN, title: blank ? (FORMS.cert.types[d.ctype] || FORMS.cert.types.thanks).title : certTitle(d),
+    const R = await certRenderer({ d, blank, design, TS, title: titleText,
       intro: blank ? "يتقدم التوجيه الفني للعلوم بخالص الشكر والتقدير إلى" : certIntro(d), lines, signers, keys, date: !blank && d.showDate ? `تحريراً في: ${fmtDateSlash(date)}${hijri(date) ? "  الموافق: " + hijri(date) : ""}` : "",
       sigImg: blank ? null : (ctx.print?.showSignature && ctx.guide?.signature ? ctx.guide.signature : null), stampImg: blank ? null : (ctx.print?.showStamp && ctx.guide?.stamp ? ctx.guide.stamp : null), nameColor: d.nameColor || D.nameColor });
     const blocks = [];
     for (let i = 0; i < list.length; i++) {
       const n = list[i], label = n ? `${d.recipient ? d.recipient + (d.prefix ? " / " + d.prefix : "") + " " : d.prefix ? d.prefix + " " : ""}${n}` : "";
-      const src = R(label, IOS);
+      const src = await R(label, IOS);
       if (i) blocks.push({ pageBreak: true });
       blocks.push({ html: `<img class="ce-img ${IOS ? "por" : "lan"}" src="${src}" alt="${esc(label || "شهادة")}">` });
     }
@@ -150,61 +168,74 @@ export async function certificate(ctx) {
   return { orientation: "landscape", cls: "t-ce", header: "", identity: "", footer: "", blocks };
 }
 
-// رسم الشهادة على لوحة (canvas) بدقة 200 نقطة/بوصة
+// رسم الشهادة على لوحة (canvas) بدقة 300 نقطة/بوصة (دقة الطباعة الاحترافية) بالخطوط المضمّنة واتجاه RTL
 const loadImg = (src) => new Promise((res) => { if (!src) return res(null); const im = new Image(); if (!/^(data:|blob:)/.test(src) && /^https?:/.test(src)) im.crossOrigin = "anonymous"; im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
+export const CERT_DPI = 300;
 async function certRenderer(o) {
-  const MM = 200 / 25.4, W = Math.round(297 * MM), H = Math.round(210 * MM);
+  const MM = CERT_DPI / 25.4, W = Math.round(297 * MM), H = Math.round(210 * MM);
   const { fileUrl, logoSrc } = await import("../store.js");
   const svg = WAVES_SVG.replace("<svg ", `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" `);
   const bg = await loadImg("data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg));
   const L = {}; for (const k of o.keys) L[k] = await loadImg(await logoSrc(k === "seal" ? "emblem" : FORMS.cert.logos[k][0]));
   const sig = o.sigImg ? await loadImg(await fileUrl(o.sigImg)) : null, stamp = o.stampImg ? await loadImg(await fileUrl(o.stampImg)) : null;
   const d = o.d, sT = (d.sizeTitle || 100) / 100, sB = (d.sizeBody || 100) / 100, PT = 0.3528 * MM;
-  const font = (w, pt, fam) => `${w} ${pt * PT}px "${fam}", "Noto Kufi Arabic", "IBM Plex Sans Arabic", sans-serif`;
-  const wrap = (c, text, maxW) => { const words = String(text).split(/\s+/).filter(Boolean), out = []; let cur = "";
+  const TS = o.TS, NM = CERT_TYPE.name, BD = CERT_TYPE.body, SM = CERT_TYPE.small;
+  const font = (w, pt, fam) => `${w} ${pt * PT}px "${fam}", "Sijil Sans", sans-serif`;
+  const greedy = (c, words, maxW) => { const out = []; let cur = "";
     for (const w of words) { const t = cur ? cur + " " + w : w; if (c.measureText(t).width > maxW && cur) { out.push(cur); cur = w; } else cur = t; } if (cur) out.push(cur); return out; };
+  // تقسيم متوازن: نفس عدد الأسطر لكن بأطوال متقاربة (بدل سطر طويل وكلمتين وحيدتين تحته)
+  const wrap = (c, text, maxW) => { const words = String(text).split(/\s+/).filter(Boolean), base = greedy(c, words, maxW); if (base.length < 2) return base;
+    let lo = maxW / base.length, hi = maxW; for (let k = 0; k < 14; k++) { const mid = (lo + hi) / 2; if (greedy(c, words, mid).length > base.length) lo = mid; else hi = mid; } return greedy(c, words, hi); };
   const drawLogo = (c, im, k, x, y, h, alignRight) => {
     if (k === "seal") { const r = 21 * MM, cx = alignRight ? x - r : x + r, cy = y + r;
       const g = c.createRadialGradient(cx - r * .3, cy - r * .3, r * .1, cx, cy, r); g.addColorStop(0, "#fbeab0"); g.addColorStop(.6, "#d9b062"); g.addColorStop(1, "#a87b2a");
       c.save(); c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2); c.fillStyle = "#b8892f"; c.fill(); c.beginPath(); c.arc(cx, cy, r * .9, 0, Math.PI * 2); c.fillStyle = g; c.fill(); c.restore();
       if (im) { const ih = r * .95, iw = ih * im.width / im.height; c.drawImage(im, cx - iw / 2, cy - ih * .62, iw, ih); }
-      c.fillStyle = "#3d2c0b"; c.textAlign = "center"; c.font = font(700, 7.5, o.fB); c.fillText("وزارة التربية", cx, cy + r * .55); return; }
+      c.fillStyle = "#3d2c0b"; c.textAlign = "center"; c.font = font(700, 7.5, BD.fam); c.fillText("وزارة التربية", cx, cy + r * .55); return; }
     if (!im) return; const w = Math.min(60 * MM, h * im.width / im.height), hh = w * im.height / im.width; c.drawImage(im, alignRight ? x - w : x, y, w, hh); };
-  const paint = (c, label) => {
-    c.fillStyle = "#fff"; c.fillRect(0, 0, W, H); if (bg) c.drawImage(bg, 0, 0, W, H);
+  // المحتوى يتوسّط المساحة بين أعلى الشهادة والتوقيعات (يُقاس أولاً ثم يُرسم)
+  const paint = (c, label) => { const end = layout(c, label, 0, true), room = H - 50 * MM - end; layout(c, label, Math.max(0, Math.min(room * .5, 22 * MM)), false); };
+  const layout = (c, label, off, dry) => {
+    c.direction = "rtl"; c.imageSmoothingQuality = "high";
+    try { c.fontKerning = "normal"; c.textRendering = "optimizeLegibility"; } catch (_) {}
     const [k1, k2, ...km] = o.keys;
+    if (!dry) { c.fillStyle = "#fff"; c.fillRect(0, 0, W, H); if (bg) c.drawImage(bg, 0, 0, W, H);
     if (k1) drawLogo(c, L[k1], k1, W - 20 * MM, 10 * MM, 30 * MM, true);
     if (k2) drawLogo(c, L[k2], k2, 24 * MM, 30 * MM, 21 * MM, false);
-    km.forEach((k, i) => drawLogo(c, L[k], k, W / 2 - 15 * MM + (i - (km.length - 1) / 2) * 34 * MM, 4 * MM, 16 * MM, false));
-    c.direction = "rtl"; c.textAlign = "center"; c.textBaseline = "middle";
-    let y = 18 * MM; const cx = W / 2;
+    km.forEach((k, i) => drawLogo(c, L[k], k, W / 2 - 15 * MM + (i - (km.length - 1) / 2) * 34 * MM, 4 * MM, 16 * MM, false)); }
+    c.textAlign = "center"; c.textBaseline = "middle";
+    let y = 17 * MM + off; const cx = W / 2;
     const block = (text, w, pt, fam, lh, color, maxW, before = 0) => { y += before * MM; c.font = font(w, pt, fam); c.fillStyle = color;
-      for (const ln of wrap(c, text, maxW * MM)) { const h = pt * PT * lh; c.fillText(ln, cx, y + h / 2); y += h; } };
-    block(o.title, 400, 40 * sT, o.fT, 1.3, "#14254a", 230);
-    block(o.intro, 400, 20 * sB, o.fB, 1.9, "#1b1b1b", 175, 5);
-    if (label) block(label, 700, 28 * sB, o.fN, 1.35, o.nameColor, 229, 3);
-    else { y += 6 * MM; c.save(); c.setLineDash([2, 6]); c.strokeStyle = "#555"; c.lineWidth = 2; c.beginPath(); c.moveTo(cx - 75 * MM, y + 6 * MM); c.lineTo(cx + 75 * MM, y + 6 * MM); c.stroke(); c.restore(); y += 10 * MM; }
+      for (const ln of wrap(c, text, maxW * MM)) { const h = pt * PT * lh; if (!dry) c.fillText(ln, cx, y + h / 2); y += h; } };
+    block(o.title, TS.w, TS.pt * sT, TS.fam, TS.lh, "#14254a", 230);
+    block(o.intro, BD.w, 19 * sB, BD.fam, 1.9, "#1b1b1b", 180, 3);
+    if (label) block(label, NM.w, 27 * sB, NM.fam, 1.5, o.nameColor, 229, 2);
+    else if (dry) y += 16 * MM; else { y += 6 * MM; c.save(); c.setLineDash([2 * MM / 8, 6 * MM / 8]); c.strokeStyle = "#555"; c.lineWidth = .25 * MM; c.beginPath(); c.moveTo(cx - 75 * MM, y + 6 * MM); c.lineTo(cx + 75 * MM, y + 6 * MM); c.stroke(); c.restore(); y += 10 * MM; }
     // زخرفة ذهبية تحت الاسم
-    y += 1.5 * MM; const oy = y + 2 * MM;
+    y += 1 * MM; const oy = y + 2 * MM; if (!dry) {
     const gl = c.createLinearGradient(cx - 96 * MM, 0, cx - 4 * MM, 0); gl.addColorStop(0, "rgba(201,162,79,0)"); gl.addColorStop(1, "#c9a24f");
     const gr = c.createLinearGradient(cx + 96 * MM, 0, cx + 4 * MM, 0); gr.addColorStop(0, "rgba(201,162,79,0)"); gr.addColorStop(1, "#c9a24f");
     c.fillStyle = gl; c.fillRect(cx - 96 * MM, oy - .35 * MM, 92 * MM, .7 * MM); c.fillStyle = gr; c.fillRect(cx + 4 * MM, oy - .35 * MM, 92 * MM, .7 * MM);
-    c.save(); c.translate(cx, oy); c.rotate(Math.PI / 4); c.fillStyle = "#c9a24f"; c.fillRect(-1.6 * MM, -1.6 * MM, 3.2 * MM, 3.2 * MM); c.restore();
+    c.save(); c.translate(cx, oy); c.rotate(Math.PI / 4); c.fillStyle = "#c9a24f"; c.fillRect(-1.6 * MM, -1.6 * MM, 3.2 * MM, 3.2 * MM); c.restore(); }
     y = oy + 4 * MM;
-    if (o.lines.length) for (const ln of o.lines) block(ln, 400, 19 * sB, o.fB, 2.2, "#1b1b1b", 229, .3);
-    else for (const w of [190, 150]) { y += 12 * MM; c.save(); c.setLineDash([2, 6]); c.strokeStyle = "#555"; c.lineWidth = 2; c.beginPath(); c.moveTo(cx - w / 2 * MM, y); c.lineTo(cx + w / 2 * MM, y); c.stroke(); c.restore(); }
-    if (o.date) block(o.date, 400, 13 * sB, o.fB, 1.6, "#333", 229, 2);
-    // التوقيعات أسفل اليسار
-    o.signers.forEach((s, i) => { const x0 = 22 * MM + i * 85 * MM, w = 75 * MM, sx = x0 + w / 2; let sy = H - 21 * MM - (s.me && (sig || stamp) ? 16 * MM : 0);
-      c.textAlign = "center"; c.fillStyle = "#8a6a2e"; c.font = font(700, 15 * sB, o.fB);
-      const lines = [s.title || "", s.name ? "أ/ " + s.name : ""].filter(Boolean); const lh = 15 * sB * PT * 1.5;
-      lines.forEach((t, j) => c.fillText(t, sx, sy - (lines.length - j) * lh + lh / 2));
+    if (o.lines.length) for (const ln of o.lines) block(ln, BD.w, 18 * sB, BD.fam, 2.05, "#1b1b1b", 229, .3);
+    else for (const w of [190, 150]) { y += 12 * MM; if (dry) continue; c.save(); c.setLineDash([2 * MM / 8, 6 * MM / 8]); c.strokeStyle = "#555"; c.lineWidth = .25 * MM; c.beginPath(); c.moveTo(cx - w / 2 * MM, y); c.lineTo(cx + w / 2 * MM, y); c.stroke(); c.restore(); }
+    if (o.date) block(o.date, SM.w, 13 * sB, SM.fam, 1.6, "#333", 229, 2);
+    if (dry) return y;
+    // التوقيعات أسفل اليسار: الصفة بخط النص والاسم بخط الاسم
+    o.signers.forEach((s, i) => { const x0 = 22 * MM + i * 85 * MM, w = 75 * MM, sx = x0 + w / 2; const sy = H - 21 * MM - (s.me && (sig || stamp) ? 16 * MM : 0);
+      c.textAlign = "center"; c.fillStyle = "#8a6a2e"; const lh = 15 * sB * PT * 1.55;
+      const rows = [[s.title || "", font(700, 14.5 * sB, BD.fam)], [s.name ? "أ/ " + s.name : "", font(NM.w, 15 * sB, NM.fam)]].filter((r) => r[0]);
+      rows.forEach(([t, f], j) => { c.font = f; c.fillText(t, sx, sy - (rows.length - j) * lh + lh / 2); });
       if (s.me) { let ix = sx - 20 * MM; for (const im of [sig, stamp]) if (im) { const h = 14 * MM, w2 = Math.min(30 * MM, h * im.width / im.height); c.drawImage(im, ix, sy + 1 * MM, w2, h); ix += w2 + 4 * MM; } }
       c.fillStyle = "#8a6a2e"; c.fillRect(x0, H - 21 * MM + 1 * MM, w, .35 * MM); });
   };
-  return (label, portrait) => {
-    const cv = document.createElement("canvas"); cv.width = portrait ? H : W; cv.height = portrait ? W : H; const c = cv.getContext("2d");
+  // كل شهادة تُحفظ كملف صورة PNG في الذاكرة (أخف من base64 على الآيباد والآيفون)
+  return (label, portrait) => new Promise((res) => {
+    const cv = document.createElement("canvas"); cv.width = portrait ? H : W; cv.height = portrait ? W : H; cv.setAttribute("dir", "rtl"); cv.lang = "ar"; const c = cv.getContext("2d");
     if (portrait) { c.translate(H, 0); c.rotate(Math.PI / 2); }
-    paint(c, label); const url = cv.toDataURL("image/png"); cv.width = cv.height = 0; return url;
-  };
+    paint(c, label);
+    const done = (url) => { cv.width = cv.height = 0; res(url); };
+    if (cv.toBlob) cv.toBlob((b) => done(b ? URL.createObjectURL(b) : cv.toDataURL("image/png")), "image/png"); else done(cv.toDataURL("image/png"));
+  });
 }

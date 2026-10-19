@@ -6,20 +6,12 @@ import { esc, $, $$, today, fmtDate } from "../ui.js";
 import { field, bindFields, recordPage, schoolOptions } from "../kit.js";
 import { FORMS, FIRST_SUPERVISOR } from "../templates.js";
 import { printOptionsPanel, bindPrintOptions } from "./teacherVisit.js";
+import { CERT_TYPE, RUQAA_MAX, titleStyleOf } from "../report/builders4.js";
 
 const C = FORMS.cert;
-// الخطوط المتاحة (Google Fonts) — تُحمَّل عند الطباعة فقط
-export const CERT_FONTS = {
-  ruqaa: ["Aref Ruqaa", "رقعة (مزخرف)"], notosans: ["Noto Sans Arabic", "نوتو سانس"], notokufi: ["Noto Kufi Arabic", "نوتو كوفي"], cairo: ["Cairo", "القاهرة (Cairo)"],
-  tajawal: ["Tajawal", "تجوال"], amiri: ["Amiri", "أميري (نسخ)"], naskh: ["Noto Naskh Arabic", "نوتو نسخ"], reemkufi: ["Reem Kufi", "ريم كوفي"], messiri: ["El Messiri", "المسيري"], plex: ["IBM Plex Sans Arabic", "بلكس"],
-};
-// إعدادات كل تصميم الافتراضية (الخطوط والألوان كما في الشهادات المرفقة، ويمكن تغييرها)
+// الخطوط: نظام ثابت لكل الشهادات (انظري CERT_TYPE في report/builders4.js) — العنوان نسخ أو رقعة فقط
 export const DESIGN_DEFAULTS = {
-  ribbons: { fTitle: "ruqaa", fBody: "notosans", fName: "notosans", title: "شكر وتقدير", nameColor: "#8a6a2e", logos: { seal: true, directorate: true } },
-  waves: { fTitle: "notokufi", fBody: "notokufi", fName: "notokufi", title: "شهـادة شكر وتقـديـر", nameColor: "#14254a", logos: { ministry: true, directorate: true } },
-  navy: { fTitle: "amiri", fBody: "amiri", fName: "amiri", title: "", nameColor: "#14254a", logos: { ministry: true, directorate: true } },
-  green: { fTitle: "amiri", fBody: "amiri", fName: "amiri", title: "", nameColor: "#1f5a43", logos: { ministry: true, directorate: true } },
-  classic: { fTitle: "amiri", fBody: "amiri", fName: "amiri", title: "", nameColor: "#222", logos: { ministry: true, directorate: true } },
+  waves: { titleStyle: "naskh", title: "شهـادة شكر وتقـديـر", nameColor: "#14254a", logos: { ministry: true, directorate: true } },
 };
 export const certIssuer = () => `التوجيه الفني للعلوم بمنطقة ${G().region || "الأحمدي"} التعليمية`;
 const genderOf = (r) => (/^قسم|^أقسام/.test(r || "") ? "p" : /ة$/.test((r || "").trim()) ? "f" : "m");
@@ -44,7 +36,7 @@ export function newCert() {
   const g = G(), D = DESIGN_DEFAULTS.waves;
   const d = { type: "cert", ctype: "thanks", design: "waves", recipient: "المعلمة", gender: "f", prefix: "", names: "", issuer: certIssuer(),
     phrase: opts("cert_phrases")[0] || "", details: "", closing: opts("cert_closings")[0] || "", date: today(), showDate: false,
-    fTitle: D.fTitle, fBody: D.fBody, fName: D.fName, nameColor: D.nameColor, titleText: D.title, sizeTitle: 100, sizeBody: 100,
+    titleStyle: D.titleStyle, nameColor: D.nameColor, titleText: D.title, sizeTitle: 100, sizeBody: 100,
     logos: { ministry: true, directorate: true },
     signers: [{ on: true, title: "الموجه الأول للعلوم", name: g.first_supervisor || FIRST_SUPERVISOR.name || "" },
       { on: false, title: `الموجه الفني${g.subject ? " لل" + g.subject.replace(/^ال/, "") : ""}`, name: g.full_name || state.profile?.full_name || "", me: true },
@@ -58,20 +50,21 @@ export async function certEditor(main, rec) {
     render(body, ed) {
       const d = ed.rec.data; if (!C.designs[d.design]) d.design = "waves"; d.logos ||= { ...((DESIGN_DEFAULTS[d.design] || {}).logos || { ministry: true, directorate: true }) };
       const opt = (o, v, l) => `<option value="${esc(o)}" ${o === v ? "selected" : ""}>${esc(l ?? o)}</option>`;
-      const fontSel = (id, v) => `<select id="${id}">${Object.entries(CERT_FONTS).map(([k, [, l]]) => opt(k, v, l)).join("")}</select>`;
+      const tStyle = d.titleStyle || (d.fTitle === "ruqaa" ? "ruqaa" : "naskh");
       const sizeSel = (id, v) => `<select id="${id}">${[80, 90, 100, 110, 120, 130].map((n) => opt(String(n), String(v || 100), n + "%")).join("")}</select>`;
       const signRows = (d.signers || []).map((s, i) => `<tr><td><input type="checkbox" data-si="${i}" data-sf="on" ${s.on ? "checked" : ""} aria-label="إظهار التوقيع ${i + 1}"></td>
         <td><input data-si="${i}" data-sf="title" value="${esc(s.title)}" aria-label="الصفة"></td><td><input data-si="${i}" data-sf="name" value="${esc(s.name)}" aria-label="الاسم"></td></tr>`).join("");
       body.innerHTML = `
-      <section class="panel"><h2>التصميم والخطوط</h2><div class="form">
+      <section class="panel"><h2>التصميم والخطوط</h2>
+      <p class="hint" style="margin:0 0 10px">نظام خطوط رسمي ثابت لكل الشهادات: العنوان <b>Noto Naskh Arabic</b>، اسم المكرّم <b>IBM Plex Sans Arabic</b> عريض، النص والتفاصيل <b>Noto Sans Arabic</b>. الخطوط محفوظة داخل الموقع وتُطبع بدقة 300 نقطة/بوصة.</p>
+      <div class="form">
         <div class="f"><label for="ct-design">تصميم الخلفية</label><select id="ct-design">${Object.entries(C.designs).map(([k, l]) => opt(k, d.design, l)).join("")}</select></div>
         <div class="f"><label for="ct-type">نوع الشهادة</label><select id="ct-type">${Object.entries(C.types).map(([k, t]) => opt(k, d.ctype, t.title)).join("")}</select></div>
         ${field({ label: "العنوان كما يظهر", key: "titleText", value: certTitle(d), hint: "يمكن كتابته بالتطويل مثل: شهـادة شكر وتقـديـر" })}
-        <div class="f"><label for="ct-ft">خط العنوان</label>${fontSel("ct-ft", d.fTitle)}</div>
+        <div class="f"><label for="ct-ft">خط العنوان</label><select id="ct-ft">${["naskh", "ruqaa"].map((k) => opt(k, tStyle, CERT_TYPE[k].label)).join("")}</select>
+          <p class="hint" id="ct-ft-h"></p></div>
         <div class="f"><label for="ct-st">حجم العنوان</label>${sizeSel("ct-st", d.sizeTitle)}</div>
-        <div class="f"><label for="ct-fb">خط النص</label>${fontSel("ct-fb", d.fBody)}</div>
         <div class="f"><label for="ct-sb">حجم النص</label>${sizeSel("ct-sb", d.sizeBody)}</div>
-        <div class="f"><label for="ct-fn">خط الاسم</label>${fontSel("ct-fn", d.fName)}</div>
         <div class="f"><label for="ct-nc">لون الاسم</label><input type="color" id="ct-nc" value="${esc(d.nameColor || "#8a6a2e")}"></div>
       </div>
       <div class="checks" style="margin-top:10px"><b style="margin-inline-end:8px">الشعارات:</b>${Object.entries(C.logos).map(([k, [, l]]) => `<label><input type="checkbox" data-logo="${k}" ${d.logos[k] ? "checked" : ""}>${esc(l)}</label>`).join("")}</div></section>
@@ -99,12 +92,16 @@ export async function certEditor(main, rec) {
       const paintCount = () => { const n = certNames(ed.rec.data).length; $("#ct-count", body).textContent = n ? `سيُطبع ${n} ${n === 1 ? "شهادة" : n === 2 ? "شهادتان" : n <= 10 ? "شهادات" : "شهادة"} بحجم A4 (شهادة لكل اسم).` : "بدون أسماء تُطبع شهادة واحدة بسطر فارغ للكتابة باليد."; };
       paintCount();
       const setVal = (k, v) => { const el = $(`[data-key='${k}']`, body); if (el) el.value = v; };
-      $("#ct-design", body).onchange = (e) => { const D = DESIGN_DEFAULTS[e.target.value] || DESIGN_DEFAULTS.navy;
-        ed.change((x) => { Object.assign(x.data, { design: e.target.value, fTitle: D.fTitle, fBody: D.fBody, fName: D.fName, nameColor: D.nameColor, logos: { ...D.logos } }); if (!x.data.title_manual) x.data.titleText = D.title || (C.types[x.data.ctype] || C.types.thanks).title; });
+      const ruqaaHint = () => { const h = $("#ct-ft-h", body); if (!h) return; const x = ed.rec.data, want = $("#ct-ft", body).value;
+        h.textContent = want === "ruqaa" && titleStyleOf({ titleStyle: "ruqaa" }, certTitle(x)) !== "ruqaa" ? `العنوان طويل (أكثر من ${RUQAA_MAX} حرفاً)، فيُطبع بخط النسخ الرسمي. الرقعة للعناوين القصيرة فقط.` : ""; };
+      ruqaaHint();
+      $("#ct-design", body).onchange = (e) => { const D = DESIGN_DEFAULTS[e.target.value] || DESIGN_DEFAULTS.waves;
+        ed.change((x) => { Object.assign(x.data, { design: e.target.value, titleStyle: D.titleStyle, nameColor: D.nameColor, logos: { ...D.logos } }); if (!x.data.title_manual) x.data.titleText = D.title || (C.types[x.data.ctype] || C.types.thanks).title; });
         ed.redraw(); };
       $("#ct-type", body).onchange = (e) => { ed.change((x) => { x.data.ctype = e.target.value; const T = C.types[e.target.value] || C.types.thanks; x.title = T.title;
         if (!x.data.title_manual) x.data.titleText = x.data.design === "waves" && e.target.value === "thanks" ? "شهـادة شكر وتقـديـر" : T.title; if (!x.data.intro_manual) x.data.introText = T.intro.replace("{الجهة}", x.data.issuer || certIssuer()); }); ed.redraw(); };
-      [["ct-ft", "fTitle"], ["ct-fb", "fBody"], ["ct-fn", "fName"], ["ct-st", "sizeTitle"], ["ct-sb", "sizeBody"]].forEach(([id, k]) => ($(`#${id}`, body).onchange = (e) => ed.change((x) => { x.data[k] = /size/.test(k) ? Number(e.target.value) : e.target.value; })));
+      $("#ct-ft", body).onchange = (e) => { ed.change((x) => { x.data.titleStyle = e.target.value; delete x.data.fTitle; delete x.data.fBody; delete x.data.fName; }); ruqaaHint(); };
+      [["ct-st", "sizeTitle"], ["ct-sb", "sizeBody"]].forEach(([id, k]) => ($(`#${id}`, body).onchange = (e) => ed.change((x) => { x.data[k] = /size/.test(k) ? Number(e.target.value) : e.target.value; })));
       $("#ct-nc", body).oninput = (e) => ed.change((x) => { x.data.nameColor = e.target.value; });
       $$("[data-logo]", body).forEach((cb) => (cb.onchange = () => ed.change((x) => { x.data.logos = { ...(x.data.logos || {}), [cb.dataset.logo]: cb.checked }; })));
       $("#ct-g", body).onchange = (e) => ed.change((x) => { x.data.gender = e.target.value; });
@@ -124,7 +121,7 @@ export async function certEditor(main, rec) {
         ed.change((x) => {
           x.data[k] = v;
           if (k === "date") x.record_date = v || null;
-          if (k === "titleText") x.data.title_manual = true;
+          if (k === "titleText") { x.data.title_manual = true; setTimeout(ruqaaHint); }
           if (k === "introText") x.data.intro_manual = true;
           if (k === "recipient") { x.data.gender = genderOf(v); }
           x.data.body_manual = false;
