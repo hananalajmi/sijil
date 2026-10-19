@@ -130,9 +130,81 @@ export async function certificate(ctx) {
       ${!blank && d.showDate ? `<div class="ce-date">تحريراً في: ${esc(fmtDateSlash(date))}${hijri(date) ? ` &nbsp;الموافق: ${esc(hijri(date))}` : ""}</div>` : ""}
       ${sigs}</div></div>`;
   const list = names.length ? names : [""];
-  // الآيباد والآيفون يطبعان طولياً فقط: تُبنى الشهادة مُدارة داخل صفحة طولية (بدل تدوير الصفحة كاملة عند الطباعة)
   const IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) || /[?&]ios=1\b/.test(location.search);
-  const wrap = (h) => (IOS ? `<div class="ce-rot">${h}</div>` : h);
-  const blocks = []; list.forEach((n, i) => { if (i) blocks.push({ pageBreak: true }); blocks.push({ html: wrap(page(n)) }); });
-  return { orientation: IOS ? "portrait" : "landscape", cls: "t-ce" + (IOS ? " ce-ios" : ""), header: "", identity: "", footer: "", blocks };
+  // الشهادة تُرسم صورةً واحدة بدقة الطباعة: ما يظهر في المعاينة هو ما يُطبع بالضبط، بلا تداخل على أي جهاز.
+  // في الآيباد والآيفون (طباعة طولية فقط) تُرسم الصورة مُدارة داخل صفحة طولية.
+  try {
+    const R = await certRenderer({ d, blank, design, fT, fB, fN, title: blank ? (FORMS.cert.types[d.ctype] || FORMS.cert.types.thanks).title : certTitle(d),
+      intro: blank ? "يتقدم التوجيه الفني للعلوم بخالص الشكر والتقدير إلى" : certIntro(d), lines, signers, keys, date: !blank && d.showDate ? `تحريراً في: ${fmtDateSlash(date)}${hijri(date) ? "  الموافق: " + hijri(date) : ""}` : "",
+      sigImg: blank ? null : (ctx.print?.showSignature && ctx.guide?.signature ? ctx.guide.signature : null), stampImg: blank ? null : (ctx.print?.showStamp && ctx.guide?.stamp ? ctx.guide.stamp : null), nameColor: d.nameColor || D.nameColor });
+    const blocks = [];
+    for (let i = 0; i < list.length; i++) {
+      const n = list[i], label = n ? `${d.recipient ? d.recipient + (d.prefix ? " / " + d.prefix : "") + " " : d.prefix ? d.prefix + " " : ""}${n}` : "";
+      const src = R(label, IOS);
+      if (i) blocks.push({ pageBreak: true });
+      blocks.push({ html: `<img class="ce-img ${IOS ? "por" : "lan"}" src="${src}" alt="${esc(label || "شهادة")}">` });
+    }
+    return { orientation: IOS ? "portrait" : "landscape", cls: "t-ce t-ce-img", header: "", identity: "", footer: "", blocks };
+  } catch (e) { console.warn("certificate canvas fallback", e); }
+  const blocks = []; list.forEach((n, i) => { if (i) blocks.push({ pageBreak: true }); blocks.push({ html: page(n) }); });
+  return { orientation: "landscape", cls: "t-ce", header: "", identity: "", footer: "", blocks };
+}
+
+// رسم الشهادة على لوحة (canvas) بدقة 200 نقطة/بوصة
+const loadImg = (src) => new Promise((res) => { if (!src) return res(null); const im = new Image(); if (!/^(data:|blob:)/.test(src) && /^https?:/.test(src)) im.crossOrigin = "anonymous"; im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
+async function certRenderer(o) {
+  const MM = 200 / 25.4, W = Math.round(297 * MM), H = Math.round(210 * MM);
+  const { fileUrl, logoSrc } = await import("../store.js");
+  const svg = WAVES_SVG.replace("<svg ", `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" `);
+  const bg = await loadImg("data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg));
+  const L = {}; for (const k of o.keys) L[k] = await loadImg(await logoSrc(k === "seal" ? "emblem" : FORMS.cert.logos[k][0]));
+  const sig = o.sigImg ? await loadImg(await fileUrl(o.sigImg)) : null, stamp = o.stampImg ? await loadImg(await fileUrl(o.stampImg)) : null;
+  const d = o.d, sT = (d.sizeTitle || 100) / 100, sB = (d.sizeBody || 100) / 100, PT = 0.3528 * MM;
+  const font = (w, pt, fam) => `${w} ${pt * PT}px "${fam}", "Noto Kufi Arabic", "IBM Plex Sans Arabic", sans-serif`;
+  const wrap = (c, text, maxW) => { const words = String(text).split(/\s+/).filter(Boolean), out = []; let cur = "";
+    for (const w of words) { const t = cur ? cur + " " + w : w; if (c.measureText(t).width > maxW && cur) { out.push(cur); cur = w; } else cur = t; } if (cur) out.push(cur); return out; };
+  const drawLogo = (c, im, k, x, y, h, alignRight) => {
+    if (k === "seal") { const r = 21 * MM, cx = alignRight ? x - r : x + r, cy = y + r;
+      const g = c.createRadialGradient(cx - r * .3, cy - r * .3, r * .1, cx, cy, r); g.addColorStop(0, "#fbeab0"); g.addColorStop(.6, "#d9b062"); g.addColorStop(1, "#a87b2a");
+      c.save(); c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2); c.fillStyle = "#b8892f"; c.fill(); c.beginPath(); c.arc(cx, cy, r * .9, 0, Math.PI * 2); c.fillStyle = g; c.fill(); c.restore();
+      if (im) { const ih = r * .95, iw = ih * im.width / im.height; c.drawImage(im, cx - iw / 2, cy - ih * .62, iw, ih); }
+      c.fillStyle = "#3d2c0b"; c.textAlign = "center"; c.font = font(700, 7.5, o.fB); c.fillText("وزارة التربية", cx, cy + r * .55); return; }
+    if (!im) return; const w = Math.min(60 * MM, h * im.width / im.height), hh = w * im.height / im.width; c.drawImage(im, alignRight ? x - w : x, y, w, hh); };
+  const paint = (c, label) => {
+    c.fillStyle = "#fff"; c.fillRect(0, 0, W, H); if (bg) c.drawImage(bg, 0, 0, W, H);
+    const [k1, k2, ...km] = o.keys;
+    if (k1) drawLogo(c, L[k1], k1, W - 20 * MM, 10 * MM, 30 * MM, true);
+    if (k2) drawLogo(c, L[k2], k2, 24 * MM, 30 * MM, 21 * MM, false);
+    km.forEach((k, i) => drawLogo(c, L[k], k, W / 2 - 15 * MM + (i - (km.length - 1) / 2) * 34 * MM, 4 * MM, 16 * MM, false));
+    c.direction = "rtl"; c.textAlign = "center"; c.textBaseline = "middle";
+    let y = 18 * MM; const cx = W / 2;
+    const block = (text, w, pt, fam, lh, color, maxW, before = 0) => { y += before * MM; c.font = font(w, pt, fam); c.fillStyle = color;
+      for (const ln of wrap(c, text, maxW * MM)) { const h = pt * PT * lh; c.fillText(ln, cx, y + h / 2); y += h; } };
+    block(o.title, 400, 40 * sT, o.fT, 1.3, "#14254a", 230);
+    block(o.intro, 400, 20 * sB, o.fB, 1.9, "#1b1b1b", 175, 5);
+    if (label) block(label, 700, 28 * sB, o.fN, 1.35, o.nameColor, 229, 3);
+    else { y += 6 * MM; c.save(); c.setLineDash([2, 6]); c.strokeStyle = "#555"; c.lineWidth = 2; c.beginPath(); c.moveTo(cx - 75 * MM, y + 6 * MM); c.lineTo(cx + 75 * MM, y + 6 * MM); c.stroke(); c.restore(); y += 10 * MM; }
+    // زخرفة ذهبية تحت الاسم
+    y += 1.5 * MM; const oy = y + 2 * MM;
+    const gl = c.createLinearGradient(cx - 96 * MM, 0, cx - 4 * MM, 0); gl.addColorStop(0, "rgba(201,162,79,0)"); gl.addColorStop(1, "#c9a24f");
+    const gr = c.createLinearGradient(cx + 96 * MM, 0, cx + 4 * MM, 0); gr.addColorStop(0, "rgba(201,162,79,0)"); gr.addColorStop(1, "#c9a24f");
+    c.fillStyle = gl; c.fillRect(cx - 96 * MM, oy - .35 * MM, 92 * MM, .7 * MM); c.fillStyle = gr; c.fillRect(cx + 4 * MM, oy - .35 * MM, 92 * MM, .7 * MM);
+    c.save(); c.translate(cx, oy); c.rotate(Math.PI / 4); c.fillStyle = "#c9a24f"; c.fillRect(-1.6 * MM, -1.6 * MM, 3.2 * MM, 3.2 * MM); c.restore();
+    y = oy + 4 * MM;
+    if (o.lines.length) for (const ln of o.lines) block(ln, 400, 19 * sB, o.fB, 2.2, "#1b1b1b", 229, .3);
+    else for (const w of [190, 150]) { y += 12 * MM; c.save(); c.setLineDash([2, 6]); c.strokeStyle = "#555"; c.lineWidth = 2; c.beginPath(); c.moveTo(cx - w / 2 * MM, y); c.lineTo(cx + w / 2 * MM, y); c.stroke(); c.restore(); }
+    if (o.date) block(o.date, 400, 13 * sB, o.fB, 1.6, "#333", 229, 2);
+    // التوقيعات أسفل اليسار
+    o.signers.forEach((s, i) => { const x0 = 22 * MM + i * 85 * MM, w = 75 * MM, sx = x0 + w / 2; let sy = H - 21 * MM - (s.me && (sig || stamp) ? 16 * MM : 0);
+      c.textAlign = "center"; c.fillStyle = "#8a6a2e"; c.font = font(700, 15 * sB, o.fB);
+      const lines = [s.title || "", s.name ? "أ/ " + s.name : ""].filter(Boolean); const lh = 15 * sB * PT * 1.5;
+      lines.forEach((t, j) => c.fillText(t, sx, sy - (lines.length - j) * lh + lh / 2));
+      if (s.me) { let ix = sx - 20 * MM; for (const im of [sig, stamp]) if (im) { const h = 14 * MM, w2 = Math.min(30 * MM, h * im.width / im.height); c.drawImage(im, ix, sy + 1 * MM, w2, h); ix += w2 + 4 * MM; } }
+      c.fillStyle = "#8a6a2e"; c.fillRect(x0, H - 21 * MM + 1 * MM, w, .35 * MM); });
+  };
+  return (label, portrait) => {
+    const cv = document.createElement("canvas"); cv.width = portrait ? H : W; cv.height = portrait ? W : H; const c = cv.getContext("2d");
+    if (portrait) { c.translate(H, 0); c.rotate(Math.PI / 2); }
+    paint(c, label); const url = cv.toDataURL("image/png"); cv.width = cv.height = 0; return url;
+  };
 }

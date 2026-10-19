@@ -448,3 +448,6 @@
 
 /* الشهادة: التصغير عند الطباعة بالـ zoom بدل التحويل (أثبت في سفاري) */
 @media print { .fit-page.p > .sheet.t-ce, .fit-page.l > .sheet.t-ce { transform: none !important; zoom: var(--print-s); } }
+/* الشهادة كصورة واحدة بحجم الورقة */
+.sheet.t-ce-img .pg-body { display: block; }
+.t-ce .ce-img { display: block; } .t-ce .ce-img.lan { width: 296.6mm; height: 209.6mm; } .t-ce .ce-img.por { width: 209.6mm; height: 296.6mm; }
