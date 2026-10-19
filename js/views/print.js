@@ -78,8 +78,8 @@ export default async function (main, { id, params }) {
   let pageStyle = document.getElementById("page-style");
   if (!pageStyle) { pageStyle = document.createElement("style"); pageStyle.id = "page-style"; document.head.appendChild(pageStyle); }
   // حجم الطباعة (تصغير الصفحة داخل الورقة): يُحفظ على هذا الجهاز. الافتراضي في الآيباد وسفاري 82%، وفي غيرهما كامل
-  const scKey = "sijil.printscale", sel = $("#pscale", main);
-  let sc = SAFARI ? 82 : 100;
+  const scKey = "sijil.printscale2", sel = $("#pscale", main);
+  let sc = SAFARI || IOS ? 82 : 100;
   try { const v = Number(localStorage.getItem(scKey)); if (v >= 70 && v <= 100) sc = v; } catch (_) {}
   if (![...sel.options].some((o) => Number(o.value) === sc)) sel.insertAdjacentHTML("beforeend", `<option value="${sc}">${sc}%</option>`);
   sel.value = String(sc);
@@ -100,8 +100,8 @@ export default async function (main, { id, params }) {
     });
   };
   // المعاينة على الشاشة تُصغَّر لتظهر الصفحة كاملة بعرض الجهاز (الآيباد والجوال)؛ الطباعة لا تتأثر
-  const fitPreview = () => { const wrap = sheets.parentElement, first = sheets.querySelector(".sheet"); if (!wrap || !first) return;
-    wrap.style.removeProperty("--pvz"); const avail = wrap.clientWidth - 24, w = first.offsetWidth; if (w > avail && avail > 200) wrap.style.setProperty("--pvz", String(Math.floor((avail / w) * 1000) / 1000)); };
+  // (أُلغي تصغير المعاينة: في الآيفون والآيباد يمنع الحد الأدنى لحجم الخط تصغير النص فيتداخل مع الصفحة)
+  const fitPreview = () => {};
   const render0 = render;
   const renderFit = async () => { await render0(); fitPreview(); };
   await renderFit();

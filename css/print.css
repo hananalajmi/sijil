@@ -440,8 +440,6 @@
 .t-ce .ce-sig-m:empty { display: none; } .t-ce .ce-waves .ce-logo-l { top: 30mm; }
 .t-ce .ce-logo-r .ce-logo { height: 30mm; } .t-ce .ce-waves .ce-logo-r { top: 10mm; }
 
-/* تصغير المعاينة على الشاشة فقط (لا يؤثر على الطباعة) */
-@media screen { .preview-wrap .sheets { zoom: var(--pvz, 1); } }
 /* الشهادة على الآيباد: صفحة طولية والشهادة مُدارة بداخلها */
 .t-ce .ce-rot { position: relative; width: 210mm; height: 297mm; overflow: hidden; }
 .t-ce .ce-rot > .ce { position: absolute; top: .5mm; left: 209mm; margin: 0; transform-origin: 0 0; transform: rotate(90deg); }
