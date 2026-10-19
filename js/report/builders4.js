@@ -211,7 +211,7 @@ async function certRenderer(o) {
     if (!dry) { c.fillStyle = "#fff"; c.fillRect(0, 0, W, H); if (bg) c.drawImage(bg, 0, 0, W, H);
       for (const [k, x, yy, h, r] of LOGO_POS()) drawLogo(c, L[k], k, x, yy, h, r); }
     c.textAlign = "center"; c.textBaseline = "middle";
-    let y = 17 * MM + off; const cx = W / 2;
+    let y = 17 * MM; const cx = W / 2;
     // نصف العرض المتاح حول المنتصف بين y0 و y1 بعيداً عن الشعارات بهامش 6 مم
     const hits = (y0, y1) => boxes.filter((b) => y1 > b.y0 - 2 * MM && y0 < b.y1 + 2 * MM);
     const freeHalf = (y0, y1) => Math.min(Infinity, ...hits(y0, y1).map((b) => (b.x1 < cx ? cx - b.x1 : b.x0 > cx ? b.x0 - cx : 0) - 6 * MM));
@@ -225,6 +225,8 @@ async function certRenderer(o) {
       }
       for (const ln of lines) { if (!dry) c.fillText(ln, cx, y + h / 2); y += h; } };
     block(o.title, TS.w, TS.pt * sT, TS.fam, TS.lh, "#14254a", 230);
+    // العنوان يبقى بمكانه فوق، وباقي الكلام يبدأ تحت الشعارات
+    y = Math.max(y, ...boxes.map((b) => b.y1)) + off;
     block(o.intro, BD.w, 19 * sB, BD.fam, 1.9, "#1b1b1b", 180, 3);
     if (label) block(label, NM.w, 27 * sB, NM.fam, 1.5, o.nameColor, 229, 2);
     else if (dry) y += 16 * MM; else { y += 6 * MM; c.save(); c.setLineDash([2 * MM / 8, 6 * MM / 8]); c.strokeStyle = "#555"; c.lineWidth = .25 * MM; c.beginPath(); c.moveTo(cx - 75 * MM, y + 6 * MM); c.lineTo(cx + 75 * MM, y + 6 * MM); c.stroke(); c.restore(); y += 10 * MM; }
