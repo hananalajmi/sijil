@@ -101,7 +101,7 @@ export default async function (main, { id, params }) {
   };
   // المعاينة على الشاشة تُصغَّر لتظهر الصفحة كاملة بعرض الجهاز (الآيباد والجوال)؛ الطباعة لا تتأثر
   const fitPreview = () => { const wrap = sheets.parentElement, first = sheets.querySelector(".sheet"); if (!wrap || !first) return;
-    sheets.style.zoom = ""; const avail = wrap.clientWidth - 24, w = first.offsetWidth; sheets.style.zoom = w > avail && avail > 200 ? String(Math.floor((avail / w) * 1000) / 1000) : ""; };
+    wrap.style.removeProperty("--pvz"); const avail = wrap.clientWidth - 24, w = first.offsetWidth; if (w > avail && avail > 200) wrap.style.setProperty("--pvz", String(Math.floor((avail / w) * 1000) / 1000)); };
   const render0 = render;
   const renderFit = async () => { await render0(); fitPreview(); };
   await renderFit();
