@@ -186,27 +186,44 @@ async function certRenderer(o) {
   // تقسيم متوازن: نفس عدد الأسطر لكن بأطوال متقاربة (بدل سطر طويل وكلمتين وحيدتين تحته)
   const wrap = (c, text, maxW) => { const words = String(text).split(/\s+/).filter(Boolean), base = greedy(c, words, maxW); if (base.length < 2) return base;
     let lo = maxW / base.length, hi = maxW; for (let k = 0; k < 14; k++) { const mid = (lo + hi) / 2; if (greedy(c, words, mid).length > base.length) lo = mid; else hi = mid; } return greedy(c, words, hi); };
-  const drawLogo = (c, im, k, x, y, h, alignRight) => {
-    if (k === "seal") { const r = 21 * MM, cx = alignRight ? x - r : x + r, cy = y + r;
+  // كل شعار يُرجع مساحته، والكتابة تتجنّب هذه المساحات
+  const drawLogo = (c, im, k, x, y, h, alignRight, draw = true) => {
+    if (k === "seal") { const r = 21 * MM, cx = alignRight ? x - r : x + r, cy = y + r; if (!draw) return { x0: cx - r, x1: cx + r, y0: cy - r, y1: cy + r };
       const g = c.createRadialGradient(cx - r * .3, cy - r * .3, r * .1, cx, cy, r); g.addColorStop(0, "#fbeab0"); g.addColorStop(.6, "#d9b062"); g.addColorStop(1, "#a87b2a");
       c.save(); c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2); c.fillStyle = "#b8892f"; c.fill(); c.beginPath(); c.arc(cx, cy, r * .9, 0, Math.PI * 2); c.fillStyle = g; c.fill(); c.restore();
       if (im) { const ih = r * .95, iw = ih * im.width / im.height; c.drawImage(im, cx - iw / 2, cy - ih * .62, iw, ih); }
       c.fillStyle = "#3d2c0b"; c.textAlign = "center"; c.font = font(700, 7.5, BD.fam); c.fillText("وزارة التربية", cx, cy + r * .55); return; }
-    if (!im) return; const w = Math.min(60 * MM, h * im.width / im.height), hh = w * im.height / im.width; c.drawImage(im, alignRight ? x - w : x, y, w, hh); };
+    if (!im) return null; const w = Math.min(60 * MM, h * im.width / im.height), hh = w * im.height / im.width, x0 = alignRight ? x - w : x;
+    if (!draw) return { x0, x1: x0 + w, y0: y, y1: y + hh }; c.drawImage(im, x0, y, w, hh); };
+  const LOGO_POS = () => { const [k1, k2, ...km] = o.keys, out = [];
+    if (k1) out.push([k1, W - 20 * MM, 10 * MM, 30 * MM, true]); if (k2) out.push([k2, 24 * MM, 30 * MM, 21 * MM, false]);
+    km.forEach((k, i) => out.push([k, W / 2 - 15 * MM + (i - (km.length - 1) / 2) * 34 * MM, 4 * MM, 16 * MM, false])); return out; };
+  const boxes = LOGO_POS().map(([k, x, y, h, r]) => drawLogo(null, L[k], k, x, y, h, r, false)).filter(Boolean);
   // المحتوى يتوسّط المساحة بين أعلى الشهادة والتوقيعات (يُقاس أولاً ثم يُرسم)
-  const paint = (c, label) => { const end = layout(c, label, 0, true), room = H - 50 * MM - end; layout(c, label, Math.max(0, Math.min(room * .5, 22 * MM)), false); };
-  const layout = (c, label, off, dry) => {
+  // وإذا زاد الكلام عن المساحة (قبل الأمواج والتوقيعات) يُصغَّر كل النص بنسبة واحدة حتى يتسع
+  const LIMIT = H - 50 * MM;
+  const paint = (c, label) => { let k = 1, end = layout(c, label, 0, true, k);
+    while (end > LIMIT && k > .62) { k *= .95; end = layout(c, label, 0, true, k); }
+    layout(c, label, Math.max(0, Math.min((LIMIT - end) * .5, 22 * MM)), false, k); };
+  const layout = (c, label, off, dry, k = 1) => {
     c.direction = "rtl"; c.imageSmoothingQuality = "high";
     try { c.fontKerning = "normal"; c.textRendering = "optimizeLegibility"; } catch (_) {}
-    const [k1, k2, ...km] = o.keys;
     if (!dry) { c.fillStyle = "#fff"; c.fillRect(0, 0, W, H); if (bg) c.drawImage(bg, 0, 0, W, H);
-    if (k1) drawLogo(c, L[k1], k1, W - 20 * MM, 10 * MM, 30 * MM, true);
-    if (k2) drawLogo(c, L[k2], k2, 24 * MM, 30 * MM, 21 * MM, false);
-    km.forEach((k, i) => drawLogo(c, L[k], k, W / 2 - 15 * MM + (i - (km.length - 1) / 2) * 34 * MM, 4 * MM, 16 * MM, false)); }
+      for (const [k, x, yy, h, r] of LOGO_POS()) drawLogo(c, L[k], k, x, yy, h, r); }
     c.textAlign = "center"; c.textBaseline = "middle";
     let y = 17 * MM + off; const cx = W / 2;
-    const block = (text, w, pt, fam, lh, color, maxW, before = 0) => { y += before * MM; c.font = font(w, pt, fam); c.fillStyle = color;
-      for (const ln of wrap(c, text, maxW * MM)) { const h = pt * PT * lh; if (!dry) c.fillText(ln, cx, y + h / 2); y += h; } };
+    // نصف العرض المتاح حول المنتصف بين y0 و y1 بعيداً عن الشعارات بهامش 6 مم
+    const hits = (y0, y1) => boxes.filter((b) => y1 > b.y0 - 2 * MM && y0 < b.y1 + 2 * MM);
+    const freeHalf = (y0, y1) => Math.min(Infinity, ...hits(y0, y1).map((b) => (b.x1 < cx ? cx - b.x1 : b.x0 > cx ? b.x0 - cx : 0) - 6 * MM));
+    const block = (text, w, pt, fam, lh, color, maxW, before = 0) => { pt *= k; y += before * k * MM; c.font = font(w, pt, fam); c.fillStyle = color;
+      const h = pt * PT * lh, pad = Math.max(0, (h - pt * PT * 1.25) / 2); let mw = maxW * MM, lines = wrap(c, text, mw);
+      for (let it = 0; it < 6; it++) {
+        const fh = freeHalf(y + pad, y + lines.length * h - pad); if (2 * fh >= mw - 1) break;
+        if (2 * fh < 120 * MM) { y = Math.max(...hits(y + pad, y + lines.length * h - pad).map((b) => b.y1)) + 2.5 * MM - pad; mw = maxW * MM; }
+        else mw = 2 * fh;
+        lines = wrap(c, text, mw);
+      }
+      for (const ln of lines) { if (!dry) c.fillText(ln, cx, y + h / 2); y += h; } };
     block(o.title, TS.w, TS.pt * sT, TS.fam, TS.lh, "#14254a", 230);
     block(o.intro, BD.w, 19 * sB, BD.fam, 1.9, "#1b1b1b", 180, 3);
     if (label) block(label, NM.w, 27 * sB, NM.fam, 1.5, o.nameColor, 229, 2);
