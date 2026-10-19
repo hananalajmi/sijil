@@ -99,7 +99,7 @@ const WAVES_SVG = `<svg class="ce-bg" viewBox="0 0 297 210" preserveAspectRatio=
   <path d="M0 210C30 200 64 197 98 198" stroke="#f2c55c" stroke-width="1" fill="none"/></svg>`;
 export async function certificate(ctx) {
   const { certLines, certIntro, certNames, certTitle, CERT_FONTS, DESIGN_DEFAULTS } = await import("../views/cert.js");
-  const d = ctx.rec.data || {}, blank = !!d.blank, design = d.design || "ribbons", D = DESIGN_DEFAULTS[design] || DESIGN_DEFAULTS.navy;
+  const d = ctx.rec.data || {}, blank = !!d.blank, design = FORMS.cert.designs[d.design] ? d.design : "waves", D = DESIGN_DEFAULTS[design] || DESIGN_DEFAULTS.navy;
   const fam = (k, def) => (CERT_FONTS[k || def] || CERT_FONTS.amiri)[0];
   const fT = fam(d.fTitle, D.fTitle), fB = fam(d.fBody, D.fBody), fN = fam(d.fName, D.fName);
   await loadCertFonts([...new Set([fT, fB, fN])]);
@@ -107,7 +107,7 @@ export async function certificate(ctx) {
   const hijri = (iso) => { try { return new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura", { day: "numeric", month: "long", year: "numeric" }).format(new Date(iso + "T12:00:00")); } catch (_) { return ""; } };
   const date = d.date || ctx.rec.record_date;
   // الشعارات المختارة: الأول يميناً والثاني يساراً والبقية في الوسط
-  const L = d.logos || { seal: true, directorate: true }, keys = Object.keys(FORMS.cert.logos).filter((k) => L[k]);
+  const L = d.logos || { ministry: true, directorate: true }, keys = Object.keys(FORMS.cert.logos).filter((k) => L[k]);
   const logoHtml = async (k) => k === "seal" ? `<div class="ce-seal"><div class="ce-seal-in">${await logo("emblem", "ce-seal-img")}<b>وزارة التربية</b><small>Ministry of Education</small></div></div>` : await logo(FORMS.cert.logos[k][0], "ce-logo");
   const right = keys[0] ? await logoHtml(keys[0]) : "", left = keys[1] ? await logoHtml(keys[1]) : "";
   const mid = (await Promise.all(keys.slice(2).map(logoHtml))).join("");
@@ -117,7 +117,7 @@ export async function certificate(ctx) {
       <div class="ce-sig-n">${s.name ? "أ/ " + esc(s.name) : ""}</div><div class="ce-sig-m">${s.me ? sigImgs : ""}</div></div>`).join("")}</div>` : `<div class="ce-sigs"></div>`;
   const lines = blank ? [] : certLines(d);
   const style = `--fT:'${fT}';--fB:'${fB}';--fN:'${fN}';--nc:${esc(d.nameColor || D.nameColor)};--sT:${(d.sizeTitle || 100) / 100};--sB:${(d.sizeBody || 100) / 100}`;
-  const bg = design === "ribbons" ? RIBBONS_SVG : design === "waves" ? WAVES_SVG : "";
+  const bg = design === "waves" ? WAVES_SVG : "";
   const page = (name) => `<div class="ce ce-${esc(design)}" style="${style}">${bg}<div class="ce-frame">${design === "navy" || design === "green" || design === "classic" ? '<i class="ce-c tl"></i><i class="ce-c tr"></i><i class="ce-c bl"></i><i class="ce-c br"></i>' : ""}
       <div class="ce-logo-r">${right}</div><div class="ce-logo-l">${left}</div>
       ${mid ? `<div class="ce-logo-m">${mid}</div>` : ""}

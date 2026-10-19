@@ -41,11 +41,11 @@ export function certLines(d) {
 export const certBody = (d) => certLines(d).join("\n");
 
 export function newCert() {
-  const g = G(), D = DESIGN_DEFAULTS.ribbons;
-  const d = { type: "cert", ctype: "thanks", design: "ribbons", recipient: "المعلمة", gender: "f", prefix: "", names: "", issuer: certIssuer(),
+  const g = G(), D = DESIGN_DEFAULTS.waves;
+  const d = { type: "cert", ctype: "thanks", design: "waves", recipient: "المعلمة", gender: "f", prefix: "", names: "", issuer: certIssuer(),
     phrase: opts("cert_phrases")[0] || "", details: "", closing: opts("cert_closings")[0] || "", date: today(), showDate: false,
     fTitle: D.fTitle, fBody: D.fBody, fName: D.fName, nameColor: D.nameColor, titleText: D.title, sizeTitle: 100, sizeBody: 100,
-    logos: { seal: true, directorate: true },
+    logos: { ministry: true, directorate: true },
     signers: [{ on: true, title: "الموجه الأول للعلوم", name: g.first_supervisor || FIRST_SUPERVISOR.name || "" },
       { on: false, title: `الموجه الفني${g.subject ? " لل" + g.subject.replace(/^ال/, "") : ""}`, name: g.full_name || state.profile?.full_name || "", me: true },
       { on: false, title: "مديرة المدرسة", name: "" }] };
@@ -53,10 +53,10 @@ export function newCert() {
 }
 
 export async function certEditor(main, rec) {
-  return recordPage(main, { rec, title: "شهادة",
+  return recordPage(main, { backHref: "#/forms?sec=cert", newHref: "#/forms/new?type=cert", rec, title: "شهادة",
     beforeApprove: (r) => [!certNames(r.data).length && "الأسماء"].filter(Boolean),
     render(body, ed) {
-      const d = ed.rec.data; d.logos ||= { ...((DESIGN_DEFAULTS[d.design] || {}).logos || { seal: true, directorate: true }) };
+      const d = ed.rec.data; if (!C.designs[d.design]) d.design = "waves"; d.logos ||= { ...((DESIGN_DEFAULTS[d.design] || {}).logos || { ministry: true, directorate: true }) };
       const opt = (o, v, l) => `<option value="${esc(o)}" ${o === v ? "selected" : ""}>${esc(l ?? o)}</option>`;
       const fontSel = (id, v) => `<select id="${id}">${Object.entries(CERT_FONTS).map(([k, [, l]]) => opt(k, v, l)).join("")}</select>`;
       const sizeSel = (id, v) => `<select id="${id}">${[80, 90, 100, 110, 120, 130].map((n) => opt(String(n), String(v || 100), n + "%")).join("")}</select>`;
@@ -103,7 +103,7 @@ export async function certEditor(main, rec) {
         ed.change((x) => { Object.assign(x.data, { design: e.target.value, fTitle: D.fTitle, fBody: D.fBody, fName: D.fName, nameColor: D.nameColor, logos: { ...D.logos } }); if (!x.data.title_manual) x.data.titleText = D.title || (C.types[x.data.ctype] || C.types.thanks).title; });
         ed.redraw(); };
       $("#ct-type", body).onchange = (e) => { ed.change((x) => { x.data.ctype = e.target.value; const T = C.types[e.target.value] || C.types.thanks; x.title = T.title;
-        if (!x.data.title_manual) x.data.titleText = x.data.design === "ribbons" && e.target.value === "thanks" ? "شكر وتقدير" : T.title; if (!x.data.intro_manual) x.data.introText = T.intro.replace("{الجهة}", x.data.issuer || certIssuer()); }); ed.redraw(); };
+        if (!x.data.title_manual) x.data.titleText = x.data.design === "waves" && e.target.value === "thanks" ? "شهـادة شكر وتقـديـر" : T.title; if (!x.data.intro_manual) x.data.introText = T.intro.replace("{الجهة}", x.data.issuer || certIssuer()); }); ed.redraw(); };
       [["ct-ft", "fTitle"], ["ct-fb", "fBody"], ["ct-fn", "fName"], ["ct-st", "sizeTitle"], ["ct-sb", "sizeBody"]].forEach(([id, k]) => ($(`#${id}`, body).onchange = (e) => ed.change((x) => { x.data[k] = /size/.test(k) ? Number(e.target.value) : e.target.value; })));
       $("#ct-nc", body).oninput = (e) => ed.change((x) => { x.data.nameColor = e.target.value; });
       $$("[data-logo]", body).forEach((cb) => (cb.onchange = () => ed.change((x) => { x.data.logos = { ...(x.data.logos || {}), [cb.dataset.logo]: cb.checked }; })));

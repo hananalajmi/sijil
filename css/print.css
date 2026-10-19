@@ -246,7 +246,7 @@
   html, body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
   body * { visibility: hidden; }
   .sheets, .sheets * { visibility: visible; }
-  .sheets, .preview-wrap .sheets { position: absolute; inset: 0 auto auto 0; padding: 0 !important; gap: 0; display: block; }
+  .sheets, .preview-wrap .sheets { position: absolute; inset: 0 auto auto 0; padding: 0 !important; gap: 0; display: block; zoom: 1 !important; }
   .sheet { box-shadow: none; margin: 0; break-after: page; page-break-after: always; }
   .sheet:last-child { break-after: auto; page-break-after: auto; }
   .sheet.landscape { page: landscape; }
@@ -438,3 +438,4 @@
 .t-ce .ce-c.bl { bottom: 4.5mm; left: 4.5mm; border-right: 0; border-top: 0; } .t-ce .ce-c.br { bottom: 4.5mm; right: 4.5mm; border-left: 0; border-top: 0; }
 .t-ce .ce-ribbons .ce-body { font-size: calc(16.5pt * var(--sB)); } .t-ce .ce-ribbons .ce-intro { font-size: calc(18pt * var(--sB)); }
 .t-ce .ce-sig-m:empty { display: none; } .t-ce .ce-waves .ce-logo-l { top: 30mm; }
+.t-ce .ce-logo-r .ce-logo { height: 30mm; } .t-ce .ce-waves .ce-logo-r { top: 10mm; }

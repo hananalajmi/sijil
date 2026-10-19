@@ -11,7 +11,7 @@ export const SECTIONS = [
   { id: "visits", label: "الزيارات الميدانية", icon: "pin", card: "visits", desc: "تسجيل ومتابعة الزيارات المدرسية",
     items: [["school-visits", "زيارة الموجه للمدرسة", "school", "تُسجَّل فيها زيارات المعلمين تلقائياً"], ["teacher-visits", "زيارة المعلم / رئيس القسم", "user", "بنود الزيارة بالمستويات الثلاثة"], ["exams", "متابعة الامتحانات", "check", "النظري والعملي"]] },
   { id: "reports", label: "التقارير", icon: "doc", card: "reports", desc: "إعداد التقارير واعتمادها وطباعتها",
-    items: [["events", "تقرير الفعالية / التنمية المهنية", "star", "مع صور الفعالية"], ["approved", "التقارير المعتمدة", "approved", "النسخ الثابتة المعتمدة"], ["bulletins", "النشرات الراجعة", "mail", "رفع النشرات وحفظها"], ["forms", "النماذج والتكاليف", "approved", "تكليف بمهمة: تعبئة وتوقيع وحفظ وإرسال"], ["sign", "توقيع ملف", "check", "ضعي توقيعك وختمك على أي نموذج PDF أو صورة"]] },
+    items: [["events", "تقرير الفعالية / التنمية المهنية", "star", "مع صور الفعالية"], ["approved", "التقارير المعتمدة", "approved", "النسخ الثابتة المعتمدة"], ["forms?sec=takleef", "التكاليف", "approved", "تكليف بمهمة: تعبئة وتوقيع وحفظ وإرسال"], ["forms?sec=criteria", "بطاقة قياس المعايير", "check", "الدرجات قوائم والمجموع تلقائي"], ["forms?sec=cert", "الشهادات", "star", "شكر وتقدير، تميّز، مشاركة، حضور"], ["sign", "توقيع ملف", "check", "ضعي توقيعك وختمك على أي نموذج PDF أو صورة"]] },
   { id: "ach", label: "الإنجازات", icon: "trophy", card: "ach", desc: "توثيق ومتابعة الإنجازات",
     items: [["weekly", "الإنجازات الأسبوعية", "layers", "تقرير زيارات التوجيه الفني للعلوم"], ["monthly-ach", "الإنجازات الشهرية", "trophy", "ملف مشترك بين كل الموجهين"]] },
   { id: "stats", label: "الإحصائيات", icon: "chart", card: "stats", desc: "إحصائيات الزيارات ومتابعة الامتحانات",
@@ -20,4 +20,4 @@ export const SECTIONS = [
 export const MORE = { id: "more", label: "الملفات والأرشيف", icon: "folder",
   items: [["groups", "المجموعات", "user", "ملفات وجداول مشتركة لكل مجموعة"], ["shared", "الملفات المشتركة", "share", ""], ["search", "البحث والأرشيف", "search", ""], ["trash", "سلة المحذوفات", "trash", ""], ["backup", "النسخ الاحتياطي", "download", ""]] };
 export const isExternal = (r) => /^https?:\/\//.test(r);
-export const sectionOf = (route) => [...SECTIONS, MORE].find((s) => s.route === route || (s.items || []).some(([r]) => r === route));
+export const sectionOf = (route) => [...SECTIONS, MORE].find((s) => s.route === route || (s.items || []).some(([r]) => r === route || r.split("?")[0] === route));

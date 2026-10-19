@@ -17,7 +17,7 @@ export function newCriteria() {
 }
 
 export async function criteriaEditor(main, rec) {
-  return recordPage(main, { rec, title: T.label,
+  return recordPage(main, { backHref: "#/forms?sec=criteria", newHref: "#/forms/new?type=criteria", rec, title: T.label,
     beforeApprove: (r) => [!r.school_id && "المدرسة", criteriaTotal(r.data.scores) == null && "الدرجات"].filter(Boolean),
     render(body, ed) {
       const r = ed.rec, d = r.data;

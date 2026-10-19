@@ -105,7 +105,7 @@ export function savePill() {
 }
 
 /* ---------------- صفحة السجل: شريط الأدوات + الاعتماد + الحذف + التنقل ---------------- */
-export async function recordPage(main, { rec, title, render, beforeApprove, newRec, merge = false }) {
+export async function recordPage(main, { rec, title, render, beforeApprove, newRec, merge = false, backHref, newHref }) {
   let listIds = navMemory[rec.kind] || [];
   try { listIds = JSON.parse(sessionStorage.getItem("nav." + rec.kind) || "null") || listIds; } catch (_) {}
   const idx = rec.id ? listIds.indexOf(rec.id) : -1;
@@ -126,7 +126,7 @@ export async function recordPage(main, { rec, title, render, beforeApprove, newR
     const appr = r.status === "approved";
     bar.innerHTML = `
       <a class="btn icon-btn" href="#/" title="الصفحة الرئيسية" aria-label="الصفحة الرئيسية">⌂</a>
-      <a class="btn icon-btn" href="#/${route}" title="رجوع إلى القائمة" aria-label="رجوع">→</a>
+      <a class="btn icon-btn" href="${backHref || "#/" + route}" title="رجوع إلى القائمة" aria-label="رجوع">→</a>
       <button class="btn icon-btn" id="prev" title="السجل السابق" aria-label="السابق" ${idx > 0 ? "" : "disabled"}>‹</button>
       <button class="btn icon-btn" id="next" title="السجل التالي" aria-label="التالي" ${idx >= 0 && idx < listIds.length - 1 ? "" : "disabled"}>›</button>
       <button class="btn" id="new">+ جديد</button>
@@ -139,7 +139,7 @@ export async function recordPage(main, { rec, title, render, beforeApprove, newR
     bar.appendChild(savePill());
     $("#prev", bar).onclick = () => go(`#/${route}/${listIds[idx - 1]}`);
     $("#next", bar).onclick = () => go(`#/${route}/${listIds[idx + 1]}`);
-    $("#new", bar).onclick = () => go(`#/${route}/new`);
+    $("#new", bar).onclick = () => go(newHref || `#/${route}/new`);
     // سجل جديد لم يُكتب فيه شيء (مثل الخطة الشهرية المعبأة تلقائياً): يُحفظ أولاً ثم يُطبع
     const ensureSaved = async () => { if (!ed.rec.id) ed.change(() => {}); await ed.save(); if (!ed.rec.id) { toast("تعذر حفظ السجل، حاولي مرة أخرى", "error"); return false; } return true; };
     $("#print", bar) && ($("#print", bar).onclick = async () => { if (await ensureSaved()) go(`#/print/${ed.rec.id}?auto=1`); });

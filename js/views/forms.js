@@ -29,11 +29,20 @@ const rid = () => Math.random().toString(36).slice(2, 10);
 const fillLink = (t) => `${location.href.split("#")[0]}#/f/${t}`;
 
 export default async function (main, { id, params }) {
-  if (!id) return listView(main, { kind: "form", title: "النماذج والتكاليف", sub: "نماذج رسمية تُعبّأ وتُطبع للتوقيع: التكليف بمهمة، وبطاقة قياس المعايير الفنية، والشهادات الجاهزة. ويمكن إرسال رابط للمكلَّفين ليكتبوا أسماءهم وأرقامهم المدنية.", newLabel: "+ تكليف بمهمة",
-    extraHead: `<a class="btn primary" href="#/forms/new?type=cert">+ شهادة</a><a class="btn primary" href="#/forms/new?type=criteria">+ بطاقة قياس المعايير</a><a class="btn" href="#/print/blank-takleef">تكليف فارغ</a><a class="btn" href="#/print/blank-criteria">بطاقة معايير فارغة</a><a class="btn" href="#/print/blank-cert">شهادة فارغة</a><a class="btn ghost" href="assets/forms/takleef-form4.docx" download="تكليف بمهمة خارج مقر العمل - نموذج 4.docx">التكليف الأصلي (Word)</a>`,
-    columns: [{ label: "التاريخ", get: (r) => fmtDate(r.record_date) }, { label: "النموذج", get: (r) => (r.data.type === "criteria" ? "بطاقة قياس المعايير" : r.data.type === "cert" ? (FORMS.cert.types[r.data.ctype] || {}).title || "شهادة" : "تكليف بمهمة") },
-      { label: "التفاصيل", get: (r) => (r.data.type === "criteria" ? criteriaSummary(r) : r.data.type === "cert" ? certSummary(r) : r.data.task || "") }, { label: "المكلَّفون", get: (r) => (r.data.type === "criteria" || r.data.type === "cert" ? "" : (r.data.people || []).length), cls: "num" },
-      { label: "المرحلة", get: (r) => (r.data.type === "criteria" || r.data.type === "cert" ? "" : (STAGES[r.data.stage] || STAGES.draft)[0]) }] });
+  // ثلاث صفحات منفصلة: التكاليف، بطاقة قياس المعايير، الشهادات
+  if (!id) {
+    const sec = params.sec || "takleef", isT = (r) => r.data.type !== "criteria" && r.data.type !== "cert";
+    if (sec === "criteria") return listView(main, { kind: "form", title: "بطاقة قياس المعايير الفنية", sub: "بطاقة قياس المعايير الفنية للمواد الأساسية: الدرجات قوائم والمجموع تلقائي.", newLabel: "+ بطاقة قياس المعايير", newHref: "#/forms/new?type=criteria",
+      rowsFilter: (r) => r.data.type === "criteria", extraHead: `<a class="btn" href="#/print/blank-criteria">بطاقة فارغة</a>`,
+      columns: [{ label: "التاريخ", get: (r) => fmtDate(r.record_date) }, { label: "المدرسة والمجموع", get: (r) => criteriaSummary(r) }] });
+    if (sec === "cert") return listView(main, { kind: "form", title: "الشهادات", sub: "شهادات شكر وتقدير وتميّز ومشاركة وحضور بتصاميم جاهزة، شهادة A4 لكل اسم.", newLabel: "+ شهادة", newHref: "#/forms/new?type=cert",
+      rowsFilter: (r) => r.data.type === "cert", extraHead: `<a class="btn" href="#/print/blank-cert">شهادة فارغة</a>`,
+      columns: [{ label: "التاريخ", get: (r) => fmtDate(r.record_date) }, { label: "الشهادة", get: (r) => certSummary(r) }] });
+    return listView(main, { kind: "form", title: "التكليف بمهمة", sub: "تكليف بمهمة خارج مقر العمل: يُعبّأ ويُطبع للتوقيع، ويمكن إرسال رابط للمكلَّفين ليكتبوا أسماءهم وأرقامهم المدنية.", newLabel: "+ تكليف بمهمة",
+      rowsFilter: isT, extraHead: `<a class="btn" href="#/print/blank-takleef">تكليف فارغ</a><a class="btn ghost" href="assets/forms/takleef-form4.docx" download="تكليف بمهمة خارج مقر العمل - نموذج 4.docx">التكليف الأصلي (Word)</a>`,
+      columns: [{ label: "التاريخ", get: (r) => fmtDate(r.record_date) }, { label: "المهمة", get: (r) => r.data.task || "" }, { label: "المكلَّفون", get: (r) => (r.data.people || []).length, cls: "num" },
+        { label: "المرحلة", get: (r) => (STAGES[r.data.stage] || STAGES.draft)[0] }] });
+  }
   // بطاقة قياس المعايير الفنية
   if ((id === "new" && params.type === "criteria")) return criteriaEditor(main, newCriteria());
   if (id === "new" && params.type === "cert") return certEditor(main, newCert());
@@ -44,7 +53,7 @@ export default async function (main, { id, params }) {
     : await api.get(id);
   if (!rec) { main.innerHTML = `<div class="container"><div class="empty">السجل غير موجود</div></div>`; return; }
 
-  const ed = await recordPage(main, { rec, title: T.label + " — " + T.formNo,
+  const ed = await recordPage(main, { rec, title: T.label + " — " + T.formNo, backHref: "#/forms?sec=takleef",
     beforeApprove: (r) => [!r.data.task && "المهمة", !r.data.from && "بداية المدة", !(r.data.people || []).length && "المكلَّفون",
       (r.data.people || []).some((p) => civilState(p.civil_id) !== "ok") && "رقم مدني ناقص"].filter(Boolean),
     render(body, ed) {

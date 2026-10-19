@@ -28,9 +28,9 @@ export async function resolveReport(id, params) {
   if (id === "stats-exams") return [await examStatsContext({ year: params.year || state.year, term: params.term, examType: params.type, version: params.version }), params.type === "practical" ? "إحصائية الامتحان العملي" : "إحصائية الامتحان النظري", `#/stats-${params.type}`, null];
   if (id === "compiled-ach") return [await compiledMonthlyContext(params.month), "الإنجازات الشهرية المجمعة", "#/compile?month=" + params.month, null];
   // نسخة فارغة من أي نموذج (للطباعة أو لإرسالها لمعلم/زميلة يعبّئها بيده): بلا اسمي وتوقيعي وختمي
-  if (id === "blank-criteria") { const c = await recordContext({ kind: "form", title: "بطاقة قياس المعايير الفنية", academic_year: state.year, data: { type: "criteria", blank: true } }); c.print = {}; return [c, "بطاقة قياس المعايير الفنية (فارغة)", "#/forms", null]; }
-  if (id === "blank-cert") { const c = await recordContext({ kind: "form", title: "شهادة", academic_year: state.year, data: { type: "cert", ctype: params.ctype || "thanks", design: params.design || "navy", blank: true, signers: [] } }); c.print = {}; return [c, "شهادة (فارغة)", "#/forms", null]; }
-  if (id === "blank-takleef") return [await recordContext({ kind: "form", title: "تكليف بمهمة خارج مقر العمل", academic_year: state.year, data: { type: "takleef", blank: true } }), "نموذج تكليف بمهمة (فارغ)", "#/forms", null];
+  if (id === "blank-criteria") { const c = await recordContext({ kind: "form", title: "بطاقة قياس المعايير الفنية", academic_year: state.year, data: { type: "criteria", blank: true } }); c.print = {}; return [c, "بطاقة قياس المعايير الفنية (فارغة)", "#/forms?sec=criteria", null]; }
+  if (id === "blank-cert") { const c = await recordContext({ kind: "form", title: "شهادة", academic_year: state.year, data: { type: "cert", ctype: params.ctype || "thanks", design: params.design || "waves", blank: true, signers: [] } }); c.print = {}; return [c, "شهادة (فارغة)", "#/forms?sec=cert", null]; }
+  if (id === "blank-takleef") return [await recordContext({ kind: "form", title: "تكليف بمهمة خارج مقر العمل", academic_year: state.year, data: { type: "takleef", blank: true } }), "نموذج تكليف بمهمة (فارغ)", "#/forms?sec=takleef", null];
   const bk = (id.match(/^blank-(teacher_visit|school_visit|event_report)$/) || [])[1];
   if (bk) {
     const c = await recordContext({ kind: bk, title: "", academic_year: state.year, data: { blank: true, visitee: params.head ? "head" : "teacher" } });
@@ -99,9 +99,15 @@ export default async function (main, { id, params }) {
       s.replaceWith(w); w.appendChild(s);
     });
   };
-  await render();
-  $("#bw", main).onchange = render;
-  $("#orient", main).onchange = () => { try { localStorage.setItem(oKey, $("#orient", main).value); } catch (_) {} render(); };
+  // المعاينة على الشاشة تُصغَّر لتظهر الصفحة كاملة بعرض الجهاز (الآيباد والجوال)؛ الطباعة لا تتأثر
+  const fitPreview = () => { const wrap = sheets.parentElement, first = sheets.querySelector(".sheet"); if (!wrap || !first) return;
+    sheets.style.zoom = ""; const avail = wrap.clientWidth - 24, w = first.offsetWidth; sheets.style.zoom = w > avail && avail > 200 ? String(Math.floor((avail / w) * 1000) / 1000) : ""; };
+  const render0 = render;
+  const renderFit = async () => { await render0(); fitPreview(); };
+  await renderFit();
+  addEventListener("resize", fitPreview);
+  $("#bw", main).onchange = renderFit;
+  $("#orient", main).onchange = () => { try { localStorage.setItem(oKey, $("#orient", main).value); } catch (_) {} renderFit(); };
 
   // فتح نافذة الطباعة (اختيار الطابعة أو الحفظ PDF). بعض الصفحات المضمّنة تمنعها، فنكتشف ذلك ونوضّح البديل
   const doPrint = () => {

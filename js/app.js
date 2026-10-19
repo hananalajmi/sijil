@@ -67,7 +67,10 @@ function shell() {
 function markNav(name) {
   const su = document.querySelector(".su-t"), g = state.guide?.data || {}, p = state.profile || {};
   if (su) su.innerHTML = `<b>${esc(g.full_name || p.full_name || p.username || "")}</b><small>${esc(g.job_title || "موجه فني")}${g.subject ? " — " + esc(g.subject) : ""}</small>`;
-  $$(".nav[data-r]").forEach((a) => (a.dataset.r === name ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
+  // للصفحات المقسمة بـ ?sec= (التكاليف/المعايير/الشهادات): يُطابَق القسم كذلك
+  const sp = new URLSearchParams((location.hash.split("?")[1] || "")).get("sec"), full = sp ? `${name}?sec=${sp}` : name;
+  const isCur = (r) => r === full || (r === name && !$$(".nav[data-r]").some((x) => x.dataset.r === full));
+  $$(".nav[data-r]").forEach((a) => (isCur(a.dataset.r) ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
   const sec = name === "hub" ? null : sectionOf(name);
   $$(".nav-grp").forEach((g) => { const on = !!sec && g.dataset.g === sec.id; g.classList.toggle("current", on); g.classList.toggle("open", on); g.querySelector(".nav-h").setAttribute("aria-expanded", String(on)); });
   if (name === "hub") { const id = location.hash.split("/")[2]?.split("?")[0]; $$(".nav-grp").forEach((g) => g.classList.toggle("current", g.dataset.g === id)); }
