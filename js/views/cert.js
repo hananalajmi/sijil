@@ -7,7 +7,7 @@ import { field, bindFields, recordPage, schoolOptions } from "../kit.js";
 import { FORMS, FIRST_SUPERVISOR } from "../templates.js";
 import { printOptionsPanel, bindPrintOptions } from "./teacherVisit.js";
 import { CERT_TYPE, RUQAA_MAX, titleStyleOf } from "../report/builders4.js";
-import { goldDefaults, goldSVG, goldResources, GOLD_BGS, TITLE_COLORS } from "../report/certGolden.js";
+import { goldDefaults, goldSVG, goldResources, GOLD_BGS, TITLE_COLORS, TEXT_FONTS } from "../report/certGolden.js";
 import { modal, toast } from "../ui.js";
 
 const C = FORMS.cert;
@@ -77,15 +77,22 @@ function goldenEditor(body, ed, designSel) {
         <div class="f"><label for="cg-tc">لون العنوان</label><select id="cg-tc">${Object.entries(TITLE_COLORS).map(([k, l]) => opt(k, d.titleColor || "auto", l)).join("")}</select></div></div>
       ${field({ label: "السطر التعريفي الأول (اختياري)", key: "line1", value: d.line1 || "", placeholder: "اتركيه فارغاً أو اكتبي ما تريدين" })}
       ${field({ label: "السطر التعريفي الثاني (اختياري)", key: "line2", value: d.line2 || "" })}</div></section>
-    <section class="panel"><h2>الجهة والمكرَّمة</h2><div class="form">
-      ${field({ label: "اسم الجهة المانحة (يظهر بعد «تتقدم»)", key: "giver", value: d.giver || "", placeholder: "مثال: إدارة مدرسة … بخالص الشكر والتقدير إلى", wide: true })}
-      ${field({ label: "المسمى الوظيفي", key: "jobTitle", type: "select", options: opts("cert_g_titles"), value: d.jobTitle, remember: "cert_g_titles", hint: "لمسمى آخر: «+ إضافة خيار جديد للقائمة»" })}
+    <section class="panel"><h2>العبارة فوق الاسم</h2><div class="form" style="grid-template-columns:1fr">
+      ${field({ label: "العبارة", key: "intro", type: "select", options: opts("cert_g_intros"), value: d.intro ?? "", remember: "cert_g_intros", hint: "لعبارة جديدة: «+ إضافة خيار جديد للقائمة» — وتُعدَّل القوائم من الحسابات والصلاحيات ← القوائم المنسدلة" })}</div></section>
+    <section class="panel"><h2>المسمى والاسم</h2><div class="form">
+      ${field({ label: "المسمى الوظيفي (مذكر أو مؤنث)", key: "jobTitle", type: "select", options: opts("cert_g_titles"), value: d.jobTitle, remember: "cert_g_titles" })}
       <div class="f"><label for="ct-sch">إضافة معلمات مدرسة (اختياري)</label><select id="ct-sch">${schoolOptions("")}</select></div></div>
-      <div class="f" style="margin-top:8px"><label for="ct-names">اسم المعلمة — اسم في كل سطر، وتُطبع شهادة لكل اسم</label><textarea id="ct-names" rows="4" placeholder="مثال:&#10;لطيفة عبدالهادي">${esc(d.names || "")}</textarea></div>
+      <div class="f" style="margin-top:8px"><label for="ct-names">الاسم — اسم في كل سطر، وتُطبع شهادة لكل اسم (يظهر بجانب المسمى)</label><textarea id="ct-names" rows="4" placeholder="مثال:&#10;لطيفة عبدالهادي الجداوي">${esc(d.names || "")}</textarea></div>
       <p class="hint" id="ct-count"></p></section>
-    <section class="panel"><h2>عبارة الشكر</h2><div class="form" style="grid-template-columns:1fr">
-      ${field({ label: "العبارة", key: "phrase", type: "select", options: opts("cert_g_phrases"), value: d.phrase, remember: "cert_g_phrases", hint: "لعبارة أخرى: «+ إضافة خيار جديد للقائمة»" })}
-      ${field({ label: "سطر ثانٍ (اختياري)", key: "phrase2", value: d.phrase2 || "" })}</div></section>
+    <section class="panel"><h2>العبارة تحت الاسم (حسب الموضوع)</h2><div class="form" style="grid-template-columns:1fr">
+      ${field({ label: "اختاري عبارة", key: "phrase", type: "select", options: opts("cert_g_phrases"), value: d.phrase, remember: "cert_g_phrases", hint: "تُكتب في المربع بالأسفل وتتغير الضمائر حسب المسمى (جهودها / جهوده)" })}
+      <div class="f"><label for="cg-body">نص العبارة — عدّليه كما تريدين، وكل سطر يظهر سطراً (مثل التاريخ أو مكان الورشة)</label><textarea id="cg-body" rows="4">${esc(d.body ?? d.phrase ?? "")}</textarea></div>
+      ${field({ label: "الختام (اختياري)", key: "closing", type: "select", options: opts("cert_closings"), value: d.closing || "", remember: "cert_closings" })}</div></section>
+    <section class="panel"><h2>الخط ولون الخط</h2><div class="form">
+      <div class="f"><label for="cg-nf">خط المسمى والاسم</label><select id="cg-nf">${Object.entries(TEXT_FONTS).map(([k, [, l]]) => opt(k, d.nameFont || "plex", l)).join("")}</select></div>
+      <div class="f"><label for="cg-nc">لون المسمى والاسم</label><input type="color" id="cg-nc" value="${esc(d.nameColor || GOLD_BGS[d.bg || "frame"].nameColor || "#14254a")}"></div>
+      <div class="f"><label for="cg-tf">خط العبارات</label><select id="cg-tf">${Object.entries(TEXT_FONTS).map(([k, [, l]]) => opt(k, d.textFont || "notosans", l)).join("")}</select></div>
+      <div class="f"><label for="cg-tcol">لون العبارات</label><input type="color" id="cg-tcol" value="${esc(d.textColor || "#1d2333")}"></div></div></section>
     <section class="panel"><h2>التوقيع (أسفل اليسار)</h2><div class="form">
       <div class="f"><label>المسمى</label><input value="الموجه الأول للعلوم" disabled></div>
       ${field({ label: "اسم الموجه الأول (اختياري)", key: "firstSupName", value: d.firstSupName || "" })}</div>
@@ -117,7 +124,19 @@ function goldenEditor(body, ed, designSel) {
   $("#ct-sch", body).onchange = (e) => { const sid = e.target.value; e.target.value = ""; if (!sid) return;
     const have = new Set(certNames(ed.rec.data)); const add = state.teachers.filter((t) => t.school_id === sid).map((t) => t.title.trim()).filter((n) => n && !have.has(n));
     if (!add.length) return; const v = [...certNames(ed.rec.data), ...add].join("\n"); ed.change((x) => { x.data.names = v; }); $("#ct-names", body).value = v; paintCount(); repaint(); };
-  bindFields(body, (k, v) => { ed.change((x) => { x.data[k] = v; if (k === "titleText") x.title = v || "شكر وتقدير"; }); repaint(); });
+  // الضمائر حسب المسمى: المعلم ← جهوده، المعلمة ← جهودها
+  const gOf = (t) => (/ة(\s|$)/.test(String(t || "").split("/")[0].trim()) ? "f" : "m");
+  const setBody = (v) => { $("#cg-body", body).value = v; ed.change((x) => { x.data.body = v; }); };
+  bindFields(body, (k, v) => { ed.change((x) => { x.data[k] = v; if (k === "titleText") x.title = v || "شكر وتقدير"; });
+    if (k === "phrase" && v) setBody(genderize(v, gOf(ed.rec.data.jobTitle)));
+    if (k === "jobTitle") { const ph = ed.rec.data.phrase || "", cur = $("#cg-body", body).value; // تُعاد صياغة العبارة فقط إن لم تُعدَّل يدوياً
+      if (ph && [genderize(ph, "f"), genderize(ph, "m")].includes(cur)) setBody(genderize(ph, gOf(v))); }
+    repaint(); });
+  $("#cg-body", body).addEventListener("input", (e) => { ed.change((x) => { x.data.body = e.target.value; }); repaint(); });
+  $("#cg-nf", body).onchange = (e) => { ed.change((x) => { x.data.nameFont = e.target.value; }); repaint(); };
+  $("#cg-tf", body).onchange = (e) => { ed.change((x) => { x.data.textFont = e.target.value; }); repaint(); };
+  $("#cg-nc", body).oninput = (e) => { ed.change((x) => { x.data.nameColor = e.target.value; }); repaint(); };
+  $("#cg-tcol", body).oninput = (e) => { ed.change((x) => { x.data.textColor = e.target.value; }); repaint(); };
   $("#cg-preview", body).onclick = () => ed.openPrint?.("");
   $("#cg-print", body).onclick = () => ed.openPrint?.("?auto=1");
   $("#cg-pdf", body).onclick = () => ed.openPrint?.("?auto=1&pdf=1");

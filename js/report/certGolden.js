@@ -11,7 +11,7 @@ import { TITLE_ART, BG_FREE } from "./certArt.js";
 // تناسب زخارفها، والنصوص تُقيَّد تلقائياً بالمساحة البيضاء فيها (BG_FREE) فلا تدخل على الزخارف.
 export const GOLD_BGS = {
   frame: { label: "الإطار الذهبي والزخارف", logoR: { x: 229, y: 15, w: 40, h: 32 }, logoL: { x: 28, y: 15, w: 40, h: 32 }, title: { cx: 148.5, y: 32, h: 34 }, sign: { x: 72, y: 163 }, dy: 0, titleColor: "gold", divider: true },
-  ribbons: { label: "أشرطة ذهبية على رخام داكن", img: "assets/cert-bg/ribbons.jpg", logoR: { x: 222, y: 29, w: 50, h: 50 }, logoL: { x: 33, y: 11, w: 44, h: 26 }, title: { cx: 143, y: 30, h: 46 }, sign: { x: 95, y: 158 }, dy: 4, titleColor: "black", defLogoR: "gold_seal" },
+  ribbons: { label: "أشرطة ذهبية على رخام داكن", img: "assets/cert-bg/ribbons.jpg", logoR: { x: 222, y: 29, w: 50, h: 50 }, logoL: { x: 33, y: 11, w: 44, h: 26 }, title: { cx: 143, y: 30, h: 46 }, sign: { x: 95, y: 158 }, dy: 4, titleColor: "black", defLogoR: "gold_seal", nameColor: "#8a6a2e" },
   leaves: { label: "أوراق ذهبية وسوداء", img: "assets/cert-bg/leaves.jpg", logoR: { x: 207, y: 20, w: 38, h: 28 }, logoL: { x: 52, y: 20, w: 38, h: 28 }, title: { cx: 148.5, y: 36, h: 34 }, sign: { x: 75, y: 158 }, dy: 4, titleColor: "gold" },
   diag: { label: "أشرطة كحلية وذهبية مائلة", img: "assets/cert-bg/diag.jpg", logoR: { x: 207, y: 24, w: 38, h: 28 }, logoL: { x: 52, y: 24, w: 38, h: 28 }, title: { cx: 148.5, y: 37, h: 32 }, sign: { x: 95, y: 158 }, dy: 4, titleColor: "navy" },
   waves2: { label: "أمواج كحلية وذهبية", img: "assets/cert-bg/waves2.jpg", logoR: { x: 226, y: 24, w: 40, h: 30 }, logoL: { x: 31, y: 24, w: 40, h: 30 }, title: { cx: 148.5, y: 36, h: 34 }, sign: { x: 72, y: 158 }, dy: 4, titleColor: "navy" },
@@ -19,8 +19,13 @@ export const GOLD_BGS = {
   silk: { label: "كحلي وذهبي على حرير", img: "assets/cert-bg/silk.jpg", logoR: { x: 226, y: 26, w: 40, h: 30 }, logoL: { x: 31, y: 26, w: 40, h: 30 }, title: { cx: 148.5, y: 38, h: 32 }, sign: { x: 88, y: 158 }, dy: 4, titleColor: "navy" },
 };
 export const TITLE_COLORS = { auto: "حسب الخلفية", gold: "ذهبي", black: "أسود", navy: "كحلي" };
+// الختام يتبع المسمى (لها ← له) والضمائر تُصاغ من النص المؤنث
+const genderClosing = (t, job) => (/ة(\s|$)/.test(String(job || "").split("/")[0].trim()) || !t ? t : t.replace(/حضرت/g, "حضر").replace(/([؀-ۿ]{2,})ها(?=[\s،.,:؛!؟]|$)/g, "$1ه"));
 const isShukr = (t) => String(t || "").replace(/[\sـ]/g, "") === "شكروتقدير";
 
+// خطوط قابلة للاختيار للاسم والنص (كلها مضمّنة في الموقع)
+export const TEXT_FONTS = { notosans: ["Sijil Sans", "نوتو سانس — Noto Sans Arabic"], plex: ["Sijil Plex", "بلكس — IBM Plex Sans Arabic"], naskh: ["Sijil Naskh", "نسخ — Noto Naskh Arabic"], ruqaa: ["Sijil Ruqaa", "رقعة — Aref Ruqaa"] };
+const fontOf = (k, w) => { const f = (TEXT_FONTS[k] || TEXT_FONTS.notosans)[0]; return [f, f === "Sijil Ruqaa" ? 700 : f === "Sijil Plex" ? (w >= 600 ? 700 : 400) : w]; };
 export const GOLD_FONTS = { title: ["Sijil Ruqaa", 700], name: ["Sijil Plex", 700], text: ["Sijil Sans", 500], strong: ["Sijil Sans", 700] };
 const C = { ivory: "#fbf6ea", gold: "#b08a3c", gold2: "#d9b867", goldDark: "#8a6a2e", navy: "#14254a", ink: "#1d2333" };
 const W = 297, H = 210, CX = W / 2, PT = 0.3528; // 1pt = 0.3528mm
@@ -28,10 +33,11 @@ const W = 297, H = 210, CX = W / 2, PT = 0.3528; // 1pt = 0.3528mm
 export const GOLD_BOX = {
   logoR: { x: 229, y: 15, w: 40, h: 32 }, logoL: { x: 28, y: 15, w: 40, h: 32 },
   title: { y: 33, maxW: 148, pt: 60 }, line1: { y: 58 }, line2: { y: 66.5 },
-  giver: { y: 80 }, job: { y: 91 }, name: { y: 106, h: 19, minW: 120, maxW: 232, pt: 28 },
-  phrase: { y: 126.5, lh: 9.6, maxLines: 3, maxW: 226 }, sign: { x: 72, y: 163 },
+  intro: { y: 80, lh: 9.4 }, name: { y: 101, pt: 26 }, phrase: { y: 121, lh: 9.4, maxW: 232 }, sign: { x: 72, y: 163 },
 };
-export const goldDefaults = () => ({ bg: "frame", titleArt: "art", titleColor: "auto", titleText: "شكر وتقدير", line1: "", line2: "", giver: "", jobTitle: "المعلمة الفاضلة", phrase: "لجهودها المتميزة وعطائها وإخلاصها في العمل", phrase2: "",
+export const goldDefaults = () => ({ bg: "frame", titleArt: "art", titleColor: "auto", titleText: "شكر وتقدير", line1: "", line2: "",
+  intro: "يتقدم التوجيه الفني للعلوم بمنطقة الأحمدي التعليمية بخالص الشكر والتقدير إلى", jobTitle: "المعلمة", phrase: "لجهودها المتميزة وعطائها وإخلاصها في العمل", body: "لجهودها المتميزة وعطائها وإخلاصها في العمل", closing: "",
+  nameFont: "plex", nameColor: "", textFont: "notosans", textColor: "#1d2333",
   gLogoR: "ministry", gLogoL: "directorate", gLogoR_img: "", gLogoL_img: "", firstSupName: "" });
 
 // قياس النص بنفس الخط المستعمل في الرسم
@@ -83,12 +89,13 @@ export async function goldResources(d) {
 export function goldSVG(d, name, res, { portrait = false, blank = false, cls = "" } = {}) {
   const P = GOLD_BGS[d.bg] || GOLD_BGS.frame, dy = P.dy || 0, out = [];
   const B = { ...GOLD_BOX, logoR: P.logoR, logoL: P.logoL, sign: P.sign };
-  const Y = (k) => GOLD_BOX[k].y + dy;
+  // بدون السطرين التعريفيين يرتفع باقي الكلام ليملأ المساحة (الشعاران والعنوان والتوقيع ثابتة)
+  const lift = String(d.line1 || "").trim() || String(d.line2 || "").trim() ? (String(d.line2 || "").trim() ? 0 : -6) : -13;
+  const Y = (k) => GOLD_BOX[k].y + dy + (k === "line1" || k === "line2" ? 0 : lift);
   // المساحة المتاحة للسطر حول المنتصف: داخل المنطقة البيضاء للخلفية وبعيداً عن التوقيع
   const free = BG_FREE[d.bg] || null;
   const room = (y, h = 8) => { let l = 0, r = W;
     if (free) for (let yy = Math.max(0, Math.floor((y - h / 2) / 2)); yy <= Math.min(free[0].length - 1, Math.floor((y + h / 2) / 2)); yy++) { l = Math.max(l, free[0][yy]); r = Math.min(r, free[1][yy]); }
-    const sg = B.sign; if (y + h / 2 > sg.y - 3 && y - h / 2 < sg.y + 32) l = Math.max(l, sg.x + 34);
     return Math.max(60, 2 * Math.min(CX - l, r - CX) - 10); };
   // الخلفية
   if (P.img) out.push(`<image href="${P.img}" x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="none"/>`);
@@ -115,27 +122,24 @@ export function goldSVG(d, name, res, { portrait = false, blank = false, cls = "
     out.push(`<path d="M${CX - tw / 2 - 6} ${ly}H${CX - 4}M${CX + 4} ${ly}H${CX + tw / 2 + 6}" stroke="url(#cgL)" stroke-width=".45"/>`, diamond(CX, ly, 1.6), diamond(CX - tw / 2 - 7.5, ly, .8), diamond(CX + tw / 2 + 7.5, ly, .8)); }
   // السطران التعريفيان (فارغان افتراضياً)
   for (const k of ["line1", "line2"]) { const t = String(d[k] || "").trim(); if (t) out.push(T(CX, Y(k), t, GOLD_FONTS.strong, fitPt(t, GOLD_FONTS.strong, 15, Math.min(210, room(Y(k))), 10), C.navy)); }
-  // الجهة المانحة
-  const giver = String(d.giver || "").trim();
-  const gtxt = /^(يتقدم|تتقدم|يتشرف|تتشرف|يسر|تسر|يشكر|تشكر)\s/.test(giver) ? giver : "تتقدم " + giver; // الفعل يُكتب تلقائياً إن لم تكتبه
-  out.push(giver && !blank ? T(CX, Y("giver"), gtxt, GOLD_FONTS.text, fitPt(gtxt, GOLD_FONTS.text, 17, Math.min(236, room(Y("giver"))), 11), C.ink)
-    : T(CX, Y("giver"), "تتقدم ……………………………………………", GOLD_FONTS.text, 17, C.ink));
-  // المسمى الوظيفي
-  const job = String(d.jobTitle || "").trim(); if (job) out.push(T(CX, Y("job"), job, GOLD_FONTS.strong, fitPt(job, GOLD_FONTS.strong, 18, Math.min(200, room(Y("job"))), 12), C.navy));
-  // الاسم داخل إطار زخرفي يتكيّف مع طوله
-  const NY = Y("name"), nMax = Math.min(B.name.maxW, room(NY, B.name.h) + 6);
-  const nm = blank ? "" : String(name || "").trim(), npt = nm ? fitPt(nm, GOLD_FONTS.name, B.name.pt, nMax - 26, 16) : B.name.pt;
-  const fw = Math.max(Math.min(B.name.minW, nMax), Math.min(nMax, (nm ? measure(nm, GOLD_FONTS.name, npt) : 90) + 28)), fx = CX - fw / 2, fy = NY - B.name.h / 2;
-  out.push(`<g fill="none" stroke="${C.gold}"><rect class="cg-frame" x="${fx}" y="${fy}" width="${fw}" height="${B.name.h}" rx="3" stroke-width=".5"/><rect x="${fx + 1.3}" y="${fy + 1.3}" width="${fw - 2.6}" height="${B.name.h - 2.6}" rx="2.2" stroke-width=".22"/></g>`,
-    diamond(fx, NY, 1.7), diamond(fx + fw, NY, 1.7), diamond(CX, fy, 1.1), diamond(CX, fy + B.name.h, 1.1));
-  out.push(nm ? T(CX, NY + .4, nm, GOLD_FONTS.name, npt, C.navy, 'class="cg-name"') : `<path d="M${CX - 60} ${NY + 4}H${CX + 60}" stroke="#777" stroke-width=".3" stroke-dasharray="1 1.6"/>`);
-  // العبارة (سطر أو سطران) + سطر ثانٍ اختياري — داخل مساحة ثابتة لا تؤثر على التوقيع
+  const TF = fontOf(d.textFont, 500), NF = fontOf(d.nameFont, 700), tcol = d.textColor || C.ink, ncol = d.nameColor || P.nameColor || C.navy;
+  // العبارة الأولى (فوق الاسم): سطر أو سطران متوازنان
+  const intro = String(d.intro ?? (d.giver ? "تتقدم " + d.giver : "")).trim(), IY = Y("intro");
+  if (intro) { let ipt = 17, il = balanced(intro, TF, ipt, room(IY, 18)); while (il.length > 2 && ipt > 11) { ipt -= .5; il = balanced(intro, TF, ipt, room(IY, 18)); }
+    const lh = B.intro.lh * ipt / 17, y0 = IY - (il.length - 1) * lh / 2; il.slice(0, 2).forEach((ln, i) => out.push(T(CX, y0 + i * lh, ln, TF, ipt, tcol, 'class="cg-intro"'))); }
+  // المسمى الوظيفي + الاسم في سطر واحد (بدون إطار)
+  const NY = Y("name"), job = String(d.jobTitle || "").trim(), nm = blank ? "" : String(name || "").trim(), nmax = Math.min(240, room(NY, 12));
+  if (nm) { const t = (job ? job + " " : "") + nm; out.push(T(CX, NY, t, NF, fitPt(t, NF, B.name.pt, nmax, 15), ncol, 'class="cg-name"')); }
+  else { if (job) out.push(T(CX + 45, NY, job, NF, B.name.pt * .8, ncol)); out.push(`<path d="M${CX - 80} ${NY + 4}H${CX + 25}" stroke="#777" stroke-width=".3" stroke-dasharray="1 1.6"/>`); }
+  const oy = NY + 9; out.push(`<path d="M${CX - 62} ${oy}H${CX - 3.5}M${CX + 3.5} ${oy}H${CX + 62}" stroke="url(#cgL)" stroke-width=".4"/>`, diamond(CX, oy, 1.4));
+  // العبارة تحت الاسم (حسب الموضوع) + الختام — تصغر تلقائياً لتبقى فوق التوقيع
+  const PY = Y("phrase"), bottom = B.sign.y - 6, src = [...String(d.body ?? d.phrase ?? "").split(/\n+/), genderClosing(d.closing || "", d.jobTitle)].map((x) => x.trim()).filter(Boolean);
   let ppt = 17, lines = [];
-  const PY = Y("phrase"), pMax = Math.min(B.phrase.maxW, ...[0, 1, 2].map((i) => room(PY + i * B.phrase.lh)));
-  const build = (p) => [...(d.phrase ? balanced(d.phrase, GOLD_FONTS.text, p, pMax) : []), ...(d.phrase2 ? balanced(d.phrase2, GOLD_FONTS.text, p, pMax) : [])];
-  if (!blank) { lines = build(ppt); while (lines.length > B.phrase.maxLines && ppt > 12) { ppt -= .5; lines = build(ppt); } lines = lines.slice(0, B.phrase.maxLines); }
+  const w0 = Math.min(B.phrase.maxW, room((PY + bottom) / 2, bottom - PY + 6));
+  const build = (p) => src.flatMap((x) => balanced(x, TF, p, w0));
+  if (!blank) { lines = build(ppt); while (PY + (lines.length - 1) * B.phrase.lh * ppt / 17 > bottom && ppt > 11) { ppt -= .5; lines = build(ppt); } }
   const lh = B.phrase.lh * ppt / 17;
-  if (lines.length) lines.forEach((ln, i) => out.push(T(CX, PY + i * lh, ln, GOLD_FONTS.text, ppt, C.ink)));
+  if (lines.length) lines.forEach((ln, i) => out.push(T(CX, PY + i * lh, ln, TF, ppt, tcol, 'class="cg-body"')));
   else for (const [i, w] of [[0, 200], [1, 150]]) out.push(`<path d="M${CX - w / 2} ${PY + 3 + i * 10}H${CX + w / 2}" stroke="#777" stroke-width=".3" stroke-dasharray="1 1.6"/>`);
   // التوقيع: أسفل اليسار دائماً
   const S = B.sign, sup = blank ? "" : String(d.firstSupName || "").trim();

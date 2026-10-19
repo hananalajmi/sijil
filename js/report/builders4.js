@@ -82,7 +82,7 @@ export const RUQAA_MAX = 22; // أطول عنوان يُسمح فيه بخط ا�
 export const titleStyleOf = (d, title) => ((d.titleStyle || (d.fTitle === "ruqaa" ? "ruqaa" : "naskh")) === "ruqaa" && String(title || "").replace(/[\sـ]/g, "").length <= RUQAA_MAX ? "ruqaa" : "naskh");
 const CERT_FONT_FILES = [
   ["Sijil Naskh", "fonts/NotoNaskhArabic-VF.woff", "400 700"], ["Sijil Sans", "fonts/NotoSansArabic-VF.woff", "400 700"],
-  ["Sijil Plex", "fonts/IBMPlexSansArabic-Bold.woff", "700"], ["Sijil Ruqaa", "fonts/ArefRuqaa-Bold.woff", "700"],
+  ["Sijil Plex", "fonts/IBMPlexSansArabic-Bold.woff", "700"], ["Sijil Plex", "fonts/IBMPlexSansArabic-Regular.woff", "400"], ["Sijil Ruqaa", "fonts/ArefRuqaa-Bold.woff", "700"],
 ];
 let certFontsP = null;
 // تحميل الخطوط فعلياً والتحقق منها قبل الرسم؛ تُرجع قائمة الخطوط التي تعذّر تحميلها
