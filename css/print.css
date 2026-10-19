@@ -442,3 +442,9 @@
 
 /* تصغير المعاينة على الشاشة فقط (لا يؤثر على الطباعة) */
 @media screen { .preview-wrap .sheets { zoom: var(--pvz, 1); } }
+/* الشهادة على الآيباد: صفحة طولية والشهادة مُدارة بداخلها */
+.t-ce .ce-rot { position: relative; width: 210mm; height: 297mm; overflow: hidden; }
+.t-ce .ce-rot > .ce { position: absolute; top: .5mm; left: 209mm; margin: 0; transform-origin: 0 0; transform: rotate(90deg); }
+
+/* الشهادة: التصغير عند الطباعة بالـ zoom بدل التحويل (أثبت في سفاري) */
+@media print { .fit-page.p > .sheet.t-ce, .fit-page.l > .sheet.t-ce { transform: none !important; zoom: var(--print-s); } }

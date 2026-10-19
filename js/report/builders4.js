@@ -130,6 +130,9 @@ export async function certificate(ctx) {
       ${!blank && d.showDate ? `<div class="ce-date">تحريراً في: ${esc(fmtDateSlash(date))}${hijri(date) ? ` &nbsp;الموافق: ${esc(hijri(date))}` : ""}</div>` : ""}
       ${sigs}</div></div>`;
   const list = names.length ? names : [""];
-  const blocks = []; list.forEach((n, i) => { if (i) blocks.push({ pageBreak: true }); blocks.push({ html: page(n) }); });
-  return { orientation: "landscape", cls: "t-ce", header: "", identity: "", footer: "", blocks };
+  // الآيباد والآيفون يطبعان طولياً فقط: تُبنى الشهادة مُدارة داخل صفحة طولية (بدل تدوير الصفحة كاملة عند الطباعة)
+  const IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) || /[?&]ios=1\b/.test(location.search);
+  const wrap = (h) => (IOS ? `<div class="ce-rot">${h}</div>` : h);
+  const blocks = []; list.forEach((n, i) => { if (i) blocks.push({ pageBreak: true }); blocks.push({ html: wrap(page(n)) }); });
+  return { orientation: IOS ? "portrait" : "landscape", cls: "t-ce" + (IOS ? " ce-ios" : ""), header: "", identity: "", footer: "", blocks };
 }
