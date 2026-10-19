@@ -67,3 +67,31 @@ export async function criteriaCard(ctx) {
     blocks: [{ html: head }, { table: { cls: "grid cr-table", colgroup: `<colgroup><col style="width:32mm"><col><col style="width:23mm"><col style="width:18mm"></colgroup>`,
       thead: `<tr><th>المعيار</th><th>بنود المعيار</th><th>الدرجة التفصيلية</th><th>الدرجة</th></tr>`, rows, keepTogether: true } }, { html: tail }] };
 }
+
+// ---------------- الشهادات الجاهزة ----------------
+// شهادة لكل اسم في صفحة أفقية؛ بدون أسماء تُطبع شهادة واحدة بسطر فارغ.
+export async function certificate(ctx) {
+  const { certBody, certIntro, certNames } = await import("../views/cert.js");
+  const d = ctx.rec.data || {}, blank = !!d.blank, T = FORMS.cert.types[d.ctype] || FORMS.cert.types.thanks;
+  const names = blank ? [] : certNames(d);
+  const hijri = (iso) => { try { return new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura", { day: "numeric", month: "long", year: "numeric" }).format(new Date(iso + "T12:00:00")); } catch (_) { return ""; } };
+  const date = d.date || ctx.rec.record_date;
+  const logos = `<div class="ce-logos"><div>${await logo("ministry_color", "ce-logo")}</div><div>${await logo("science_guidance", "ce-logo")}</div><div>${await logo("directorate", "ce-logo")}</div></div>`;
+  const sigImgs = blank ? "" : await sigSlotHtml(ctx);
+  const signers = (d.signers || []).filter((s) => s.on && (s.title || s.name));
+  const sigs = `<div class="ce-sigs n${signers.length || 1}">${(signers.length ? signers : [{ title: "", name: "" }]).map((s, i) => `<div class="ce-sig">
+      <div class="ce-sig-t">${esc(s.title || "")}</div><div class="ce-sig-n">${s.name ? "أ. " + esc(s.name) : '<span class="dots" style="min-width:45mm"></span>'}</div>
+      <div class="ce-sig-m">${s.me && i === 0 ? sigImgs : ""}</div></div>`).join("")}</div>`;
+  const page = (name) => `<div class="ce ce-${esc(d.design || "navy")}"><div class="ce-frame"><i class="ce-c tl"></i><i class="ce-c tr"></i><i class="ce-c bl"></i><i class="ce-c br"></i>
+      ${logos}
+      <h1 class="ce-title">${esc(T.title)}</h1><div class="ce-orn"><span></span><b>✦</b><span></span></div>
+      <p class="ce-intro">${esc(blank ? T.intro.replace("{الجهة}", d.issuer || "التوجيه الفني للعلوم") : certIntro(d))}</p>
+      <div class="ce-name">${name ? `${d.prefix ? `<small>${esc(d.prefix)} /</small> ` : ""}${esc(name)}` : '<span class="dots" style="min-width:150mm"></span>'}</div>
+      ${!blank && d.school && name ? `<div class="ce-school">${esc(d.school)}</div>` : ""}
+      <p class="ce-body">${blank ? '<span class="dots" style="min-width:200mm"></span><br><span class="dots" style="min-width:160mm"></span>' : esc(d.body || certBody(d))}</p>
+      <div class="ce-date">${blank ? "تحريراً في: " + '<span class="dots" style="min-width:40mm"></span>' : `تحريراً في: ${esc(fmtDateSlash(date))}${hijri(date) ? ` &nbsp;الموافق: ${esc(hijri(date))}` : ""}`}</div>
+      ${sigs}</div></div>`;
+  const list = names.length ? names : [""];
+  const blocks = []; list.forEach((n, i) => { if (i) blocks.push({ pageBreak: true }); blocks.push({ html: page(n) }); });
+  return { orientation: "landscape", cls: "t-ce", header: "", identity: "", footer: "", blocks };
+}
