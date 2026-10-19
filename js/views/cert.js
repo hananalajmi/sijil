@@ -7,10 +7,13 @@ import { field, bindFields, recordPage, schoolOptions } from "../kit.js";
 import { FORMS, FIRST_SUPERVISOR } from "../templates.js";
 import { printOptionsPanel, bindPrintOptions } from "./teacherVisit.js";
 import { CERT_TYPE, RUQAA_MAX, titleStyleOf } from "../report/builders4.js";
+import { goldDefaults, goldSVG, goldResources } from "../report/certGolden.js";
+import { modal, toast } from "../ui.js";
 
 const C = FORMS.cert;
 // الخطوط: نظام ثابت لكل الشهادات (انظري CERT_TYPE في report/builders4.js) — العنوان نسخ أو رقعة فقط
 export const DESIGN_DEFAULTS = {
+  golden: { titleStyle: "ruqaa", title: "شكر وتقدير", nameColor: "#14254a", logos: {} },
   waves: { titleStyle: "naskh", title: "شهـادة شكر وتقـديـر", nameColor: "#14254a", logos: { ministry: true, directorate: true } },
 };
 export const certIssuer = () => `التوجيه الفني للعلوم بمنطقة ${G().region || "الأحمدي"} التعليمية`;
@@ -41,14 +44,89 @@ export function newCert() {
     signers: [{ on: true, title: "الموجه الأول للعلوم", name: g.first_supervisor || FIRST_SUPERVISOR.name || "" },
       { on: false, title: `الموجه الفني${g.subject ? " لل" + g.subject.replace(/^ال/, "") : ""}`, name: g.full_name || state.profile?.full_name || "", me: true },
       { on: false, title: "مديرة المدرسة", name: "" }] };
+  Object.assign(d, goldDefaults(), { design: "golden", titleText: "شكر وتقدير", firstSupName: g.first_supervisor || FIRST_SUPERVISOR.name || "" });
   return { kind: "form", title: C.types.thanks.title, record_date: today(), academic_year: state.year, data: d };
+}
+
+// ---------------- محرّر القالب الرسمي الذهبي ----------------
+const LOGO_CHOICES = () => [["", "بدون شعار"], ...Object.entries(C.logos).filter(([k]) => k !== "seal").map(([k, [, l]]) => [k, l]), ["custom", "صورة من جهازي…"]];
+// تصغير الصورة المرفوعة (بحد أقصى 900 بكسل) مع الحفاظ على النسبة والشفافية
+const readLogo = (file) => new Promise((res, rej) => { const fr = new FileReader(); fr.onerror = rej; fr.onload = () => { const im = new Image(); im.onerror = () => rej(new Error("الصورة غير صالحة"));
+  im.onload = () => { const k = Math.min(1, 900 / Math.max(im.width, im.height)), cv = document.createElement("canvas"); cv.width = Math.round(im.width * k); cv.height = Math.round(im.height * k);
+    cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height); res(cv.toDataURL("image/png")); }; im.src = fr.result; }; fr.readAsDataURL(file); });
+function goldenEditor(body, ed, designSel) {
+  const d = ed.rec.data; for (const [k, v] of Object.entries(goldDefaults())) if (d[k] === undefined) d[k] = v;
+  const opt = (o, v, l) => `<option value="${esc(o)}" ${o === v ? "selected" : ""}>${esc(l ?? o)}</option>`;
+  const logoCtl = (side, label) => `<div class="f cg-logo"><label for="cg-${side}">${label}</label>
+      <select id="cg-${side}" data-side="${side}">${LOGO_CHOICES().map(([k, l]) => opt(k, d["gLogo" + side] || "", l)).join("")}</select>
+      <div class="row" style="gap:6px;margin-top:6px"><label class="btn sm">رفع / استبدال<input type="file" accept="image/*" data-up="${side}" hidden></label>
+      <button class="btn sm ghost" type="button" data-del="${side}">حذف الشعار</button></div></div>`;
+  body.innerHTML = `
+    <section class="panel cg-live-wrap"><h2>معاينة مباشرة</h2><div id="cg-live" class="cg-live" aria-live="polite"></div>
+      <div class="row" style="gap:8px;margin-top:10px;flex-wrap:wrap">
+        <button class="btn primary" type="button" id="cg-preview">معاينة الشهادة</button><button class="btn" type="button" id="cg-pdf">تنزيل PDF</button>
+        <button class="btn" type="button" id="cg-print">طباعة الشهادة</button><button class="btn ghost" type="button" id="cg-reset">إعادة تعيين الحقول</button></div>
+      <p class="hint">الخطوط محفوظة داخل الموقع وتُضمَّن في ملف PDF. أماكن الشعارين والعنوان والتوقيع ثابتة في كل الشهادات.</p></section>
+    <section class="panel"><h2>التصميم والشعاران</h2><div class="form">
+      <div class="f"><label for="ct-design">تصميم الشهادة</label>${designSel}</div>
+      ${logoCtl("R", "الشعار الأيمن")}${logoCtl("L", "الشعار الأيسر")}</div></section>
+    <section class="panel"><h2>العنوان والسطران التعريفيان</h2><div class="form" style="grid-template-columns:1fr">
+      ${field({ label: "عنوان الشهادة (خط زخرفي)", key: "titleText", value: d.titleText || "شكر وتقدير" })}
+      ${field({ label: "السطر التعريفي الأول (اختياري)", key: "line1", value: d.line1 || "", placeholder: "اتركيه فارغاً أو اكتبي ما تريدين" })}
+      ${field({ label: "السطر التعريفي الثاني (اختياري)", key: "line2", value: d.line2 || "" })}</div></section>
+    <section class="panel"><h2>الجهة والمكرَّمة</h2><div class="form">
+      ${field({ label: "اسم الجهة المانحة (يظهر بعد «تتقدم»)", key: "giver", value: d.giver || "", placeholder: "مثال: إدارة مدرسة … بخالص الشكر والتقدير إلى", wide: true })}
+      ${field({ label: "المسمى الوظيفي", key: "jobTitle", type: "select", options: opts("cert_g_titles"), value: d.jobTitle, remember: "cert_g_titles", hint: "لمسمى آخر: «+ إضافة خيار جديد للقائمة»" })}
+      <div class="f"><label for="ct-sch">إضافة معلمات مدرسة (اختياري)</label><select id="ct-sch">${schoolOptions("")}</select></div></div>
+      <div class="f" style="margin-top:8px"><label for="ct-names">اسم المعلمة — اسم في كل سطر، وتُطبع شهادة لكل اسم</label><textarea id="ct-names" rows="4" placeholder="مثال:&#10;لطيفة عبدالهادي">${esc(d.names || "")}</textarea></div>
+      <p class="hint" id="ct-count"></p></section>
+    <section class="panel"><h2>عبارة الشكر</h2><div class="form" style="grid-template-columns:1fr">
+      ${field({ label: "العبارة", key: "phrase", type: "select", options: opts("cert_g_phrases"), value: d.phrase, remember: "cert_g_phrases", hint: "لعبارة أخرى: «+ إضافة خيار جديد للقائمة»" })}
+      ${field({ label: "سطر ثانٍ (اختياري)", key: "phrase2", value: d.phrase2 || "" })}</div></section>
+    <section class="panel"><h2>التوقيع (أسفل اليسار)</h2><div class="form">
+      <div class="f"><label>المسمى</label><input value="الموجه الأول للعلوم" disabled></div>
+      ${field({ label: "اسم الموجه الأول (اختياري)", key: "firstSupName", value: d.firstSupName || "" })}</div>
+      <p class="hint">لا يُطبع تاريخ في هذا القالب.</p></section>`;
+  // المعاينة المباشرة
+  let res = null, tm = 0, resKey = "";
+  const live = $("#cg-live", body);
+  const paint = async () => { const x = { ...goldDefaults(), ...ed.rec.data }, key = [x.gLogoR, x.gLogoL, (x.gLogoR_img || "").length, (x.gLogoL_img || "").length].join("|");
+    if (!res || key !== resKey) { res = await goldResources(x); resKey = key; }
+    live.innerHTML = goldSVG(x, certNames(x)[0] || "", res); };
+  const repaint = () => { clearTimeout(tm); tm = setTimeout(paint, 120); };
+  paint();
+  const paintCount = () => { const n = certNames(ed.rec.data).length; $("#ct-count", body).textContent = n ? `سيُطبع ${n} ${n === 1 ? "شهادة" : n === 2 ? "شهادتان" : n <= 10 ? "شهادات" : "شهادة"} بحجم A4 أفقي (شهادة لكل اسم). المعاينة تعرض الاسم الأول.` : "بدون اسم تُطبع شهادة بسطر فارغ للكتابة باليد."; };
+  paintCount();
+  $$("[data-side]", body).forEach((sel) => (sel.onchange = () => { const s = sel.dataset.side;
+    if (sel.value === "custom" && !ed.rec.data["gLogo" + s + "_img"]) { $(`[data-up='${s}']`, body).click(); sel.value = ed.rec.data["gLogo" + s] || ""; return; }
+    ed.change((x) => { x.data["gLogo" + s] = sel.value; }); repaint(); }));
+  $$("[data-up]", body).forEach((inp) => (inp.onchange = async () => { const s = inp.dataset.up, f = inp.files[0]; inp.value = ""; if (!f) return;
+    try { const url = await readLogo(f); ed.change((x) => { x.data["gLogo" + s] = "custom"; x.data["gLogo" + s + "_img"] = url; }); $(`#cg-${s}`, body).value = "custom"; repaint(); toast("تم رفع الشعار"); }
+    catch (e) { toast(e.message || "تعذّر قراءة الصورة", "error"); } }));
+  $$("[data-del]", body).forEach((b) => (b.onclick = () => { const s = b.dataset.del; ed.change((x) => { x.data["gLogo" + s] = ""; x.data["gLogo" + s + "_img"] = ""; }); $(`#cg-${s}`, body).value = ""; repaint(); }));
+  $("#ct-names", body).addEventListener("input", (e) => { ed.change((x) => { x.data.names = e.target.value; }); paintCount(); repaint(); });
+  $("#ct-sch", body).onchange = (e) => { const sid = e.target.value; e.target.value = ""; if (!sid) return;
+    const have = new Set(certNames(ed.rec.data)); const add = state.teachers.filter((t) => t.school_id === sid).map((t) => t.title.trim()).filter((n) => n && !have.has(n));
+    if (!add.length) return; const v = [...certNames(ed.rec.data), ...add].join("\n"); ed.change((x) => { x.data.names = v; }); $("#ct-names", body).value = v; paintCount(); repaint(); };
+  bindFields(body, (k, v) => { ed.change((x) => { x.data[k] = v; if (k === "titleText") x.title = v || "شكر وتقدير"; }); repaint(); });
+  $("#cg-preview", body).onclick = () => ed.openPrint?.("");
+  $("#cg-print", body).onclick = () => ed.openPrint?.("?auto=1");
+  $("#cg-pdf", body).onclick = () => ed.openPrint?.("?auto=1&pdf=1");
+  $("#cg-reset", body).onclick = async () => {
+    const ok = await modal({ title: "إعادة تعيين الحقول", body: "<p>تُمسح كل الحقول (ومنها الأسماء والشعاران المرفوعان) وترجع للقيم الافتراضية. التصميم يبقى كما هو.</p>", actions: [{ label: "إلغاء", value: false }, { label: "إعادة التعيين", kind: "primary", value: true }] });
+    if (!ok) return; const g = G(); ed.change((x) => { Object.assign(x.data, goldDefaults(), { names: "", firstSupName: g.first_supervisor || FIRST_SUPERVISOR.name || "" }); x.title = "شكر وتقدير"; }); ed.redraw(); };
 }
 
 export async function certEditor(main, rec) {
   return recordPage(main, { backHref: "#/forms?sec=cert", newHref: "#/forms/new?type=cert", rec, title: "شهادة",
     beforeApprove: (r) => [!certNames(r.data).length && "الأسماء"].filter(Boolean),
     render(body, ed) {
-      const d = ed.rec.data; if (!C.designs[d.design]) d.design = "waves"; d.logos ||= { ...((DESIGN_DEFAULTS[d.design] || {}).logos || { ministry: true, directorate: true }) };
+      const d = ed.rec.data; if (!C.designs[d.design]) d.design = "waves";
+      const designSel = `<select id="ct-design">${Object.entries(C.designs).map(([k, l]) => `<option value="${k}" ${k === d.design ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
+      const bindDesign = () => { $("#ct-design", body).onchange = (e) => { const v = e.target.value;
+        ed.change((x) => { x.data.design = v; if (v === "golden") { for (const [k, val] of Object.entries(goldDefaults())) if (x.data[k] === undefined) x.data[k] = val; if (!x.data.firstSupName) x.data.firstSupName = G().first_supervisor || FIRST_SUPERVISOR.name || ""; }
+          else { const D = DESIGN_DEFAULTS.waves; x.data.titleStyle ||= D.titleStyle; x.data.logos ||= { ...D.logos }; if (!x.data.title_manual || x.data.titleText === "شكر وتقدير") x.data.titleText = D.title; } }); ed.redraw(); }; };
+      if (d.design === "golden") { goldenEditor(body, ed, designSel); bindDesign(); return; } d.logos ||= { ...((DESIGN_DEFAULTS[d.design] || {}).logos || { ministry: true, directorate: true }) };
       const opt = (o, v, l) => `<option value="${esc(o)}" ${o === v ? "selected" : ""}>${esc(l ?? o)}</option>`;
       const tStyle = d.titleStyle || (d.fTitle === "ruqaa" ? "ruqaa" : "naskh");
       const sizeSel = (id, v) => `<select id="${id}">${[80, 90, 100, 110, 120, 130].map((n) => opt(String(n), String(v || 100), n + "%")).join("")}</select>`;
@@ -58,7 +136,7 @@ export async function certEditor(main, rec) {
       <section class="panel"><h2>التصميم والخطوط</h2>
       <p class="hint" style="margin:0 0 10px">نظام خطوط رسمي ثابت لكل الشهادات: العنوان <b>Noto Naskh Arabic</b>، اسم المكرّم <b>IBM Plex Sans Arabic</b> عريض، النص والتفاصيل <b>Noto Sans Arabic</b>. الخطوط محفوظة داخل الموقع وتُطبع بدقة 300 نقطة/بوصة.</p>
       <div class="form">
-        <div class="f"><label for="ct-design">تصميم الخلفية</label><select id="ct-design">${Object.entries(C.designs).map(([k, l]) => opt(k, d.design, l)).join("")}</select></div>
+        <div class="f"><label for="ct-design">تصميم الشهادة</label>${designSel}</div>
         <div class="f"><label for="ct-type">نوع الشهادة</label><select id="ct-type">${Object.entries(C.types).map(([k, t]) => opt(k, d.ctype, t.title)).join("")}</select></div>
         ${field({ label: "العنوان كما يظهر", key: "titleText", value: certTitle(d), hint: "يمكن كتابته بالتطويل مثل: شهـادة شكر وتقـديـر" })}
         <div class="f"><label for="ct-ft">خط العنوان</label><select id="ct-ft">${["naskh", "ruqaa"].map((k) => opt(k, tStyle, CERT_TYPE[k].label)).join("")}</select>
@@ -95,9 +173,7 @@ export async function certEditor(main, rec) {
       const ruqaaHint = () => { const h = $("#ct-ft-h", body); if (!h) return; const x = ed.rec.data, want = $("#ct-ft", body).value;
         h.textContent = want === "ruqaa" && titleStyleOf({ titleStyle: "ruqaa" }, certTitle(x)) !== "ruqaa" ? `العنوان طويل (أكثر من ${RUQAA_MAX} حرفاً)، فيُطبع بخط النسخ الرسمي. الرقعة للعناوين القصيرة فقط.` : ""; };
       ruqaaHint();
-      $("#ct-design", body).onchange = (e) => { const D = DESIGN_DEFAULTS[e.target.value] || DESIGN_DEFAULTS.waves;
-        ed.change((x) => { Object.assign(x.data, { design: e.target.value, titleStyle: D.titleStyle, nameColor: D.nameColor, logos: { ...D.logos } }); if (!x.data.title_manual) x.data.titleText = D.title || (C.types[x.data.ctype] || C.types.thanks).title; });
-        ed.redraw(); };
+      bindDesign();
       $("#ct-type", body).onchange = (e) => { ed.change((x) => { x.data.ctype = e.target.value; const T = C.types[e.target.value] || C.types.thanks; x.title = T.title;
         if (!x.data.title_manual) x.data.titleText = x.data.design === "waves" && e.target.value === "thanks" ? "شهـادة شكر وتقـديـر" : T.title; if (!x.data.intro_manual) x.data.introText = T.intro.replace("{الجهة}", x.data.issuer || certIssuer()); }); ed.redraw(); };
       $("#ct-ft", body).onchange = (e) => { ed.change((x) => { x.data.titleStyle = e.target.value; delete x.data.fTitle; delete x.data.fBody; delete x.data.fName; }); ruqaaHint(); };

@@ -133,8 +133,9 @@ export default async function (main, { id, params }) {
   // الطباعة التلقائية عند فتح المعاينة: سفاري الآيباد يمنعها ويعرض رسالة حظر، فيكتفى فيه بتنبيه للضغط على زر الطباعة
   if (params.auto === "1") {
     history.replaceState(null, "", location.hash.replace(/([?&])auto=1&?/, "$1").replace(/[?&]$/, ""));
-    if (IOS) { $("#print", main).classList.add("pulse"); toast("المعاينة جاهزة — اضغطي «طباعة / حفظ PDF»"); }
-    else setTimeout(doPrint, 300);
+    const pdfHint = params.pdf === "1";
+    if (IOS) { $("#print", main).classList.add("pulse"); toast(pdfHint ? "اضغطي «طباعة / حفظ PDF» ثم زر المشاركة ← «حفظ في الملفات» ليُحفظ PDF" : "المعاينة جاهزة — اضغطي «طباعة / حفظ PDF»"); }
+    else { if (pdfHint) toast("في نافذة الطباعة اختاري «حفظ كـ PDF» (Save as PDF) بدل الطابعة"); setTimeout(doPrint, pdfHint ? 900 : 300); }
   }
   const word = async (mode = "download") => {
     try {

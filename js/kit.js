@@ -145,6 +145,7 @@ export async function recordPage(main, { rec, title, render, beforeApprove, newR
     $("#print", bar) && ($("#print", bar).onclick = async () => { if (await ensureSaved()) go(`#/print/${ed.rec.id}?auto=1`); });
     $("#preview", bar) && ($("#preview", bar).onclick = async () => { if (await ensureSaved()) go(`#/print/${ed.rec.id}`); });
     $("#word", bar) && ($("#word", bar).onclick = async () => { if (await ensureSaved()) go(`#/print/${ed.rec.id}?word=1`); });
+    ed.openPrint = async (q = "") => { if (await ensureSaved()) go(`#/print/${ed.rec.id}${q}`); };
     $("#approve", bar) && ($("#approve", bar).onclick = approve);
     $("#unapprove", bar) && ($("#unapprove", bar).onclick = unapprove);
     $("#trash", bar).onclick = trash;

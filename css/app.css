@@ -576,3 +576,8 @@ input.cid-ok { border-color: var(--good) !important; background: var(--good-soft
 
 /* زيارات المدارس في التقويم */
 .cal-visit { display: block; margin-top: 2px; background: color-mix(in srgb, #1f8a5b 14%, transparent); border-inline-start: 3px solid #1f8a5b; color: inherit; }
+
+/* الشهادة الرسمية الذهبية: معاينة مباشرة داخل المحرّر */
+.cg-live { border: 1px solid var(--line, #ddd); border-radius: 10px; overflow: hidden; background: #fff; box-shadow: 0 6px 18px rgba(20, 37, 74, .08); }
+.cg-live svg { display: block; width: 100%; height: auto; }
+.cg-logo .btn.sm { font-size: 13px; padding: 5px 10px; }

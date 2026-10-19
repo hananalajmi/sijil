@@ -116,6 +116,14 @@ const WAVES_SVG = `<svg class="ce-bg" viewBox="0 0 297 210" preserveAspectRatio=
 export async function certificate(ctx) {
   const { certLines, certIntro, certNames, certTitle, DESIGN_DEFAULTS } = await import("../views/cert.js");
   const d = ctx.rec.data || {}, blank = !!d.blank, design = FORMS.cert.designs[d.design] ? d.design : "waves", D = DESIGN_DEFAULTS[design] || DESIGN_DEFAULTS.waves;
+  const IOS0 = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) || /[?&]ios=1\b/.test(location.search);
+  if (design === "golden") { // القالب الرسمي الذهبي: SVG متجهي بنصوص حقيقية (يُحفظ PDF بخطوط مضمّنة)
+    const G = await import("./certGolden.js"); const dd = { ...G.goldDefaults(), ...d }; const res = await G.goldResources(dd);
+    const bad = await loadCertFonts(); if (bad.length) { try { (await import("../ui.js")).toast("تعذّر تحميل خطوط الشهادة — تأكدي من الاتصال ثم أعيدي المعاينة قبل الطباعة", "err"); } catch (_) {} }
+    const names = blank ? [""] : certNames(d).length ? certNames(d) : [""], blocks = [];
+    names.forEach((n, i) => { if (i) blocks.push({ pageBreak: true }); blocks.push({ html: G.goldSVG(dd, n, res, { portrait: IOS0, blank }) }); });
+    return { orientation: IOS0 ? "portrait" : "landscape", cls: "t-ce t-ce-img t-ce-svg", header: "", identity: "", footer: "", blocks };
+  }
   const titleText = blank ? (FORMS.cert.types[d.ctype] || FORMS.cert.types.thanks).title : certTitle(d);
   const TS = CERT_TYPE[titleStyleOf(d, titleText)];
   const fT = TS.fam, fB = CERT_TYPE.body.fam, fN = CERT_TYPE.name.fam;
