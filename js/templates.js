@@ -282,6 +282,20 @@ TEACHER_VISIT.sections.forEach((s) => s.items.forEach((label, i) => {
   DEFAULT_OPTIONS[tvOptionKey(s.key, i)] = { label: `${s.screenTitle} — ${i + 1}. ${label}`, items: [...(TV_LEVELS[s.key]?.[i] || [])] };
 }));
 
+// شعارات رأس كل نموذج (يمين / وسط / يسار): الافتراضي، ويغيّرها المستخدم من زر «الشعارات» في المعاينة ("" = بدون)
+export const HEAD_LOGOS = {
+  teacher_visit: { label: "زيارة المعلم", r: "ministry_small", c: "", l: "directorate" },
+  school_visit: { label: "زيارة المدرسة", r: "ministry", c: "new_kuwait", l: "directorate" },
+  stats: { label: "الإحصائيات", r: "stats_r", c: "stats_c", l: "stats_l" },
+  department: { label: "بيانات الأقسام العلمية", r: "dep_r", c: "", l: "dep_l" },
+  weekly_report: { label: "التقرير الأسبوعي", r: "science_guidance", c: "", l: "ministry_color" },
+  monthly_achievements: { label: "الإنجازات الشهرية", r: "science_guidance", c: "ministry_color", l: "region" },
+  shared_achievements: { label: "الإنجازات المشتركة", r: "ministry_hd", c: "", l: "directorate" },
+  takleef: { label: "التكليف", r: "emblem", c: "", l: "" },
+  criteria: { label: "بطاقة قياس المعايير", r: "emblem", c: "", l: "" },
+};
+// الشعارات المتاحة للاختيار في رأس النماذج
+export const HEAD_LOGO_CHOICES = ["ministry_hd", "ministry", "ministry_small", "ministry_color", "ministry_event", "emblem", "seal_gold", "stats_r", "dep_r", "directorate", "directorate_event", "dep_l", "stats_l", "region", "science_guidance", "general_science", "stats_c", "new_kuwait"];
 // الشعارات الافتراضية المستخرجة من الملفات الرسمية المرفقة (قابلة للاستبدال من الإعدادات)
 export const LOGOS = {
   seal_gold: { label: "ختم وزارة التربية الذهبي (من نموذج الشهادة)", src: "assets/logos/ministry-seal-gold.png" },
@@ -300,6 +314,8 @@ export const LOGOS = {
   stats_r: { label: "الإحصائيات: الشعار الأيمن (وزارة التربية — الإدارة العامة)", src: "assets/logos/stats-logo-right.png" },
   stats_c: { label: "الإحصائيات: الشعار الأوسط", src: "assets/logos/stats-logo-center.png" },
   stats_l: { label: "الإحصائيات: الشعار الأيسر (التوجيه الفني للعلوم)", src: "assets/logos/stats-logo-left.png" },
+  dep_r: { label: "بيانات الأقسام: الشعار الأيمن (وزارة التربية)", src: "assets/logos/dep-logo-right.png" },
+  dep_l: { label: "بيانات الأقسام: الشعار الأيسر (التوجيه الفني للعلوم)", src: "assets/logos/dep-logo-left.png" },
   stats_strip: { label: "ترويسة الإحصائيات", src: "assets/logos/stats-strip.png" },
   departments_strip: { label: "ترويسة بيانات الأقسام العلمية", src: "assets/logos/departments-strip.jpg" },
 };

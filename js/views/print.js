@@ -6,6 +6,10 @@ import { BUILDERS } from "../report/builders.js";
 import { paginate, auditPages } from "../report/paginate.js";
 import { recordContext, visitStatsContext, examStatsContext, compiledMonthlyContext, monthlyDerived } from "../report/context.js";
 import { KIND_LABEL, KIND_ROUTE } from "../kit.js";
+import { HEAD_LOGOS, HEAD_LOGO_CHOICES, LOGOS } from "../templates.js";
+import { G, setHeadLogos } from "../store.js";
+// نوع النموذج لشعارات الرأس (تقرير الفعالية تُختار شعاراته من صفحة التقرير نفسها)
+const headKindOf = (ctx) => { const k = ctx.kind || ctx.rec?.kind; if (k === "stats_visits" || k === "stats_exams") return "stats"; if (k === "form") return ctx.rec?.data?.type; return k; };
 
 // الآيباد والآيفون (سفاري): لا يدعمان اتجاه الصفحة العرضي في الطباعة ولا الطباعة التلقائية
 const IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) || /[?&]ios=1\b/.test(location.search);
@@ -63,6 +67,7 @@ export default async function (main, { id, params }) {
       <label class="row" style="font-size:13.5px">اتجاه الصفحة <select id="orient" aria-label="اتجاه الصفحة"><option value="">حسب القالب (${rep.orientation === "landscape" ? "عرضي" : "طولي"})</option><option value="portrait">طولي</option><option value="landscape">عرضي</option></select></label>
       <label class="row" style="font-size:13.5px"><input type="checkbox" id="bw"> أبيض وأسود</label>
       <label class="row" style="font-size:13.5px" title="تصغير الصفحة داخل الورقة: صغّريه إذا قُصّت الأطراف أو انقسمت الصفحة على ورقتين، وكبّريه إذا كانت الهوامش كبيرة">حجم الطباعة <select id="pscale" aria-label="حجم الطباعة">${[100, 97, 94, 91, 88, 85, 82, 79, 76, 73, 70].map((v) => `<option value="${v}">${v}%${v === 100 ? " (كامل)" : ""}</option>`).join("")}</select></label>
+      ${HEAD_LOGOS[headKindOf(ctx)] && rec?.status !== "approved" ? `<button class="btn" id="hlogos" title="اختيار الشعارات في رأس هذا النموذج: يمين ووسط ويسار">الشعارات</button>` : ""}
       <button class="btn primary" id="print">طباعة / حفظ PDF</button>
       <button class="btn" id="word">تصدير Word</button>
       <button class="btn" id="share" title="يرسل الملف (Word) عبر واتساب أو البريد من جهازك">إرسال</button>
@@ -130,6 +135,20 @@ export default async function (main, { id, params }) {
     }, 700);
   };
   $("#print", main).onclick = doPrint;
+  // اختيار شعارات الرأس لهذا النوع من النماذج (يُحفظ ويُطبق على كل نماذج هذا النوع)
+  const hb = $("#hlogos", main);
+  if (hb) hb.onclick = async () => {
+    const kind = headKindOf(ctx), D = HEAD_LOGOS[kind], U = (G().head_logos || {})[kind] || {}, cur = (k) => (U[k] !== undefined ? U[k] : D[k]);
+    const sel = (k, l) => `<div class="f"><label for="hl-${k}">شعار ${l}</label><select id="hl-${k}"><option value="">بدون</option>${HEAD_LOGO_CHOICES.filter((x) => LOGOS[x]).map((x) => `<option value="${x}" ${x === cur(k) ? "selected" : ""}>${esc(LOGOS[x].label)}</option>`).join("")}</select></div>`;
+    const v = await modal({ title: `شعارات رأس «${D.label}»`, body: `<p class="hint">اختاري شعاراً أو اثنين أو ثلاثة، وحددي مكان كل شعار. يُطبق على كل نماذج «${esc(D.label)}».</p><div class="form">${sel("r", "اليمين")}${sel("c", "الوسط")}${sel("l", "اليسار")}</div>`,
+      actions: [{ label: "إلغاء", value: null }, { label: "الافتراضي", value: () => ({ r: D.r, c: D.c, l: D.l }) },
+        { label: "حفظ", kind: "primary", value: (b) => ({ r: b.querySelector("#hl-r").value, c: b.querySelector("#hl-c").value, l: b.querySelector("#hl-l").value }) }], wide: true });
+    if (!v) return;
+    const val = v;
+    const saving = setHeadLogos(kind, val);
+    ctx.guide = { ...(ctx.guide || {}), head_logos: { ...(G().head_logos || {}), [kind]: val } };
+    const keep = rep.orientation; Object.assign(rep, await build(ctx)); rep.orientation = keep; await renderFit(); await saving; toast("تم تحديث الشعارات");
+  };
   // الطباعة التلقائية عند فتح المعاينة: سفاري الآيباد يمنعها ويعرض رسالة حظر، فيكتفى فيه بتنبيه للضغط على زر الطباعة
   if (params.auto === "1") {
     history.replaceState(null, "", location.hash.replace(/([?&])auto=1&?/, "$1").replace(/[?&]$/, ""));

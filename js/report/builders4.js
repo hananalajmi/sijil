@@ -2,7 +2,7 @@
 // يُطبع مُعبّأً من بيانات النموذج، أو فارغاً (blank) للتعبئة باليد.
 import { esc, fmtDateSlash } from "../ui.js";
 import { FORMS, FIRST_SUPERVISOR } from "../templates.js";
-import { logo, sigSlotHtml } from "./builders.js";
+import { logo, sigSlotHtml, headLogos } from "./builders.js";
 
 const dots = (w = 38) => `<span class="dots" style="min-width:${w}mm"></span>`;
 const v = (x, w) => (x ? `<b class="fm-v">${esc(x)}</b>` : dots(w));
@@ -11,9 +11,11 @@ export async function formTakleef(ctx) {
   const T = FORMS.takleef, d = ctx.rec.data || {}, blank = !!d.blank;
   const region = ctx.guide?.region || "الأحمدي";
   const people = blank ? [] : (d.people || []).filter((p) => (p.name || "").trim() || (p.civil_id || "").trim());
+  const H = await headLogos(ctx, "takleef");
   const head = `<div class="fm-head">
-      <div class="fm-org">${await logo("emblem", "fm-emblem")}<div>${T.header.map(esc).join("<br>")}<br>الإدارة العامة لمنطقة ${esc(region)} التعليمية</div></div>
-      <div class="fm-no"><span>${esc(T.formNo)}</span><span>${esc(T.pageNo)}</span></div></div>
+      <div class="fm-org">${H.r ? H.r.replace('class="logo ', 'class="logo fm-emblem ') : ""}<div>${T.header.map(esc).join("<br>")}<br>الإدارة العامة لمنطقة ${esc(region)} التعليمية</div></div>
+      ${H.c ? `<div class="fm-c">${H.c}</div>` : ""}
+      <div class="fm-no">${H.l ? `<div class="fm-l">${H.l}</div>` : ""}<span>${esc(T.formNo)}</span><span>${esc(T.pageNo)}</span></div></div>
     <h1 class="fm-title">${esc(T.label)}</h1>
     <div class="fm-line"><b>التاريخ :</b> ${blank ? dots(45) : v(fmtDateSlash(d.date || ctx.rec.record_date), 45)}</div>
     <div class="fm-line"><b>الموافق :</b> ${blank ? dots(45) : v(d.hijri, 45)}</div>
@@ -45,10 +47,11 @@ export async function criteriaCard(ctx) {
   const region = ctx.guide?.region || "الأحمدي";
   const sc = blank ? {} : d.scores || {};
   const total = blank ? null : criteriaTotal(sc);
+  const H = await headLogos(ctx, "criteria");
   const head = `<div class="cr-head">
-      <div class="cr-org">${await logo("emblem", "cr-emblem")}<div><b>وزارة التربية</b><br><b>منطقة ${esc(region)} التعليمية</b></div></div>
-      <h1 class="cr-title">${esc(T.label)}</h1>
-      <div class="cr-date"><b>التاريخ :</b> ${blank ? dots(30) : v(fmtDateSlash(d.date || ctx.rec.record_date), 30)}</div></div>
+      <div class="cr-org">${H.r ? H.r.replace('class="logo ', 'class="logo cr-emblem ') : ""}<div><b>وزارة التربية</b><br><b>منطقة ${esc(region)} التعليمية</b></div></div>
+      <div class="hl-mid">${H.c ? `<div class="hl-cm">${H.c}</div>` : ""}<h1 class="cr-title">${esc(T.label)}</h1></div>
+      <div class="cr-date">${H.l ? `<div class="cr-l">${H.l}</div>` : ""}<b>التاريخ :</b> ${blank ? dots(30) : v(fmtDateSlash(d.date || ctx.rec.record_date), 30)}</div></div>
     <div class="cr-id"><div><b>اسم المدرسة :</b> ${blank ? dots(70) : v(ctx.school?.title, 70)}</div><div><b>العام الدراسي :</b> ${v((ctx.rec.academic_year || "").replace("-", "/"), 25)}</div></div>
     <div class="cr-id"><div><b>المادة :</b> ${blank ? v(T.subject, 40) : v(d.subject || T.subject, 40)}</div></div>`;
   const rows = [];

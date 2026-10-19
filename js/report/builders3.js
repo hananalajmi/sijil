@@ -2,7 +2,7 @@
 // غلاف، صفحة المحتوى، «المرحلة الثانوية»، الأقسام السبعة، ثم «الموجه الفني الأول». الصور في مربع ثابت الحجم داخل كل صف.
 import { esc, fmtDateSlash, dayName, MONTHS_AR } from "../ui.js";
 import { SHARED_ACH, FIRST_SUPERVISOR } from "../templates.js";
-import { val, img, logo } from "./builders.js";
+import { val, img, logo, headLogos, logoRow } from "./builders.js";
 
 const monthName = (m) => (m ? MONTHS_AR[Number(m.split("-")[1]) - 1] : "");
 const yearTxt = (y) => { const [a, b] = (y || "").split("-"); return a && b ? `${a}- ${b}` : y || ""; };
@@ -28,7 +28,7 @@ export async function sharedAchievements(ctx) {
   const mName = monthName(d.month);
   const observer = d.observer_name || ctx.guide?.first_supervisor || FIRST_SUPERVISOR.name;
   const cover = `<div class="sa-cover">
-    <div class="sa-logos"><div>${await logo("ministry_hd")}</div><div>${await logo("directorate")}</div></div>
+    ${logoRow(await headLogos(ctx, "shared_achievements"), "sa-logos")}
     <div class="sa-title"><div>${esc(SHARED_ACH.title)}</div><div>${esc(SHARED_ACH.region)}</div><div>للعام الدراسي ${esc(yearTxt(ctx.rec.academic_year))}</div></div>
     <div class="sa-month">شهر <span>${esc(mName)}</span></div>
     <div class="sa-obs"><div>${esc(SHARED_ACH.observer)}</div><div>أ. ${val(observer)}</div></div>

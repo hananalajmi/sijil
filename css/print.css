@@ -454,3 +454,19 @@
 /* الشهادة كصورة واحدة بحجم الورقة */
 .sheet.t-ce-img .pg-body { display: block; }
 .t-ce .ce-img { display: block; } .t-ce .ce-img.lan { width: 296.6mm; height: 209.6mm; } .t-ce .ce-img.por { width: 209.6mm; height: 296.6mm; }
+
+/* ---------- شعارات رأس النماذج (يمين / وسط / يسار) ---------- */
+.hl-row { display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: center; width: 100%; }
+.hl-row > div { display: flex; align-items: center; min-width: 0; }
+.hl-row > .hl-r { justify-content: flex-start; } .hl-row > .hl-c { justify-content: center; } .hl-row > .hl-l { justify-content: flex-end; }
+.hl-row .logo { height: 17mm; max-width: 62mm; width: auto; object-fit: contain; margin: 0; }
+.hl-mid { text-align: center; } .hl-mid .hl-cm .logo { height: 12mm; max-width: 50mm; width: auto; object-fit: contain; margin: 0 auto 1.5mm; }
+.t-st .hl-row { margin-bottom: 3mm; }
+.t-dp .hl-row { margin-bottom: 2mm; } .t-dp .hl-row .logo { height: 15mm; }
+.t-ach .hl-row.ach-logos .logo { height: 26mm; max-width: 55mm; }
+.t-sa .hl-row.sa-logos .logo { height: 30mm; max-width: 70mm; }
+.t-tv .tv-head .logo, .t-sv .sv-head .logo { max-width: 50mm; width: auto; object-fit: contain; }
+.t-fm .fm-c .logo, .t-fm .fm-l .logo { height: 16mm; max-width: 45mm; width: auto; object-fit: contain; }
+.t-fm .fm-no { display: flex; flex-direction: column; align-items: flex-end; }
+.t-cr .cr-l .logo { height: 14mm; max-width: 40mm; width: auto; object-fit: contain; margin-inline-start: auto; }
+.t-ach .hl-row.ach-logos, .t-sa .hl-row.sa-logos { display: grid; grid-template-columns: 1fr 1fr 1fr; justify-items: stretch; }

@@ -1,12 +1,19 @@
 // بناء التقارير المطبوعة من البيانات وفق القوالب الرسمية المرفقة.
 // كل دالة تستقبل "سياق" قابلاً للحفظ (يُحفظ كما هو كنسخة ثابتة عند الاعتماد) وتعيد تقريراً للمحرك.
 import { esc, fmtDate, dayName, yearLabel, WORK_DAYS, DAYS, MONTHS_EN, parseDate, addDays } from "../ui.js";
-import { TEACHER_VISIT, SCHOOL_VISIT, STATS, LOGOS } from "../templates.js";
-import { fileUrl, logoSrc } from "../store.js";
+import { TEACHER_VISIT, SCHOOL_VISIT, STATS, LOGOS, HEAD_LOGOS } from "../templates.js";
+import { fileUrl, logoSrc, G } from "../store.js";
 
 export const val = (v) => esc(v ?? "");
 export const nl = (s) => esc(s || "").split(/\n+/).map((x) => x.trim()).filter(Boolean);
 export async function img(fileId, cls = "") { const u = await fileUrl(fileId); return u ? `<img class="${cls}" src="${u}" alt="">` : ""; }
+// شعارات رأس النموذج الثلاثة حسب اختيار المستخدم (يمين / وسط / يسار)
+export async function headLogos(ctx, kind) {
+  const D = HEAD_LOGOS[kind] || {}, U = (ctx.guide?.head_logos ?? G().head_logos ?? {})[kind] || {};
+  const one = async (k) => { const v = U[k] !== undefined ? U[k] : D[k]; return v && LOGOS[v] ? await logo(v) : ""; };
+  return { r: await one("r"), c: await one("c"), l: await one("l") };
+}
+export const logoRow = (H, cls = "") => `<div class="hl-row ${cls}"><div class="hl-r">${H.r}</div><div class="hl-c">${H.c}</div><div class="hl-l">${H.l}</div></div>`;
 export async function logo(key, cls = "") { const u = await logoSrc(key); return u ? `<img class="logo ${cls}" src="${u}" alt="">` : ""; }
 
 // خانات التوقيع: الاسم + صورة التوقيع والختم (عند اختيار المستخدم) + التاريخ الاختياري
@@ -40,10 +47,11 @@ export const mySig = (ctx, title, name) => ({
 export async function teacherVisit(ctx) {
   const d = ctx.rec.data || {};
   const isHead = d.visitee === "head";
+  const H = await headLogos(ctx, "teacher_visit");
   const header = `<div class="tv-head">
-      <div class="tv-logo-r">${await logo("ministry_small")}</div>
-      <h1 class="tv-title">${isHead ? "زيارة الموجه الفني لرئيس القسم" : "زيارة الموجه الفني للمعلم"}</h1>
-      <div class="tv-logo-l">${await logo("directorate")}</div>
+      <div class="tv-logo-r">${H.r}</div>
+      <div class="hl-mid">${H.c ? `<div class="hl-cm">${H.c}</div>` : ""}<h1 class="tv-title">${isHead ? "زيارة الموجه الفني لرئيس القسم" : "زيارة الموجه الفني للمعلم"}</h1></div>
+      <div class="tv-logo-l">${H.l}</div>
     </div>`;
   const identity = `<div class="tv-meta">
       <div class="tv-school"><b>المدرسة:</b> <span class="fill">${val(ctx.school?.title)}</span></div>
@@ -77,10 +85,11 @@ export async function teacherVisit(ctx) {
 /* ============================== زيارة الموجه للمدرسة ============================== */
 export async function schoolVisit(ctx) {
   const d = ctx.rec.data || {};
+  const H = await headLogos(ctx, "school_visit");
   const header = `<div class="sv-head">
-    <div>${await logo("ministry")}</div>
-    <h1 class="sv-title">زيارةُ المُوجهِ الفَنّي</h1>
-    <div class="sv-logos-l">${await logo("directorate")}${await logo("new_kuwait")}</div></div>`;
+    <div>${H.r}</div>
+    <div class="hl-mid">${H.c ? `<div class="hl-cm">${H.c}</div>` : ""}<h1 class="sv-title">زيارةُ المُوجهِ الفَنّي</h1></div>
+    <div class="sv-logos-l">${H.l}</div></div>`;
   const term = ctx.rec.term;
   const identity = `<table class="grid sv-id">
       <thead><tr><th class="w-school">المدرسة</th><th>اليوم</th><th>التاريخ</th><th>الفترة الدراسية</th></tr></thead>
@@ -127,7 +136,7 @@ export async function schoolVisit(ctx) {
 /* ============================== الإحصائيات ============================== */
 async function statsFrame(ctx, title) {
   // ثلاثة شعارات: يمين ووسط ويسار (تُستبدل من الإعدادات)
-  const header = `<div class="st-logos"><div class="st-lr">${await logo("stats_r")}</div><div class="st-lc">${await logo("stats_c")}</div><div class="st-ll">${await logo("stats_l")}</div></div>`;
+  const header = logoRow(await headLogos(ctx, "stats"), "st-logos");
   const identity = `<div class="st-titles"><div class="st-t1">${esc(title)}</div><div class="st-t1">للعام الدراسي${esc(yearLabel(ctx.year))} م</div>
       <div class="st-stars">*******************************</div>
       <div class="st-l"><b>المرحلة :</b> ${val(ctx.guide?.stage) || "................."}</div>
@@ -223,7 +232,7 @@ export async function eventReport(ctx) {
 export async function departments(ctx) {
   const d = ctx.rec.data || {}, s = d.info || {};
   const grades = ctx.grades;
-  const header = `<div class="st-strip">${await logo("departments_strip", "strip")}</div>
+  const header = `${logoRow(await headLogos(ctx, "department"))}
     <div class="dp-title">بيانات الأقسام العلمية لمدارس منطقة ${val(ctx.guide?.region || "الأحمدي")} التعليمية للمرحلة ${val(ctx.stageWord)}<br>${esc((ctx.rec.academic_year || "").replace("-", " / "))} م</div>`;
   const info = `<table class="grid dp-info"><tr><td><b>اسم المدرسة :</b> ${val(ctx.school?.title)}</td><td><b>اسم المدير :</b> ${val(s.principal)}</td><td><b>النقال :</b> ${val(s.principal_mobile)}</td></tr>
     <tr><td colspan="2"><b>اسم المدير المساعد (الفني ):</b> ${val(s.assistant_tech)}</td><td><b>اسم المدير المساعد ( الإداري):</b> ${val(s.assistant_admin)}</td></tr>

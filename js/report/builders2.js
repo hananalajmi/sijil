@@ -2,7 +2,7 @@
 // وفق ملفي Word المرفقين: غلاف، صفحة المحتوى، ثم الأقسام، والتوقيع الأخير للموجه الفني الأول.
 import { esc, fmtDate, fmtDateSlash, dayName, MONTHS_AR, addDays } from "../ui.js";
 import { WEEKLY_REPORT, MONTHLY_ACH, COVER_LINES, FIRST_SUPERVISOR } from "../templates.js";
-import { val, nl, img, logo, sigRow, mySig } from "./builders.js";
+import { val, nl, img, logo, sigRow, mySig, headLogos, logoRow } from "./builders.js";
 
 const yearM = (y) => { const [a, b] = (y || "").split("-"); return a && b ? `${a}-${b}م` : ""; };
 const monthName = (m) => (m ? MONTHS_AR[Number(m.split("-")[1]) - 1] : "");
@@ -32,7 +32,7 @@ export async function weeklyReport(ctx) {
   const period = `الأسبوع ${d.week_label || ""} — ${monthName(d.month || ws)} (${fmtDateSlash(ws)} - ${fmtDateSlash(we)})`;
   const fs = firstSup(ctx);
   const cover = `<div class="ach-cover">
-    <div class="ach-logos two"><div>${await logo("science_guidance")}</div><div>${await logo("ministry_color")}</div></div>
+    ${logoRow(await headLogos(ctx, "weekly_report"), "ach-logos")}
     <div class="ach-lines">${coverLines(ctx).map((l) => `<div>${esc(l)}</div>`).join("")}</div>
     <div class="ach-year">العام الدراسي ${esc(yearM(ctx.rec.academic_year))}</div>
     <div class="ach-title">${esc(WEEKLY_REPORT.title)}</div>
@@ -68,7 +68,7 @@ export async function monthlyAchievements(ctx) {
   const fs = firstSup(ctx);
   const dir = ctx.cover?.director || MONTHLY_ACH.director;
   const cover = `<div class="ach-cover">
-    <div class="ach-logos three"><div>${await logo("science_guidance")}</div><div>${await logo("ministry_color")}</div><div>${await logo("region")}</div></div>
+    ${logoRow(await headLogos(ctx, "monthly_achievements"), "ach-logos")}
     <div class="ach-lines">${coverLines(ctx).map((l) => `<div>${esc(l)}</div>`).join("")}</div>
     <div class="ach-year">العام الدراسي ${esc(yearM(ctx.rec.academic_year))}</div>
     <div class="ach-title">${esc(MONTHLY_ACH.title)}</div>

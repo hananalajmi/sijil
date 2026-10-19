@@ -31,6 +31,15 @@ export async function loadOptions() {
 // القائمة الشخصية للموجّه (إن عدّلها) تتقدم على القائمة العامة
 export const opts = (key) => state.guide?.data?.my_options?.[key] || state.options[key]?.items || [];
 
+// شعارات رأس النماذج: تُحفظ مع البيانات الرئيسية للموجّه لكل نوع نموذج
+export function setHeadLogos(kind, val) {
+  const next = (g) => ({ ...(g?.data || {}), head_logos: { ...(g?.data?.head_logos || {}), [kind]: val } });
+  guideSaving = guideSaving.then(async () => { const g = state.guide; const data = next(g);
+    state.guide = g ? await api.update(g.id, { data }, g.version) : await api.create({ kind: "guide_data", title: "البيانات الرئيسية", academic_year: academicYearOf(), data }); })
+    .catch((e) => { toast("تعذر حفظ الشعارات: " + e.message, "error"); });
+  if (state.guide) state.guide = { ...state.guide, data: next(state.guide) };
+  return guideSaving;
+}
 // تعديل قائمة شخصية: يُحفظ مع البيانات الرئيسية للموجّه (لا يؤثر على غيره)
 let guideSaving = Promise.resolve();
 export function setMyOptions(key, items) {
