@@ -297,6 +297,9 @@ export const LOGOS = {
   region: { label: "شعار المنطقة / المراقبة (غلاف الإنجازات الشهرية)", src: "assets/logos/ahmadi-science.png" },
   ministry_event: { label: "شعار وزارة التربية (تقرير الفعالية)", src: "assets/logos/ministry-event.jpg" },
   directorate_event: { label: "شعار الإدارة العامة (تقرير الفعالية)", src: "assets/logos/ahmadi-science-event.jpg" },
+  stats_r: { label: "الإحصائيات: الشعار الأيمن (وزارة التربية — الإدارة العامة)", src: "assets/logos/stats-logo-right.png" },
+  stats_c: { label: "الإحصائيات: الشعار الأوسط", src: "assets/logos/stats-logo-center.png" },
+  stats_l: { label: "الإحصائيات: الشعار الأيسر (التوجيه الفني للعلوم)", src: "assets/logos/stats-logo-left.png" },
   stats_strip: { label: "ترويسة الإحصائيات", src: "assets/logos/stats-strip.png" },
   departments_strip: { label: "ترويسة بيانات الأقسام العلمية", src: "assets/logos/departments-strip.jpg" },
 };

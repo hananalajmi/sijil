@@ -1,7 +1,7 @@
 // بناء التقارير المطبوعة من البيانات وفق القوالب الرسمية المرفقة.
 // كل دالة تستقبل "سياق" قابلاً للحفظ (يُحفظ كما هو كنسخة ثابتة عند الاعتماد) وتعيد تقريراً للمحرك.
 import { esc, fmtDate, dayName, yearLabel, WORK_DAYS, DAYS, MONTHS_EN, parseDate, addDays } from "../ui.js";
-import { TEACHER_VISIT, SCHOOL_VISIT, STATS } from "../templates.js";
+import { TEACHER_VISIT, SCHOOL_VISIT, STATS, LOGOS } from "../templates.js";
 import { fileUrl, logoSrc } from "../store.js";
 
 export const val = (v) => esc(v ?? "");
@@ -126,7 +126,8 @@ export async function schoolVisit(ctx) {
 
 /* ============================== الإحصائيات ============================== */
 async function statsFrame(ctx, title) {
-  const header = `<div class="st-strip">${await logo("stats_strip", "strip")}</div>`;
+  // ثلاثة شعارات: يمين ووسط ويسار (تُستبدل من الإعدادات)
+  const header = `<div class="st-logos"><div class="st-lr">${await logo("stats_r")}</div><div class="st-lc">${await logo("stats_c")}</div><div class="st-ll">${await logo("stats_l")}</div></div>`;
   const identity = `<div class="st-titles"><div class="st-t1">${esc(title)}</div><div class="st-t1">للعام الدراسي${esc(yearLabel(ctx.year))} م</div>
       <div class="st-stars">*******************************</div>
       <div class="st-l"><b>المرحلة :</b> ${val(ctx.guide?.stage) || "................."}</div>
@@ -190,11 +191,14 @@ export async function monthlyPlan(ctx) {
 }
 
 /* ============================== تقرير الفعالية / التنمية المهنية ============================== */
+export const EV_LOGO_DEFAULT = { r: "ministry_event", c: "directorate_event", l: "general_science" };
 export async function eventReport(ctx) {
   const d = ctx.rec.data || {};
   const place = d.place || ctx.school?.title || "";
-  const header = `<div class="ev-head"><div class="ev-r">${await logo("ministry_event")}<div class="ev-org">الإدارة العامة لمنطقة ${val(ctx.guide?.region || "الأحمدي")}<br>التعليمية</div></div>
-    <div class="ev-c">${await logo("directorate_event")}</div><div class="ev-l">${await logo("general_science")}</div></div>`;
+  // الشعارات اختيارية: حتى ثلاثة، وكل شعار في المكان المختار (يمين / وسط / يسار)
+  const L = { ...EV_LOGO_DEFAULT, ...(d.evLogos || {}) };
+  const slot = async (k) => (L[k] && LOGOS[L[k]] ? await logo(L[k]) : "");
+  const header = `<div class="ev-head"><div class="ev-r">${await slot("r")}</div><div class="ev-c">${await slot("c")}</div><div class="ev-l">${await slot("l")}</div></div>`;
   const rows = [["عنوان التنمية المهنية", d.pd_title], ["الجهة المنفذة", d.organizer], ["اليوم", dayName(ctx.rec.record_date)], ["التاريخ", fmtDate(ctx.rec.record_date)], ["المكان", place]];
   const photos = (d.photos?.length ? d.photos : d.photo ? [d.photo] : []).filter(Boolean);
   const blocks = [

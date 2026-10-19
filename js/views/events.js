@@ -5,6 +5,10 @@ import { $, today, dayName, fmtDate, academicYearOf } from "../ui.js";
 import { field, bindFields, recordPage, schoolOptions, photoSlots } from "../kit.js";
 import { listView } from "./_list.js";
 import { printOptionsPanel, bindPrintOptions } from "./teacherVisit.js";
+import { LOGOS } from "../templates.js";
+import { EV_LOGO_DEFAULT } from "../report/builders.js";
+// الشعارات المتاحة لرأس تقرير الفعالية
+const EV_LOGO_CHOICES = ["ministry_event", "ministry_hd", "ministry", "emblem", "seal_gold", "directorate_event", "directorate", "general_science", "science_guidance", "new_kuwait"];
 
 export default async function (main, { id }) {
   if (!id) return listView(main, { kind: "event_report", title: "تقرير الفعالية / التنمية المهنية", newLabel: "+ تقرير فعالية",
@@ -25,6 +29,10 @@ export default async function (main, { id }) {
         ${field({ label: "الفئة المستهدفة", key: "target", type: "select", options: opts("target_groups"), value: d.target })}
         ${field({ label: "نبذة مختصرة عن التنمية المهنية", key: "summary", type: "textarea", value: d.summary, wide: true, rows: 6 })}
       </div></section>
+      <section class="panel"><h2>الشعارات في رأس التقرير</h2><p class="hint">اختاري شعاراً أو اثنين أو ثلاثة، وحددي مكان كل شعار. «بدون» يترك المكان فارغاً.</p><div class="form">
+        ${[["r", "اليمين"], ["c", "الوسط"], ["l", "اليسار"]].map(([k, l]) => { const v = (d.evLogos || EV_LOGO_DEFAULT)[k] ?? ""; return `<div class="f"><label for="evl-${k}">شعار ${l}</label><select id="evl-${k}" data-evl="${k}">
+          <option value="" ${!v ? "selected" : ""}>بدون</option>${EV_LOGO_CHOICES.filter((x) => LOGOS[x]).map((x) => `<option value="${x}" ${x === v ? "selected" : ""}>${LOGOS[x].label}</option>`).join("")}</select></div>`; }).join("")}
+      </div></section>
       <section class="panel"><h2>صور معبرة</h2><p class="hint">أضيفي صورة أو أكثر؛ تُطبع كلها بنفس الحجم وحولها إطار بسيط.</p><div id="photo"></div></section>${printOptionsPanel(ed)}`;
       bindFields(body, (k, v) => {
         ed.change((x) => {
@@ -39,6 +47,7 @@ export default async function (main, { id }) {
       const paintPhotos = () => photoSlots($("#photo", body), photos(), Math.min(9, photos().length + 1), (ids) => {
         ed.change((x) => { x.data.photos = ids.filter(Boolean); x.data.photo = x.data.photos[0] || null; }, { immediate: true }); paintPhotos(); }, { recordId: r.id });
       paintPhotos();
+      body.querySelectorAll("[data-evl]").forEach((sel) => (sel.onchange = () => ed.change((x) => { x.data.evLogos = { ...EV_LOGO_DEFAULT, ...(x.data.evLogos || {}), [sel.dataset.evl]: sel.value }; })));
       bindPrintOptions(body, ed);
     } });
 }

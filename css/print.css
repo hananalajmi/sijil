@@ -92,6 +92,9 @@
 .t-sv .sv-sigs .sig-name { text-align: center; }
 
 /* ---------- الإحصائيات ---------- */
+.t-st .st-logos { display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: center; margin-bottom: 3mm; }
+.t-st .st-logos > div { display: flex; align-items: center; } .t-st .st-lr { justify-content: flex-start; } .t-st .st-lc { justify-content: center; } .t-st .st-ll { justify-content: flex-end; }
+.t-st .st-logos .logo { height: 17mm; max-width: 62mm; width: auto; object-fit: contain; }
 .t-st .st-strip .strip, .t-dp .st-strip .strip { width: 100%; height: auto; max-height: 22mm; object-fit: contain; }
 .t-st .st-titles { text-align: center; font-weight: 700; font-size: 13pt; line-height: 1.4; }
 .t-st .st-stars { font-size: 10pt; }
@@ -194,10 +197,12 @@
 
 /* ---------- تقرير الفعالية ---------- */
 .t-ev .ev-head { display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: start; }
-.t-ev .ev-r { text-align: center; } .t-ev .ev-r .logo { height: 22mm; margin: 0 auto; }
+.t-ev .ev-head > div { display: flex; align-items: center; min-height: 20mm; }
+.t-ev .ev-r { justify-content: flex-start; } .t-ev .ev-c { justify-content: center; } .t-ev .ev-l { justify-content: flex-end; }
+.t-ev .ev-head .logo { height: 21mm; max-width: 62mm; width: auto; object-fit: contain; margin: 0; }
 .t-ev .ev-org, .t-ev .ev-school { font-weight: 700; font-size: 10.5pt; }
 .t-ev .ev-school { margin-top: 2mm; }
-.t-ev .ev-c .logo { height: 16mm; margin: 0 auto; } .t-ev .ev-l .logo { height: 18mm; margin-inline-start: auto; margin-inline-end: 0; }
+
 .t-ev .ev-name { border: 1pt solid #000; width: 70%; margin: 4mm auto 6mm; text-align: center; color: #e00000; font-weight: 800; font-size: 14pt; padding: 2.5mm; }
 .t-ev .ev-table { width: 92%; margin: 0 auto 6mm; border: 1pt solid #8eaadb; }
 .t-ev .ev-table th, .t-ev .ev-table td { border: 1pt solid #8eaadb; padding: 1mm 3mm; height: 7mm; }
