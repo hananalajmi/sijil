@@ -1,7 +1,7 @@
 // زيارة الموجه الفني للمدرسة (وتشمل الزيارة الاستطلاعية وزيارة المتابعة كنوع زيارة إلى أن يصل قالبها الخاص)
 import { api } from "../api.js";
 import { state, opts, schoolById, teacherById } from "../store.js";
-import { esc, $, $$, today, dayName, fmtDate, academicYearOf } from "../ui.js";
+import { esc, $, $$, today, dayName, fmtDate, academicYearOf, toast } from "../ui.js";
 import { field, bindFields, recordPage, schoolOptions, teacherOptions, photoSlots, promptNewOption, addTeacherName } from "../kit.js";
 import { SCHOOL_VISIT } from "../templates.js";
 import { goalsText, recordsText } from "../svtext.js";
