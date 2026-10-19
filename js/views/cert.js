@@ -7,7 +7,7 @@ import { field, bindFields, recordPage, schoolOptions } from "../kit.js";
 import { FORMS, FIRST_SUPERVISOR } from "../templates.js";
 import { printOptionsPanel, bindPrintOptions } from "./teacherVisit.js";
 import { CERT_TYPE, RUQAA_MAX, titleStyleOf } from "../report/builders4.js";
-import { goldDefaults, goldSVG, goldResources, GOLD_BGS, TITLE_COLORS, TEXT_FONTS, loadTextFont } from "../report/certGolden.js";
+import { goldDefaults, goldSVG, goldResources, GOLD_BGS, TITLE_COLORS, TEXT_FONTS, loadTextFont, STYLE_PARTS, STYLE_SIZES, styleOf } from "../report/certGolden.js";
 import { modal, toast } from "../ui.js";
 
 const C = FORMS.cert;
@@ -56,6 +56,7 @@ const readLogo = (file) => new Promise((res, rej) => { const fr = new FileReader
     cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height); res(cv.toDataURL("image/png")); }; im.src = fr.result; }; fr.readAsDataURL(file); });
 function goldenEditor(body, ed, designSel) {
   const d = ed.rec.data; for (const [k, v] of Object.entries(goldDefaults())) if (d[k] === undefined) d[k] = v;
+  const SS = styleOf(d), fontOpts = (v) => Object.entries(TEXT_FONTS).map(([k, [, l]]) => `<option value="${k}" ${k === v || (TEXT_FONTS[v] ? false : { notosans: "notosansarabic", plex: "ibmplexsansarabic", naskh: "notonaskharabic", ruqaa: "arefruqaa", kufi: "notokufiarabic", messiri: "elmessiri", markazi: "markazitext" }[v] === k) ? "selected" : ""}>${esc(l)}</option>`).join("");
   const opt = (o, v, l) => `<option value="${esc(o)}" ${o === v ? "selected" : ""}>${esc(l ?? o)}</option>`;
   const logoCtl = (side, label) => `<div class="f cg-logo"><label for="cg-${side}">${label}</label>
       <select id="cg-${side}" data-side="${side}">${LOGO_CHOICES().map(([k, l]) => opt(k, d["gLogo" + side] || "", l)).join("")}</select>
@@ -88,23 +89,23 @@ function goldenEditor(body, ed, designSel) {
       ${field({ label: "اختاري عبارة", key: "phrase", type: "select", options: opts("cert_g_phrases"), value: d.phrase, remember: "cert_g_phrases", hint: "تُكتب في المربع بالأسفل وتتغير الضمائر حسب المسمى (جهودها / جهوده)" })}
       <div class="f"><label for="cg-body">نص العبارة — عدّليه كما تريدين، وكل سطر يظهر سطراً (مثل التاريخ أو مكان الورشة)</label><textarea id="cg-body" rows="4">${esc(d.body ?? d.phrase ?? "")}</textarea></div>
       ${field({ label: "الختام (اختياري)", key: "closing", type: "select", options: opts("cert_closings"), value: d.closing || "", remember: "cert_closings" })}</div></section>
-    <section class="panel"><h2>الخط ولون الخط</h2><div class="form">
-      <div class="f"><label for="cg-nf">خط المسمى والاسم</label><select id="cg-nf">${Object.entries(TEXT_FONTS).map(([k, [, l]]) => opt(k, d.nameFont || "plex", l)).join("")}</select></div>
-      <div class="f"><label for="cg-nc">لون المسمى والاسم</label><input type="color" id="cg-nc" value="${esc(d.nameColor || GOLD_BGS[d.bg || "frame"].nameColor || "#14254a")}"></div>
-      <div class="f"><label for="cg-tf">خط العبارات</label><select id="cg-tf">${Object.entries(TEXT_FONTS).map(([k, [, l]]) => opt(k, d.textFont || "notosans", l)).join("")}</select></div>
-      <div class="f"><label for="cg-tcol">لون العبارات</label><input type="color" id="cg-tcol" value="${esc(d.textColor || "#1d2333")}"></div>
-      <div class="f"><label for="cg-size">حجم الخط</label><select id="cg-size">${[85, 90, 95, 100, 105, 110, 115, 120].map((n) => opt(String(n), String(d.sizeK || 100), n === 100 ? "100% (متناسق مع A4)" : n + "%")).join("")}</select></div></div>
-      <p class="hint">إذا زاد الكلام يصغر الخط تلقائياً حتى يبقى بعيداً عن الزخارف والتوقيع.</p></section>
+    <section class="panel"><h2>تنسيق العبارات (الخط والحجم واللون لكل عبارة)</h2>
+      <div class="tbl-wrap"><table class="data cg-styles"><thead><tr><th>العبارة</th><th>الخط</th><th>الحجم</th><th>اللون</th></tr></thead><tbody>
+      ${Object.entries(STYLE_PARTS).map(([k, [l]]) => { const S = SS[k]; return `<tr><td><b>${esc(l)}</b></td>
+        <td><select data-sf="${k}" aria-label="خط ${esc(l)}">${fontOpts(S.font)}</select></td>
+        <td><select data-ss="${k}" aria-label="حجم ${esc(l)}">${STYLE_SIZES.map((n) => opt(String(n), String(S.size), n + " نقطة")).join("")}</select></td>
+        <td><input type="color" data-sc="${k}" value="${esc(S.color || GOLD_BGS[d.bg || "frame"].nameColor || "#14254a")}" aria-label="لون ${esc(l)}"></td></tr>`; }).join("")}</tbody></table></div>
+      <p class="hint">${Object.keys(TEXT_FONTS).length} خطاً عربياً مجانياً من Google Fonts. إذا زاد الكلام يصغر الكل بنسبة واحدة تلقائياً حتى يبقى بعيداً عن الزخارف والتوقيع.</p></section>
     <section class="panel"><h2>التوقيع (أسفل اليسار)</h2><div class="form">
-      <div class="f"><label>المسمى</label><input value="الموجه الأول للعلوم" disabled></div>
-      ${field({ label: "اسم الموجه الأول (اختياري)", key: "firstSupName", value: d.firstSupName || "" })}</div>
+      ${field({ label: "المسمى", key: "signTitle", type: "select", options: opts("cert_g_signers"), value: d.signTitle ?? "الموجه الأول للعلوم", remember: "cert_g_signers" })}
+      ${field({ label: "اسم الشخص (اختياري)", key: "firstSupName", value: d.firstSupName || "" })}</div>
       <p class="hint">لا يُطبع تاريخ في هذا القالب.</p></section>`;
   // المعاينة المباشرة
   let res = null, tm = 0, resKey = "";
   const live = $("#cg-live", body);
   const paint = async () => { const x = { ...goldDefaults(), ...ed.rec.data }, key = [x.gLogoR, x.gLogoL, (x.gLogoR_img || "").length, (x.gLogoL_img || "").length].join("|");
     if (!res || key !== resKey) { res = await goldResources(x); resKey = key; }
-    await Promise.all([loadTextFont(x.nameFont), loadTextFont(x.textFont)]);
+    await Promise.all(Object.values(styleOf(x)).map((y) => loadTextFont(y.font)));
     live.innerHTML = goldSVG(x, certNames(x)[0] || "", res); };
   const repaint = () => { clearTimeout(tm); tm = setTimeout(paint, 120); };
   paint();
@@ -132,21 +133,22 @@ function goldenEditor(body, ed, designSel) {
   const setBody = (v) => { $("#cg-body", body).value = v; ed.change((x) => { x.data.body = v; }); };
   bindFields(body, (k, v) => { ed.change((x) => { x.data[k] = v; if (k === "titleText") x.title = v || "شكر وتقدير"; });
     if (k === "phrase" && v) setBody(genderize(v, gOf(ed.rec.data.jobTitle)));
+    if (k === "signTitle") { const g = G(), first = g.first_supervisor || FIRST_SUPERVISOR.name || "", me = g.full_name || state.profile?.full_name || "", cur = ed.rec.data.firstSupName || "";
+      const auto = /الأول/.test(v) ? first : /الموجه|الموجهة/.test(v) ? me : ""; if (!cur || cur === first || cur === me) { ed.change((x) => { x.data.firstSupName = auto; }); const el = $("[data-key='firstSupName']", body); if (el) el.value = auto; } }
     if (k === "jobTitle") { const ph = ed.rec.data.phrase || "", cur = $("#cg-body", body).value; // تُعاد صياغة العبارة فقط إن لم تُعدَّل يدوياً
       if (ph && [genderize(ph, "f"), genderize(ph, "m")].includes(cur)) setBody(genderize(ph, gOf(v))); }
     repaint(); });
   $("#cg-body", body).addEventListener("input", (e) => { ed.change((x) => { x.data.body = e.target.value; }); repaint(); });
-  $("#cg-nf", body).onchange = async (e) => { ed.change((x) => { x.data.nameFont = e.target.value; }); await loadTextFont(e.target.value); repaint(); };
-  $("#cg-tf", body).onchange = async (e) => { ed.change((x) => { x.data.textFont = e.target.value; }); await loadTextFont(e.target.value); repaint(); };
-  $("#cg-size", body).onchange = (e) => { ed.change((x) => { x.data.sizeK = Number(e.target.value); }); repaint(); };
-  $("#cg-nc", body).oninput = (e) => { ed.change((x) => { x.data.nameColor = e.target.value; }); repaint(); };
-  $("#cg-tcol", body).oninput = (e) => { ed.change((x) => { x.data.textColor = e.target.value; }); repaint(); };
+  const setSt = (k, f, v) => ed.change((x) => { const cur = styleOf(x.data); x.data.st = { ...Object.fromEntries(Object.entries(cur).map(([a, b]) => [a, { ...b }])) }; x.data.st[k][f] = v; });
+  $$("[data-sf]", body).forEach((el) => (el.onchange = async () => { setSt(el.dataset.sf, "font", el.value); await loadTextFont(el.value); repaint(); }));
+  $$("[data-ss]", body).forEach((el) => (el.onchange = () => { setSt(el.dataset.ss, "size", Number(el.value)); repaint(); }));
+  $$("[data-sc]", body).forEach((el) => (el.oninput = () => { setSt(el.dataset.sc, "color", el.value); repaint(); }));
   $("#cg-preview", body).onclick = () => ed.openPrint?.("");
   $("#cg-print", body).onclick = () => ed.openPrint?.("?auto=1");
   $("#cg-pdf", body).onclick = () => ed.openPrint?.("?auto=1&pdf=1");
   $("#cg-reset", body).onclick = async () => {
     const ok = await modal({ title: "إعادة تعيين الحقول", body: "<p>تُمسح كل الحقول (ومنها الأسماء والشعاران المرفوعان) وترجع للقيم الافتراضية. التصميم يبقى كما هو.</p>", actions: [{ label: "إلغاء", value: false }, { label: "إعادة التعيين", kind: "primary", value: true }] });
-    if (!ok) return; const g = G(); ed.change((x) => { Object.assign(x.data, goldDefaults(), { names: "", firstSupName: g.first_supervisor || FIRST_SUPERVISOR.name || "" }); x.title = "شكر وتقدير"; }); ed.redraw(); };
+    if (!ok) return; const g = G(); ed.change((x) => { delete x.data.st; Object.assign(x.data, goldDefaults(), { names: "", firstSupName: g.first_supervisor || FIRST_SUPERVISOR.name || "" }); x.title = "شكر وتقدير"; }); ed.redraw(); };
 }
 
 export async function certEditor(main, rec) {
