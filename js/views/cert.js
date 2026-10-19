@@ -15,11 +15,11 @@ export const CERT_FONTS = {
 };
 // إعدادات كل تصميم الافتراضية (الخطوط والألوان كما في الشهادات المرفقة، ويمكن تغييرها)
 export const DESIGN_DEFAULTS = {
-  ribbons: { fTitle: "ruqaa", fBody: "notosans", fName: "notosans", title: "شكر وتقدير", nameColor: "#8a6a2e" },
-  waves: { fTitle: "notokufi", fBody: "notokufi", fName: "notokufi", title: "شهـادة شكر وتقـديـر", nameColor: "#14254a" },
-  navy: { fTitle: "amiri", fBody: "amiri", fName: "amiri", title: "", nameColor: "#14254a" },
-  green: { fTitle: "amiri", fBody: "amiri", fName: "amiri", title: "", nameColor: "#1f5a43" },
-  classic: { fTitle: "amiri", fBody: "amiri", fName: "amiri", title: "", nameColor: "#222" },
+  ribbons: { fTitle: "ruqaa", fBody: "notosans", fName: "notosans", title: "شكر وتقدير", nameColor: "#8a6a2e", logos: { seal: true, directorate: true } },
+  waves: { fTitle: "notokufi", fBody: "notokufi", fName: "notokufi", title: "شهـادة شكر وتقـديـر", nameColor: "#14254a", logos: { ministry: true, directorate: true } },
+  navy: { fTitle: "amiri", fBody: "amiri", fName: "amiri", title: "", nameColor: "#14254a", logos: { ministry: true, directorate: true } },
+  green: { fTitle: "amiri", fBody: "amiri", fName: "amiri", title: "", nameColor: "#1f5a43", logos: { ministry: true, directorate: true } },
+  classic: { fTitle: "amiri", fBody: "amiri", fName: "amiri", title: "", nameColor: "#222", logos: { ministry: true, directorate: true } },
 };
 export const certIssuer = () => `التوجيه الفني للعلوم بمنطقة ${G().region || "الأحمدي"} التعليمية`;
 const genderOf = (r) => (/^قسم|^أقسام/.test(r || "") ? "p" : /ة$/.test((r || "").trim()) ? "f" : "m");
@@ -56,7 +56,7 @@ export async function certEditor(main, rec) {
   return recordPage(main, { rec, title: "شهادة",
     beforeApprove: (r) => [!certNames(r.data).length && "الأسماء"].filter(Boolean),
     render(body, ed) {
-      const d = ed.rec.data; d.logos ||= { seal: true, directorate: true };
+      const d = ed.rec.data; d.logos ||= { ...((DESIGN_DEFAULTS[d.design] || {}).logos || { seal: true, directorate: true }) };
       const opt = (o, v, l) => `<option value="${esc(o)}" ${o === v ? "selected" : ""}>${esc(l ?? o)}</option>`;
       const fontSel = (id, v) => `<select id="${id}">${Object.entries(CERT_FONTS).map(([k, [, l]]) => opt(k, v, l)).join("")}</select>`;
       const sizeSel = (id, v) => `<select id="${id}">${[80, 90, 100, 110, 120, 130].map((n) => opt(String(n), String(v || 100), n + "%")).join("")}</select>`;
@@ -100,7 +100,7 @@ export async function certEditor(main, rec) {
       paintCount();
       const setVal = (k, v) => { const el = $(`[data-key='${k}']`, body); if (el) el.value = v; };
       $("#ct-design", body).onchange = (e) => { const D = DESIGN_DEFAULTS[e.target.value] || DESIGN_DEFAULTS.navy;
-        ed.change((x) => { Object.assign(x.data, { design: e.target.value, fTitle: D.fTitle, fBody: D.fBody, fName: D.fName, nameColor: D.nameColor }); if (!x.data.title_manual) x.data.titleText = D.title || (C.types[x.data.ctype] || C.types.thanks).title; });
+        ed.change((x) => { Object.assign(x.data, { design: e.target.value, fTitle: D.fTitle, fBody: D.fBody, fName: D.fName, nameColor: D.nameColor, logos: { ...D.logos } }); if (!x.data.title_manual) x.data.titleText = D.title || (C.types[x.data.ctype] || C.types.thanks).title; });
         ed.redraw(); };
       $("#ct-type", body).onchange = (e) => { ed.change((x) => { x.data.ctype = e.target.value; const T = C.types[e.target.value] || C.types.thanks; x.title = T.title;
         if (!x.data.title_manual) x.data.titleText = x.data.design === "ribbons" && e.target.value === "thanks" ? "شكر وتقدير" : T.title; if (!x.data.intro_manual) x.data.introText = T.intro.replace("{الجهة}", x.data.issuer || certIssuer()); }); ed.redraw(); };
