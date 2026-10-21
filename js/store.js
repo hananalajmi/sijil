@@ -31,11 +31,11 @@ export async function loadOptions() {
 // القائمة الشخصية للموجّه (إن عدّلها) تتقدم على القائمة العامة
 export const opts = (key) => state.guide?.data?.my_options?.[key] || state.options[key]?.items || [];
 
-// حفظ قيمة واحدة في البيانات الرئيسية للموجّه (مثل مجلده في الدرايف)
+// حفظ قيمة واحدة في البيانات الرئيسية للموجّه (مثل روابطي)
 export function setGuideData(key, val) {
   const next = (g) => ({ ...(g?.data || {}), [key]: val });
   guideSaving = guideSaving.then(async () => { const g = state.guide; const data = next(g);
-    state.guide = g ? await api.update(g.id, { data }, g.version) : await api.create({ kind: "guide_data", title: "البيانات الرئيسية", academic_year: academicYearOf(), data }); })
+    state.guide = g?.id ? await api.update(g.id, { data }, g.version) : await api.create({ kind: "guide_data", title: "البيانات الرئيسية", academic_year: academicYearOf(), data }); })
     .catch((e) => { toast("تعذر الحفظ: " + e.message, "error"); });
   if (state.guide) state.guide = { ...state.guide, data: next(state.guide) }; else state.guide = { data: next(null) };
   return guideSaving;

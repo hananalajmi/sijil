@@ -7,8 +7,7 @@ import { paginate, auditPages } from "../report/paginate.js";
 import { recordContext, visitStatsContext, examStatsContext, compiledMonthlyContext, monthlyDerived } from "../report/context.js";
 import { KIND_LABEL, KIND_ROUTE } from "../kit.js";
 import { HEAD_LOGOS, HEAD_LOGO_CHOICES, LOGOS } from "../templates.js";
-import { G, setHeadLogos, setGuideData } from "../store.js";
-import { driveReady, preloadDrive, requestToken, pickFolder, uploadToDrive, folderIdFromLink, myDriveFolder } from "../gdrive.js";
+import { G, setHeadLogos } from "../store.js";
 // نوع النموذج لشعارات الرأس (تقرير الفعالية تُختار شعاراته من صفحة التقرير نفسها)
 const headKindOf = (ctx) => { const k = ctx.kind || ctx.rec?.kind; if (k === "stats_visits" || k === "stats_exams") return "stats"; if (k === "form") return ctx.rec?.data?.type; return k; };
 
@@ -70,13 +69,11 @@ export default async function (main, { id, params }) {
       <label class="row" style="font-size:13.5px" title="تصغير الصفحة داخل الورقة: صغّريه إذا قُصّت الأطراف أو انقسمت الصفحة على ورقتين، وكبّريه إذا كانت الهوامش كبيرة">حجم الطباعة <select id="pscale" aria-label="حجم الطباعة">${[100, 97, 94, 91, 88, 85, 82, 79, 76, 73, 70].map((v) => `<option value="${v}">${v}%${v === 100 ? " (كامل)" : ""}</option>`).join("")}</select></label>
       ${HEAD_LOGOS[headKindOf(ctx)] && rec?.status !== "approved" ? `<button class="btn" id="hlogos" title="اختيار الشعارات في رأس هذا النموذج: يمين ووسط ويسار">الشعارات</button>` : ""}
       <button class="btn primary" id="print">طباعة / حفظ PDF</button>
-      <button class="btn" id="pdfclean" title="ملف PDF بدون رابط الموقع والتاريخ أعلى وأسفل الورقة — اطبعيه أو احفظيه أو أرسليه">PDF بدون رابط</button>
       <button class="btn" id="word">تصدير Word</button>
       <button class="btn" id="share" title="يرسل الملف (Word) عبر واتساب أو البريد من جهازك">إرسال</button>
-      <button class="btn" id="gdrive" title="يرفع التقرير PDF إلى مجلدك في Google Drive">رفع إلى الدرايف</button>
       ${!rec && id !== "compiled-ach" && !id.startsWith("blank-") ? `<button class="btn" id="freeze">حفظ نسخة معتمدة</button>` : ""}
     </div>
-    <p class="hint no-print" style="margin:10px 0 0">لحفظ PDF: اضغطي «طباعة / حفظ PDF» ثم اختاري «حفظ كـ PDF» (في الجوال: مشاركة ← حفظ في الملفات). إذا ظهر رابط الموقع والتاريخ أسفل الورقة استعملي «PDF بدون رابط». الملف مطابق لهذه المعاينة. «إرسال» يرسل الملف بصيغة Word عبر واتساب أو البريد، ولإرساله PDF: احفظيه PDF ثم أرسليه من الملفات.</p>
+    <p class="hint no-print" style="margin:10px 0 0">لحفظ PDF: اضغطي «طباعة / حفظ PDF» ثم اختاري «حفظ كـ PDF» (في الجوال: مشاركة ← حفظ في الملفات). الملف مطابق لهذه المعاينة. «إرسال» يرسل الملف بصيغة Word عبر واتساب أو البريد، ولإرساله PDF: احفظيه PDF ثم أرسليه من الملفات.</p>
     <div class="preview-wrap"><div class="sheets" id="sheets"></div></div>
     <div class="flow" id="flow" aria-hidden="true"></div>`;
   const sheets = $("#sheets", main);
@@ -122,8 +119,25 @@ export default async function (main, { id, params }) {
   $("#orient", main).onchange = () => { try { localStorage.setItem(oKey, $("#orient", main).value); } catch (_) {} renderFit(); };
 
   // فتح نافذة الطباعة (اختيار الطابعة أو الحفظ PDF). بعض الصفحات المضمّنة تمنعها، فنكتشف ذلك ونوضّح البديل
+  // الآيفون والآيباد يضيفان رابط الموقع والتاريخ أعلى وأسفل كل ورقة ولا يمكن إلغاؤهما من الموقع؛
+  // فيُجهَّز PDF من الصفحات نفسها ويُفتح من نافذة المشاركة (ومنها «طباعة» أو «حفظ في الملفات») فيُطبع بدونهما.
+  const printIOS = async () => {
+    let file;
+    try {
+      toast("جارٍ تجهيز الملف للطباعة…");
+      const { sheetsToPdf } = await import("../report/pdf.js");
+      const blob = await sheetsToPdf($("#sheets", main));
+      file = new File([blob], `${name.replace(/[\\/:*?"<>|]/g, "-")}.pdf`, { type: "application/pdf" });
+    } catch (e) { console.warn(e); try { window.print(); } catch (_) {} return; } // إن تعذّر: الطباعة العادية
+    const share = async () => { if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: name }); return true; } catch (e) { if (e.name === "AbortError") return true; } } return false; };
+    // المشاركة تحتاج ضغطة مباشرة، فيُعرض زر بعد تجهيز الملف
+    const v = await modal({ title: "الملف جاهز للطباعة", body: `<p>اضغطي «طباعة / مشاركة» ثم اختاري <b>طباعة</b> (أو «حفظ في الملفات»). يُطبع بدون رابط الموقع والتاريخ.</p>`,
+      actions: [{ label: "إلغاء", value: null }, { label: "الطباعة العادية", value: "plain" }, { label: "طباعة / مشاركة", kind: "primary", value: () => share() }] });
+    if (v === "plain") { try { window.print(); } catch (_) {} }
+    else if (v === false) { download(file, file.name); toast("نُزّل ملف PDF — افتحيه واطبعيه"); } // المشاركة غير متاحة في هذا المتصفح
+  };
   const doPrint = () => {
-    if (IOS) { try { window.print(); } catch (_) {} return; } // سفاري الآيباد: لا تُعرف حالة النافذة، فلا تظهر رسالة بديلة
+    if (IOS) { printIOS(); return; } // الآيفون والآيباد: PDF نظيف بدون رابط الموقع والتاريخ
     let opened = false;
     const mark = () => (opened = true);
     window.addEventListener("beforeprint", mark, { once: true });
@@ -142,18 +156,6 @@ export default async function (main, { id, params }) {
     }, 700);
   };
   $("#print", main).onclick = doPrint;
-  // PDF من الصفحات نفسها: لا يضيف المتصفح فيه رابط الموقع ولا التاريخ (سفاري والآيفون يضيفانها عند الطباعة المباشرة)
-  $("#pdfclean", main).onclick = async () => {
-    try {
-      toast("جارٍ تجهيز ملف PDF…");
-      const { sheetsToPdf } = await import("../report/pdf.js");
-      const blob = await sheetsToPdf($("#sheets", main), { onProgress: (i, n) => n > 2 && toast(`جارٍ تجهيز ملف PDF… صفحة ${i} من ${n}`) });
-      const fname = `${name.replace(/[\\/:*?"<>|]/g, "-")}.pdf`, file = new File([blob], fname, { type: "application/pdf" });
-      // في الجوال: نافذة المشاركة (طباعة، حفظ في الملفات، الدرايف، واتساب…)؛ وفي الكمبيوتر: تنزيل الملف
-      if (IOS && navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: name }); return; } catch (e) { if (e.name === "AbortError") return; } }
-      download(blob, fname); toast("نُزّل ملف PDF — افتحيه واطبعيه بدون رابط الموقع");
-    } catch (e) { console.error(e); toast(e.message || "تعذر إنشاء PDF", "error"); }
-  };
   // اختيار شعارات الرأس لهذا النوع من النماذج (يُحفظ ويُطبق على كل نماذج هذا النوع)
   const hb = $("#hlogos", main);
   if (hb) hb.onclick = async () => {
@@ -214,48 +216,8 @@ export default async function (main, { id, params }) {
         }
         download(blob, fname); toast("نُزّل الملف؛ أرسليه من البريد أو واتساب"); return;
       }
-      if (mode === "blob") return { blob, fname };
       download(blob, fname);
     } catch (e) { console.error(e); toast("تعذر إنشاء ملف Word: " + e.message, "error"); }
-  };
-  // ---------- الرفع إلى مجلدي في Google Drive ----------
-  preloadDrive().catch(() => {});
-  const chooseFolder = async (tok) => {
-    const cur = myDriveFolder();
-    const link = await modal({ title: "اختيار مجلدك في الدرايف", body: `<p>افتحي الدرايف وادخلي إلى مجلدك (مثلاً المجلد الذي باسمك)، ثم: النقاط الثلاث ← «نسخ الرابط»، والصقيه هنا. تُفتح بعدها نافذة قوقل على المجلد، اضغطي «اختيار».</p>
-        <div class="f"><label for="gd-link">رابط المجلد (اختياري)</label><input id="gd-link" dir="ltr" placeholder="https://drive.google.com/drive/folders/…" value="${esc(cur?.link || "")}"></div>
-        <p class="hint">يُحفظ مجلدك لحسابك فقط، ويمكن تغييره لاحقاً. يلزم أن تكون صلاحيتك على المجلد «محرر».</p>`,
-      actions: [{ label: "إلغاء", value: null }, { label: "متابعة", kind: "primary", value: (b) => ({ link: b.querySelector("#gd-link").value }) }] });
-    if (!link) return null;
-    const f = await pickFolder(tok, folderIdFromLink(link.link));
-    if (!f) return null;
-    const saved = { ...f, link: f.link || link.link || "" }; await setGuideData("drive_folder", saved); return saved;
-  };
-  $("#gdrive", main).onclick = async () => {
-    if (!driveReady()) {
-      const admin = state.profile?.role === "admin";
-      const v = await modal({ title: "الرفع إلى الدرايف غير مفعّل بعد", body: `<p>يحتاج الموقع ربطاً بقوقل مرة واحدة يضبطه المشرف من «الحسابات والصلاحيات ← ربط Google Drive».</p>
-          ${myDriveFolder()?.link ? `<p>يمكنك الآن حفظ الملف ثم فتح مجلدك ورفعه يدوياً.</p>` : ""}`,
-        actions: [{ label: "إغلاق", value: null }, ...(myDriveFolder()?.link ? [{ label: "فتح مجلدي", value: "open" }] : []), ...(admin ? [{ label: "إعداد الربط", kind: "primary", value: "setup" }] : [])] });
-      if (v === "setup") location.hash = "#/admin?tab=drive"; else if (v === "open") window.open(myDriveFolder().link, "_blank", "noopener");
-      return;
-    }
-    let tokP; try { tokP = requestToken(); } catch (e) { toast(e.message, "error"); return; } // داخل حدث الضغط مباشرة
-    try {
-      const tok = await tokP;
-      let f = myDriveFolder(); if (!f?.id) f = await chooseFolder(tok); if (!f) return;
-      // ملف PDF من صفحات المعاينة نفسها (نفس الشكل المطبوع)
-      toast("جارٍ تجهيز ملف PDF…");
-      const { sheetsToPdf } = await import("../report/pdf.js");
-      const out = { blob: await sheetsToPdf($("#sheets", main), { onProgress: (i, n) => n > 2 && toast(`جارٍ تجهيز ملف PDF… صفحة ${i} من ${n}`) }), fname: `${name.replace(/[\\/:*?"<>|]/g, "-")}.pdf` };
-      toast("جارٍ الرفع إلى الدرايف…");
-      let r;
-      try { r = await uploadToDrive(tok, out.blob, out.fname, f.id); }
-      catch (e) { if (!e.folder) throw e; toast(e.message, "error"); f = await chooseFolder(tok); if (!f) return; r = await uploadToDrive(tok, out.blob, out.fname, f.id); }
-      const v = await modal({ title: "تم الرفع إلى الدرايف", body: `<p>رُفع الملف <b>${esc(r.name || out.fname)}</b> إلى مجلد <b>${esc(f.name || "")}</b>.</p>`,
-        actions: [{ label: "تغيير المجلد", value: "change" }, ...(r.webViewLink ? [{ label: "فتح الملف", value: "open" }] : []), { label: "تم", kind: "primary", value: null }] });
-      if (v === "open") window.open(r.webViewLink, "_blank", "noopener"); else if (v === "change") { await chooseFolder(tok); toast("حُفظ المجلد الجديد للمرات القادمة"); }
-    } catch (e) { console.error(e); toast(e.message || "تعذر الرفع", "error"); }
   };
   $("#word", main).onclick = () => word();
   $("#share", main).onclick = () => word("share");

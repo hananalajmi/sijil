@@ -1,7 +1,7 @@
 // الواجهة الرئيسية: الأقسام + التنبيهات
 import { api } from "../api.js";
-import { state, G, pendingDrafts, logoSrc } from "../store.js";
-import { esc, $, today, weekStart, fmtDate, addDays } from "../ui.js";
+import { state, G, pendingDrafts, logoSrc, setGuideData } from "../store.js";
+import { esc, $, $$, today, weekStart, fmtDate, addDays, modal, toast } from "../ui.js";
 import { installCard } from "../pwa.js";
 import { icon } from "../icons.js";
 import { SECTIONS } from "../nav.js";
@@ -55,7 +55,36 @@ export default async function (main) {
       <section class="panel"><h2 class="ph">${icon("bell")} تنبيهات</h2>${alerts.length ? `<div class="alerts">${alerts.map(([k, t, h]) => `<div class="alert ${k}"><span>${esc(t)}</span><a class="btn small" href="${h}">فتح</a></div>`).join("")}</div>` : `<p class="hint">لا توجد تنبيهات. ${esc(g.full_name ? "أحسنتِ يا أ. " + g.full_name.split(" ")[0] : "")}</p>`}</section>
       <section class="panel"><h2 class="ph">${icon("plus")} إجراءات سريعة</h2><div class="quick">${quick.map(([h, t, i]) => `<a class="qa" href="${h}">${icon(i)}<span>${t}</span></a>`).join("")}</div>
         <p class="hint" style="margin-top:10px">${state.teachers.filter((t) => visited.has(t.id)).length} من ${state.teachers.length} معلمة تمت زيارتهن في العام ${esc(year)}.</p></section>
+      <section class="panel" id="mylinks"></section>
     </div>
   </div>`;
+  paintLinks($("#mylinks", main));
   const ic = installCard(); if (ic) { ic.style.marginBottom = "16px"; $(".hero", main).after(ic); }
+}
+
+// روابطي: قائمة روابط شخصية لسهولة الوصول (مجلدات الدرايف، النماذج، المواقع…) — تُحفظ لحسابك فقط
+const myLinks = () => (Array.isArray(G().my_links) ? G().my_links : []);
+const okUrl = (u) => { const t = String(u || "").trim(); if (!t) return ""; const v = /^https?:\/\//i.test(t) ? t : "https://" + t; try { const x = new URL(v); return /^https?:$/.test(x.protocol) ? x.href : ""; } catch (_) { return ""; } };
+async function editLink(box, i) {
+  const L = myLinks(), cur = i == null ? { title: "", url: "" } : L[i];
+  const v = await modal({ title: i == null ? "إضافة رابط" : "تعديل الرابط", body: `<div class="form" style="grid-template-columns:1fr">
+      <div class="f"><label for="ml-t">الاسم</label><input id="ml-t" value="${esc(cur.title)}" placeholder="مثال: مجلدي في الدرايف — الأسبوع الثالث"></div>
+      <div class="f"><label for="ml-u">الرابط</label><input id="ml-u" dir="ltr" value="${esc(cur.url)}" placeholder="https://…"></div></div>`,
+    actions: [...(i == null ? [] : [{ label: "حذف", value: "del" }]), { label: "إلغاء", value: null }, { label: "حفظ", kind: "primary", value: (b) => ({ title: b.querySelector("#ml-t").value.trim(), url: b.querySelector("#ml-u").value }) }] });
+  if (!v) return;
+  const next = [...L];
+  if (v === "del") next.splice(i, 1);
+  else { const url = okUrl(v.url); if (!url) return toast("الرابط غير صحيح", "error"); const item = { title: v.title || new URL(url).hostname, url }; if (i == null) next.push(item); else next[i] = item; }
+  await setGuideData("my_links", next); paintLinks(box); toast(v === "del" ? "حُذف الرابط" : "حُفظ الرابط");
+}
+function paintLinks(box) {
+  if (!box) return;
+  const L = myLinks();
+  box.innerHTML = `<h2 class="ph">${icon("share")} روابطي</h2>
+    ${L.length ? `<div class="mylinks">${L.map((l, i) => `<div class="row" style="gap:8px;align-items:center;margin-bottom:6px"><a class="btn" style="flex:1;justify-content:flex-start;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.title)}</a>
+      <button class="btn small ghost" data-ed="${i}" aria-label="تعديل ${esc(l.title)}">تعديل</button></div>`).join("")}</div>` : `<p class="hint">أضيفي روابطك المهمة (مثل مجلدك في الدرايف) لتفتحيها بضغطة.</p>`}
+    <div class="row" style="margin-top:8px"><button class="btn small" id="ml-add">+ إضافة رابط</button></div>
+    <p class="hint" style="margin-top:8px">لرفع تقرير: احفظيه PDF من «طباعة / حفظ PDF»، ثم افتحي الرابط وارفعي الملف من تطبيق الدرايف.</p>`;
+  $("#ml-add", box).onclick = () => editLink(box, null);
+  $$("[data-ed]", box).forEach((b) => (b.onclick = () => editLink(box, Number(b.dataset.ed))));
 }
