@@ -88,7 +88,8 @@ async function driveSetup(out) {
     <div class="row" style="margin-top:10px"><button class="btn primary" id="gd-save">حفظ</button><button class="btn ghost" id="gd-clear">إلغاء الربط</button></div></section>`;
   const save = async (items) => { try { await api.saveOption("google_drive", "ربط Google Drive", items); await loadOptions(); toast(items.length ? "حُفظ الربط" : "أُلغي الربط"); } catch (e) { toast(e.message, "error"); } };
   $("#gd-save", out).onclick = () => {
-    const cid = $("#gd-cid", out).value.trim(), key = $("#gd-key", out).value.trim(), app = $("#gd-app", out).value.trim();
+    const clean = (v) => v.replace(/[\s"'“”‘’«»]/g, ""); // يزيل المسافات وعلامات الاقتباس التي قد تُنسخ مع المعرّف
+    const cid = clean($("#gd-cid", out).value), key = clean($("#gd-key", out).value), app = clean($("#gd-app", out).value).replace(/\D/g, "");
     if (/drive\.google\.com/.test(cid)) return modal({ title: "هذا رابط مجلد، مكانه مختلف", body: "<p>هذه الصفحة لإعداد الربط مع قوقل مرة واحدة فقط (معلومات من Google Cloud).</p><p><b>رابط مجلدك</b> تلصقينه عند الضغط على «رفع إلى الدرايف» في معاينة أي تقرير، ويُحفظ لحسابك.</p>" });
     if (!/\.apps\.googleusercontent\.com$/.test(cid)) return toast("Client ID يجب أن ينتهي بـ .apps.googleusercontent.com", "error");
     if (/^GOCSPX-/i.test(key) || /^GOCSPX-/i.test(cid)) return toast("هذا «Client secret» وهو سري — لا يوضع هنا", "error");
