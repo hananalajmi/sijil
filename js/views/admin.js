@@ -89,6 +89,7 @@ async function driveSetup(out) {
   const save = async (items) => { try { await api.saveOption("google_drive", "ربط Google Drive", items); await loadOptions(); toast(items.length ? "حُفظ الربط" : "أُلغي الربط"); } catch (e) { toast(e.message, "error"); } };
   $("#gd-save", out).onclick = () => {
     const cid = $("#gd-cid", out).value.trim(), key = $("#gd-key", out).value.trim(), app = $("#gd-app", out).value.trim();
+    if (/drive\.google\.com/.test(cid)) return modal({ title: "هذا رابط مجلد، مكانه مختلف", body: "<p>هذه الصفحة لإعداد الربط مع قوقل مرة واحدة فقط (معلومات من Google Cloud).</p><p><b>رابط مجلدك</b> تلصقينه عند الضغط على «رفع إلى الدرايف» في معاينة أي تقرير، ويُحفظ لحسابك.</p>" });
     if (!/\.apps\.googleusercontent\.com$/.test(cid)) return toast("Client ID يجب أن ينتهي بـ .apps.googleusercontent.com", "error");
     if (/^GOCSPX-/i.test(key) || /^GOCSPX-/i.test(cid)) return toast("هذا «Client secret» وهو سري — لا يوضع هنا", "error");
     if (!key) return toast("أدخلي API key", "error");
