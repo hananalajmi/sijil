@@ -87,7 +87,11 @@ export default async function (main, { name }) {
     const id = d()[key];
     const u = id ? await fileUrl(id) : null;
     box.innerHTML = `<div class="row">${u ? `<img src="${u}" alt="" style="max-height:80px;max-width:200px;background:#fff;border:1px solid var(--line);border-radius:6px;padding:4px">` : '<span class="hint">لم تُرفع بعد</span>'}
-      <label class="btn small">${u ? "استبدال" : "رفع صورة"}<input type="file" accept="image/*" hidden></label>${u ? '<button class="btn small danger" data-x>إزالة</button>' : ""}</div>`;
+      <label class="btn small">${u ? "استبدال" : "رفع صورة"}<input type="file" accept="image/*" hidden></label>${category === "signature" ? '<button class="btn small" type="button" data-draw>✍️ وقّعي بيدك أو بالقلم</button>' : ""}${u ? '<button class="btn small danger" data-x>إزالة</button>' : ""}</div>`;
+    const save = async (f) => { try { const up = await api.upload(await shrinkImage(f, 1000), { category, title: f.name }); ed.change((r) => (r.data[key] = up.id), { immediate: true }); await ed.save(); imgSlot(box, key, category); toast("تم حفظ التوقيع"); }
+      catch (err) { toast("تعذر الحفظ: " + err.message, "error"); } };
+    const dr = box.querySelector("[data-draw]");
+    if (dr) dr.onclick = async () => { const { drawSignature } = await import("../sigpad.js"); const f = await drawSignature({ modal, toast }); if (f) await save(f); };
     box.querySelector("input").onchange = async (e) => {
       const f0 = e.target.files[0]; e.target.value = ""; if (!f0) return;
       // تنظيف تلقائي داخل المتصفح: إزالة الخلفية والقص وتوحيد لون الحبر، مع معاينة قبل الحفظ

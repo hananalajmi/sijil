@@ -55,7 +55,8 @@ export const GOLD_BOX = {
 export const goldDefaults = () => ({ bg: "frame", titleArt: "art", titleColor: "auto", titleText: "شكر وتقدير", line1: "", line2: "",
   intro: "يتقدم التوجيه الفني للعلوم بمنطقة الأحمدي التعليمية بخالص الشكر والتقدير إلى", jobTitle: "المعلمة", phrase: "لجهودها المتميزة وعطائها وإخلاصها في العمل", body: "لجهودها المتميزة وعطائها وإخلاصها في العمل", closing: "مع تمنياتنا لكم بمزيد من التقدم والازدهار",
   nameFont: "plex", nameColor: "", textFont: "notosans", textColor: "#1d2333", sizeK: 100,
-  gLogoR: "ministry", gLogoL: "directorate", gLogoR_img: "", gLogoL_img: "", firstSupName: "", signTitle: "الموجه الأول للعلوم" });
+  gLogoR: "ministry", gLogoL: "directorate", gLogoR_img: "", gLogoL_img: "", firstSupName: "", signTitle: "الموجه الأول للعلوم",
+  gSig: false, gStamp: false, gStamp2: false, gStamp2_img: "", gStamp2Pos: "right" });
 
 // قياس النص بنفس الخط المستعمل في الرسم
 let mctx = null;
@@ -93,13 +94,17 @@ const toDataUrl = async (src) => { if (!src) return ""; if (/^data:/.test(src)) 
   try { const b = await (await fetch(src)).blob(); return await new Promise((r) => { const f = new FileReader(); f.onload = () => r(f.result); f.onerror = () => r(""); f.readAsDataURL(b); }); } catch (_) { return ""; } };
 const imgSize = (src) => new Promise((res) => { if (!src) return res(null); const im = new Image(); im.onload = () => res([im.naturalWidth, im.naturalHeight]); im.onerror = () => res(null); im.src = src; });
 
-export async function goldResources(d) {
+// marks: معرّفات ملفات توقيع الموجّه وختمه (من البيانات الرئيسية) عند اختيار إظهارهما
+export async function goldResources(d, marks = {}) {
   const { logoSrc } = await import("../store.js");
   const one = async (k, img) => { const src = k === "custom" ? img : k && FORMS.cert.logos[k] ? await logoSrc(FORMS.cert.logos[k][0]) : ""; const u = await toDataUrl(src); return u ? { src: u, size: await imgSize(u) } : null; };
   await loadCertFonts(); await Promise.all(Object.values(styleOf(d)).map((x) => loadTextFont(x.font)));
   const P = GOLD_BGS[d.bg] || GOLD_BGS.frame;
   if (P.img) await new Promise((r) => { const im = new Image(); im.onload = im.onerror = r; im.src = P.img; }); // في الذاكرة قبل المعاينة والطباعة
-  return { R: await one(d.gLogoR, d.gLogoR_img), L: await one(d.gLogoL, d.gLogoL_img) };
+  const mark = async (fileId) => { if (!fileId) return null; try { const { img } = await import("./builders.js"); const h = await img(fileId, "sig-img"); const u = await toDataUrl((h.match(/src="([^"]+)"/) || [])[1]); return u ? { src: u, size: await imgSize(u) } : null; } catch (_) { return null; } };
+  const extra = d.gStamp2 && d.gStamp2_img ? await toDataUrl(d.gStamp2_img) : "";
+  return { R: await one(d.gLogoR, d.gLogoR_img), L: await one(d.gLogoL, d.gLogoL_img),
+    sig: d.gSig ? await mark(marks.sig) : null, stamp: d.gStamp ? await mark(marks.stamp) : null, stamp2: extra ? { src: extra, size: await imgSize(extra) } : null };
 }
 
 // يبني الشهادة لاسم واحد. portrait: تُدار داخل صفحة طولية (الآيباد والآيفون)
@@ -178,6 +183,16 @@ export function goldSVG(d, name, res, { portrait = false, blank = false, cls = "
   if (sT) out.push(T(S.x, S.y, sT, sF, fitPt(sT, sF, sP, 76, 10), SS.sign.color, 'class="cg-sign"'));
   if (sup) out.push(T(S.x, S.y + sP * PT * 1.55, "أ/ " + sup, sF, fitPt("أ/ " + sup, sF, sP * .92, 76, 10), C.navy, 'class="cg-sup"'));
   out.push(`<path d="M${S.x - 30} ${S.y + 26}H${S.x + 30}" stroke="${C.goldDark}" stroke-width=".3" stroke-dasharray="1 1.4"/>`, T(S.x, S.y + 30.5, "التوقيع", GOLD_FONTS.text, 9.5, "#8b7d63"));
+  // صورة التوقيع والختم فوق خط التوقيع، والختم الإضافي أسفل اليمين أو في الوسط
+  const put = (L, box, cls) => { if (!L?.src) return; const [iw, ih] = L.size || [1, 1], s = Math.min(box.w / iw, box.h / ih), w = iw * s, h = ih * s;
+    out.push(`<image class="${cls}" href="${L.src}" x="${(box.x + (box.w - w) / 2).toFixed(2)}" y="${(box.y + (box.h - h) / 2).toFixed(2)}" width="${w.toFixed(2)}" height="${h.toFixed(2)}" preserveAspectRatio="xMidYMid meet" style="mix-blend-mode:multiply"/>`); };
+  if (!blank) {
+    const both = res?.sig?.src && res?.stamp?.src;
+    put(res?.sig, { x: S.x - (both ? 20 : 15), y: S.y + 11.5, w: 30, h: 14 }, "cg-sigimg");
+    put(res?.stamp, { x: both ? S.x + 7 : S.x - 12, y: S.y + 7, w: 24, h: 21 }, "cg-stampimg");
+    const p2 = d.gStamp2Pos === "center" ? { x: CX - 15, y: S.y - 2, w: 30, h: 28 } : { x: W - S.x - 16, y: S.y - 4, w: 32, h: 30 };
+    put(res?.stamp2, p2, "cg-stamp2");
+  }
   const defs = `<defs><linearGradient id="cgG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9cf86"/><stop offset=".5" stop-color="${C.gold}"/><stop offset="1" stop-color="#8a6526"/></linearGradient>
     <linearGradient id="cgL" gradientUnits="userSpaceOnUse" x1="${CX - 100}" y1="0" x2="${CX + 100}" y2="0"><stop offset="0" stop-color="${C.gold}" stop-opacity="0"/><stop offset=".5" stop-color="${C.gold}"/><stop offset="1" stop-color="${C.gold}" stop-opacity="0"/></linearGradient></defs>`;
   const body = defs + out.join("");
