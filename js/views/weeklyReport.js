@@ -47,8 +47,9 @@ export default async function (main, { id, params }) {
       <div class="sub">صف لكل مدرسة في كل يوم، مرتبط بزيارة الموجه للمدرسة وزيارات المعلمين: يتحدث تلقائياً كلما عدّلتِ الزيارة. الصف الذي تعدّلينه هنا يبقى كما كتبتِه.</div></div>
       <div class="row"><button class="btn" id="sync">تحديث من السجلات</button><button class="btn" id="addrow">+ صف يدوي</button></div></div>
       <div id="rows"></div>
-      <h3 style="margin:14px 0 6px">أيام بدون زيارة</h3><p class="hint" style="margin:0 0 8px">كل يوم عمل في الأسبوع ما فيه زيارة يظهر هنا: اختاري السبب، أو أضيفي سبباً جديداً للقائمة. يُطبع في جدول الزيارات مكان الزيارة.</p>
-      <div id="novisit"></div></section>
+      <h3 style="margin:14px 0 6px">ملاحظات (تُطبع تحت جدول الزيارات)</h3><p class="hint" style="margin:0 0 8px">سبب عدم الزيارة: كل يوم عمل في الأسبوع ما فيه زيارة يظهر هنا، اختاري السبب أو أضيفي سبباً جديداً للقائمة.</p>
+      <div id="novisit"></div>
+      <div style="margin-top:10px">${field({ label: "ملاحظات أخرى (كل ملاحظة في سطر)", key: "notes", type: "textarea", value: d.notes || "", wide: true, rows: 3 })}</div></section>
     <section class="panel"><h2>ثالثاً: مستوى المعلمين والمتعلمين</h2>${field({ label: "كل نقطة في سطر", key: "level", type: "textarea", value: d.level, wide: true, rows: 5 })}</section>
     <section class="panel"><h2>رابعاً: الإيجابيات والسلبيات والمقترحات</h2><div class="form">
       ${field({ label: "الإيجابيات", key: "positives", type: "textarea", value: d.positives })}${field({ label: "السلبيات", key: "negatives", type: "textarea", value: d.negatives })}${field({ label: "المقترحات", key: "suggestions", type: "textarea", value: d.suggestions })}</div></section>

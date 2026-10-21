@@ -470,3 +470,5 @@
 .t-fm .fm-no { display: flex; flex-direction: column; align-items: flex-end; }
 .t-cr .cr-l .logo { height: 14mm; max-width: 40mm; width: auto; object-fit: contain; margin-inline-start: auto; }
 .t-ach .hl-row.ach-logos, .t-sa .hl-row.sa-logos { display: grid; grid-template-columns: 1fr 1fr 1fr; justify-items: stretch; }
+
+.t-ach .ach-notes { margin: 2mm 0 4mm; font-size: 11.5pt; line-height: 1.7; } .t-ach .ach-notes ul { margin: 1mm 0 0; padding-inline-start: 7mm; }
