@@ -6,7 +6,26 @@ import { fileUrl, logoSrc, G } from "../store.js";
 
 export const val = (v) => esc(v ?? "");
 export const nl = (s) => esc(s || "").split(/\n+/).map((x) => x.trim()).filter(Boolean);
-export async function img(fileId, cls = "") { const u = await fileUrl(fileId); return u ? `<img class="${cls}" src="${u}" alt="">` : ""; }
+export async function img(fileId, cls = "") { const u = await fileUrl(fileId); if (!u) return ""; const t = /sig-img|stamp-img/.test(cls) ? await trimImage(u) : u; return `<img class="${cls}" src="${t}" alt="">`; }
+// قصّ الفراغ حول صورة التوقيع والختم حتى تظهر بحجم متناسق في كل النماذج (عند تعذر القراءة تُستعمل الصورة كما هي)
+const trimCache = new Map();
+export function trimImage(url) {
+  if (trimCache.has(url)) return trimCache.get(url);
+  const p = new Promise((res) => { const im = new Image(); if (/^https?:/.test(url)) im.crossOrigin = "anonymous";
+    im.onerror = () => res(url);
+    im.onload = () => { try {
+      const k = Math.min(1, 1200 / Math.max(im.naturalWidth, im.naturalHeight)), w = Math.max(1, Math.round(im.naturalWidth * k)), h = Math.max(1, Math.round(im.naturalHeight * k));
+      const cv = document.createElement("canvas"); cv.width = w; cv.height = h; const c = cv.getContext("2d"); c.drawImage(im, 0, 0, w, h);
+      const px = c.getImageData(0, 0, w, h).data; let x0 = w, y0 = h, x1 = -1, y1 = -1;
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = (y * w + x) * 4; if (px[i + 3] > 24 && (px[i] < 235 || px[i + 1] < 235 || px[i + 2] < 235)) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } }
+      if (x1 < 0 || (x0 < 3 && y0 < 3 && x1 > w - 4 && y1 > h - 4)) return res(url);
+      const m = Math.round(Math.max(x1 - x0, y1 - y0) * .03) + 2; x0 = Math.max(0, x0 - m); y0 = Math.max(0, y0 - m); x1 = Math.min(w - 1, x1 + m); y1 = Math.min(h - 1, y1 + m);
+      const o = document.createElement("canvas"); o.width = x1 - x0 + 1; o.height = y1 - y0 + 1; o.getContext("2d").drawImage(cv, x0, y0, o.width, o.height, 0, 0, o.width, o.height);
+      res(o.toDataURL("image/png"));
+    } catch (_) { res(url); } };
+    im.src = url; });
+  trimCache.set(url, p); return p;
+}
 // شعارات رأس النموذج الثلاثة حسب اختيار المستخدم (يمين / وسط / يسار)
 export async function headLogos(ctx, kind) {
   const D = HEAD_LOGOS[kind] || {}, U = (ctx.guide?.head_logos ?? G().head_logos ?? {})[kind] || {};

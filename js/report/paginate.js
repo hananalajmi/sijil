@@ -20,7 +20,9 @@ function newSheet(rep, container, bare = false) {
   container.appendChild(s);
   return s;
 }
-const overflows = (body) => body.scrollHeight > body.clientHeight + 1;
+// قياس دقيق (بالكسور) حتى لا تتجاوز كتلة حدود الصفحة بجزء من المليمتر
+const overflows = (body) => { if (body.scrollHeight > body.clientHeight + 1) return true;
+  const last = body.lastElementChild; return !!last && last.getBoundingClientRect().bottom > body.getBoundingClientRect().bottom + .5; };
 
 async function waitImages(root) {
   const imgs = [...root.querySelectorAll("img")];

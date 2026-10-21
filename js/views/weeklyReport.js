@@ -48,8 +48,8 @@ export default async function (main, { id, params }) {
       <div id="rows"></div></section>
     <section class="panel"><h2>ثالثاً: مستوى المعلمين والمتعلمين</h2>${field({ label: "كل نقطة في سطر", key: "level", type: "textarea", value: d.level, wide: true, rows: 5 })}</section>
     <section class="panel"><h2>رابعاً: الإيجابيات والسلبيات والمقترحات</h2><div class="form">
-      ${field({ label: "الإيجابيات", key: "positives", type: "textarea", value: d.positives })}${field({ label: "السلبيات", key: "negatives", type: "textarea", value: d.negatives })}${field({ label: "المقترحات", key: "suggestions", type: "textarea", value: d.suggestions })}
-      ${field({ label: "الملاحظات (اختياري)", key: "note", type: "select", options: opts("weekly_notes"), value: d.note || "", remember: "weekly_notes", hint: "تظهر في الطباعة فقط إذا اخترتِ ملاحظة — لملاحظة جديدة: «+ إضافة خيار جديد للقائمة»" })}</div></section>
+      ${field({ label: "الإيجابيات", key: "positives", type: "textarea", value: d.positives })}${field({ label: "السلبيات", key: "negatives", type: "textarea", value: d.negatives })}${field({ label: "المقترحات", key: "suggestions", type: "textarea", value: d.suggestions })}</div></section>
+    <section class="panel"><h2>خامساً: الملاحظات</h2><div class="form">${field({ label: "الملاحظة (اختياري)", key: "note", type: "select", options: opts("weekly_notes"), value: d.note || "", remember: "weekly_notes", wide: true, hint: "تُطبع «خامساً: الملاحظات» فقط إذا اخترتِ ملاحظة — لملاحظة جديدة: «+ إضافة خيار جديد للقائمة»" })}</div></section>
     ${printOptionsPanel(ed, { sigsEveryPage: true })}`;
     const box = $("#rows", body);
     const paint = () => {

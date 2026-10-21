@@ -41,7 +41,8 @@ export async function weeklyReport(ctx) {
     <div class="ach-year">${esc(yearM(ctx.rec.academic_year))}</div>
     <div class="ach-cover-sigs"><div><b>الموجه الفني</b><span>أ. ${val(ctx.guide?.full_name)}</span></div><div><b>${esc(fs.title)}</b><span>أ. ${val(fs.name)}</span></div></div>
   </div>`;
-  const toc = contentsPage(WEEKLY_REPORT.contents.map((t, i) => [MONTHLY_ACH.ordinals[i].replace("اً", "ا"), t]));
+  const note = String(d.note || "").trim(); // خامساً: الملاحظات — تظهر (وفي المحتويات) فقط إذا اختيرت ملاحظة
+  const toc = contentsPage([...WEEKLY_REPORT.contents, ...(note ? ["الملاحظات"] : [])].map((t, i) => [MONTHLY_ACH.ordinals[i].replace("اً", "ا"), t]));
   const rows = (d.rows || []).filter((r) => r.date || r.place || r.goal || r.summary);
   const blocks = [];
   blocks.push({ table: { before: H("أولاً", "زيارات الموجه الفني للعلوم"), cls: "grid ach-t", thead: `<tr><th class="c-n">م</th><th>التاريخ</th><th>اليوم</th><th>مكان الزيارة</th><th>الهدف من الزيارة</th></tr>`,
@@ -52,8 +53,9 @@ export async function weeklyReport(ctx) {
       <tr><td colspan="2" class="tl"><b>ملخص الزيارة:</b>${lines(r.summary)}</td></tr></table>` });
   }
   blocks.push({ group: { cls: "ach-txt", head: H("ثالثاً", "مستوى المعلمين والمتعلمين"), items: nl(d.level).map((x) => `<div class="ln">${x}</div>`) } });
-  const pns = [["الإيجابيات", d.positives], ["السلبيات", d.negatives], ["المقترحات", d.suggestions], ["الملاحظات", d.note]].filter(([, t]) => (t || "").trim());
+  const pns = [["الإيجابيات", d.positives], ["السلبيات", d.negatives], ["المقترحات", d.suggestions]].filter(([, t]) => (t || "").trim());
   blocks.push({ group: { cls: "ach-txt", head: H("رابعاً", "الإيجابيات والسلبيات والمقترحات"), items: pns.flatMap(([k, t]) => [`<div class="ach-sub">${k}:</div>`, ...nl(t).map((x) => `<div class="ln">${x}</div>`)]) } });
+  if (note) blocks.push({ group: { cls: "ach-txt ach-note", head: H("خامساً", "الملاحظات"), items: nl(note).map((x) => `<div class="ln">${x}</div>`) } });
   const sigs = await finalSigs(ctx, "الموجه الفني");
   if (ctx.print?.sigsEveryPage === false) blocks.push({ html: `<div class="ach-endsig">${sigs}</div>` });
   return { orientation: "portrait", cls: "t-ach", covers: [cover, toc], header: running(ctx, WEEKLY_REPORT.title, period), identity: "", footer: ctx.print?.sigsEveryPage === false ? "" : sigs, blocks };

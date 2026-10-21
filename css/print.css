@@ -24,9 +24,12 @@
 .sig { flex: 1 1 0; text-align: center; min-width: 0; }
 .sig-title { font-weight: 700; }
 .sig-name { margin-top: 2mm; }
-.sig-marks { height: 15mm; display: flex; justify-content: center; align-items: center; gap: 2mm; }
-.sig-marks img { max-height: 15mm; max-width: 30mm; object-fit: contain; }
-.sig-date { font-size: 9pt; }
+/* التوقيع والختم والتاريخ بأحجام موحّدة ومتناسقة في كل النماذج */
+.sig-marks { height: 14mm; display: flex; justify-content: center; align-items: center; gap: 3mm; }
+.sig-marks img, .cr-sigimg img { object-fit: contain; }
+.sig-marks .sig-img, .cr-sigimg .sig-img { max-height: 10mm; max-width: 26mm; }
+.sig-marks .stamp-img, .cr-sigimg .stamp-img { max-height: 14mm; max-width: 22mm; }
+.sig-date { font-size: 9.5pt; margin-top: .5mm; }
 
 /* صور التوثيق */
 .photo-row { display: flex; gap: 4mm; justify-content: center; padding-block: 3mm; }
@@ -393,8 +396,7 @@
 .t-cr .cr-recs { margin: 1mm 6mm 1mm 2mm; padding-inline-start: 5mm; font-size: 10pt; line-height: 1.45; }
 .t-cr .cr-recs-empty { padding: 2mm; display: flex; flex-direction: column; gap: 4mm; }
 .t-cr .cr-sign { display: flex; justify-content: space-between; align-items: center; gap: 6mm; margin-top: 3mm; font-size: 11pt; }
-.t-cr .cr-sigimg { display: inline-flex; align-items: center; gap: 2mm; vertical-align: middle; }
-.t-cr .cr-sigimg img { max-height: 14mm; max-width: 32mm; object-fit: contain; }
+.cr-sigimg { display: inline-flex; align-items: center; gap: 3mm; vertical-align: middle; }
 
 /* نص الهدف والسجلات أسفل مربع الاختيارات */
 .t-sv .sv-para { margin-inline: 2mm; line-height: 6.2mm; text-align: justify; background: repeating-linear-gradient(to bottom, transparent 0 calc(6.2mm - .8pt), #9a9a9a calc(6.2mm - .8pt) 6.2mm); }
@@ -471,3 +473,6 @@
 .t-cr .cr-l .logo { height: 14mm; max-width: 40mm; width: auto; object-fit: contain; margin-inline-start: auto; }
 .t-ach .hl-row.ach-logos, .t-sa .hl-row.sa-logos { display: grid; grid-template-columns: 1fr 1fr 1fr; justify-items: stretch; }
 
+
+/* خامساً: الملاحظات — بعيدة عن الإيجابيات والسلبيات بنحو 3 أسطر، وبخط أوضح */
+.t-ach .ach-note { margin-top: 18mm; } .t-ach .ach-note .ln { font-size: 13pt; line-height: 1.7; }

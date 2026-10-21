@@ -188,7 +188,8 @@ async function certRenderer(o) {
   const svg = WAVES_SVG.replace("<svg ", `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" `);
   const bg = await loadImg("data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg));
   const L = {}; for (const k of o.keys) L[k] = await loadImg(await logoSrc(k === "seal" ? "emblem" : FORMS.cert.logos[k][0]));
-  const sig = o.sigImg ? await loadImg(await fileUrl(o.sigImg)) : null, stamp = o.stampImg ? await loadImg(await fileUrl(o.stampImg)) : null;
+  const { trimImage } = await import("./builders.js"), tr = async (f) => { const u = await fileUrl(f); return u ? await loadImg(await trimImage(u)) : null; };
+  const sig = o.sigImg ? await tr(o.sigImg) : null, stamp = o.stampImg ? await tr(o.stampImg) : null;
   const d = o.d, sT = (d.sizeTitle || 100) / 100, sB = (d.sizeBody || 100) / 100, PT = 0.3528 * MM;
   const TS = o.TS, NM = CERT_TYPE.name, BD = CERT_TYPE.body, SM = CERT_TYPE.small;
   const font = (w, pt, fam) => `${w} ${pt * PT}px "${fam}", "Sijil Sans", sans-serif`;
@@ -257,7 +258,11 @@ async function certRenderer(o) {
       c.textAlign = "center"; c.fillStyle = "#8a6a2e"; const lh = 15 * sB * PT * 1.55;
       const rows = [[s.title || "", font(700, 14.5 * sB, BD.fam)], [s.name ? "أ/ " + s.name : "", font(NM.w, 15 * sB, NM.fam)]].filter((r) => r[0]);
       rows.forEach(([t, f], j) => { c.font = f; c.fillText(t, sx, sy - (rows.length - j) * lh + lh / 2); });
-      if (s.me) { let ix = sx - 20 * MM; for (const im of [sig, stamp]) if (im) { const h = 14 * MM, w2 = Math.min(30 * MM, h * im.width / im.height); c.drawImage(im, ix, sy + 1 * MM, w2, h); ix += w2 + 4 * MM; } }
+      if (s.me) { // نفس أحجام التوقيع والختم في باقي النماذج، مع الحفاظ على النسبة
+        const fit = (im, mh, mw) => { const k = Math.min(mh * MM / im.height, mw * MM / im.width); return [im.width * k, im.height * k]; };
+        const parts = [[sig, 10, 26], [stamp, 14, 22]].filter(([im]) => im).map(([im, mh, mw]) => [im, ...fit(im, mh, mw)]);
+        let ix = sx - (parts.reduce((a, [, w]) => a + w, 0) + (parts.length - 1) * 3 * MM) / 2;
+        for (const [im, w2, h2] of parts) { c.drawImage(im, ix, sy + 1 * MM + (14 * MM - h2) / 2, w2, h2); ix += w2 + 3 * MM; } }
       c.fillStyle = "#8a6a2e"; c.fillRect(x0, H - 21 * MM + 1 * MM, w, .35 * MM); });
   };
   // كل شهادة تُحفظ كملف صورة PNG في الذاكرة (أخف من base64 على الآيباد والآيفون)
