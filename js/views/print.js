@@ -86,6 +86,10 @@ export default async function (main, { id, params }) {
   const scKey = "sijil.printscale2", sel = $("#pscale", main);
   let sc = SAFARI || IOS ? 82 : 100;
   try { const v = Number(localStorage.getItem(scKey)); if (v >= 70 && v <= 100) sc = v; } catch (_) {}
+  // الآيفون والآيباد يضيفان هوامش (وعنوان الصفحة ورابطها) لا يمكن إلغاؤها: أكبر حجم تدخل فيه الصفحة كاملة في ورقة واحدة 85%،
+  // وأي حجم أكبر يقسم الصفحة على ورقتين (فينتقل التوقيع أو آخر الصفحة لورقة جديدة)
+  const IOS_MAX = 85;
+  if (IOS) { [...sel.options].forEach((o) => { if (Number(o.value) > IOS_MAX) o.remove(); }); if (sc > IOS_MAX) sc = 82; }
   if (![...sel.options].some((o) => Number(o.value) === sc)) sel.insertAdjacentHTML("beforeend", `<option value="${sc}">${sc}%</option>`);
   sel.value = String(sc);
   const applyScale = () => document.documentElement.style.setProperty("--print-s", String(Number(sel.value) / 100));
