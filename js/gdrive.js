@@ -5,7 +5,8 @@
 import { state, G } from "./store.js";
 
 const SCOPE = "https://www.googleapis.com/auth/drive.file";
-export const driveConfig = () => { const it = state.options?.google_drive?.items || []; return { clientId: String(it[0] || "").trim(), apiKey: String(it[1] || "").trim(), appId: String(it[2] || "").trim() }; };
+const clean = (v) => String(v || "").replace(/[\s"'“”‘’«»]/g, ""); // لو نُسخ المعرّف مع مسافة أو علامة اقتباس
+export const driveConfig = () => { const it = state.options?.google_drive?.items || []; return { clientId: clean(it[0]), apiKey: clean(it[1]), appId: clean(it[2]).replace(/\D/g, "") }; };
 export const driveReady = () => { const c = driveConfig(); return !!(c.clientId && c.apiKey); };
 export const myDriveFolder = () => G().drive_folder || null;
 
