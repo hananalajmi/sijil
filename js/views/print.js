@@ -72,7 +72,7 @@ export default async function (main, { id, params }) {
       <button class="btn primary" id="print">طباعة / حفظ PDF</button>
       <button class="btn" id="word">تصدير Word</button>
       <button class="btn" id="share" title="يرسل الملف (Word) عبر واتساب أو البريد من جهازك">إرسال</button>
-      <button class="btn" id="gdrive" title="يرفع التقرير (Word) إلى مجلدك في Google Drive">رفع إلى الدرايف</button>
+      <button class="btn" id="gdrive" title="يرفع التقرير PDF إلى مجلدك في Google Drive">رفع إلى الدرايف</button>
       ${!rec && id !== "compiled-ach" && !id.startsWith("blank-") ? `<button class="btn" id="freeze">حفظ نسخة معتمدة</button>` : ""}
     </div>
     <p class="hint no-print" style="margin:10px 0 0">لحفظ PDF: اضغطي «طباعة / حفظ PDF» ثم اختاري «حفظ كـ PDF» (في الجوال: مشاركة ← حفظ في الملفات). الملف مطابق لهذه المعاينة. «إرسال» يرسل الملف بصيغة Word عبر واتساب أو البريد، ولإرساله PDF: احفظيه PDF ثم أرسليه من الملفات.</p>
@@ -231,7 +231,10 @@ export default async function (main, { id, params }) {
     try {
       const tok = await tokP;
       let f = myDriveFolder(); if (!f?.id) f = await chooseFolder(tok); if (!f) return;
-      const out = await word("blob"); if (!out) return;
+      // ملف PDF من صفحات المعاينة نفسها (نفس الشكل المطبوع)
+      toast("جارٍ تجهيز ملف PDF…");
+      const { sheetsToPdf } = await import("../report/pdf.js");
+      const out = { blob: await sheetsToPdf($("#sheets", main), { onProgress: (i, n) => n > 2 && toast(`جارٍ تجهيز ملف PDF… صفحة ${i} من ${n}`) }), fname: `${name.replace(/[\\/:*?"<>|]/g, "-")}.pdf` };
       toast("جارٍ الرفع إلى الدرايف…");
       let r;
       try { r = await uploadToDrive(tok, out.blob, out.fname, f.id); }
