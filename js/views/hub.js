@@ -1,11 +1,24 @@
 // صفحة القسم: تفتح من بطاقات الرئيسية، وتعرض صفحات القسم كبطاقات بنفس ثيم الواجهة
-import { esc, $, $$ } from "../ui.js";
+import { esc, $, $$, download, toast } from "../ui.js";
 import { G, setGuideData } from "../store.js";
 import { editLinkList } from "../links.js";
 import { icon } from "../icons.js";
 import { SECTIONS, MORE, isExternal } from "../nav.js";
 
 const NEWABLE = new Set(["school-visits", "teacher-visits", "exams", "events", "weekly", "monthly", "schools"]);
+
+// ملف تقويم بتذكير أسبوعي: كل أربعاء 8 صباحاً بتوقيت الكويت (يُضاف لتقويم الجوال وينبّه حتى لو الموقع مغلق)
+function plansIcs() {
+  const d = new Date(); d.setDate(d.getDate() + ((3 - d.getDay() + 7) % 7 || (d.getHours() >= 8 ? 7 : 0)));
+  const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
+  const url = location.href.split("#")[0] + "#/hub/plans";
+  return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//sijil//plans//AR", "CALSCALE:GREGORIAN",
+    "BEGIN:VTIMEZONE", "TZID:Asia/Kuwait", "BEGIN:STANDARD", "DTSTART:19700101T000000", "TZOFFSETFROM:+0300", "TZOFFSETTO:+0300", "TZNAME:+03", "END:STANDARD", "END:VTIMEZONE",
+    "BEGIN:VEVENT", `UID:sijil-weekly-plans-${ymd}@sijil`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").split(".")[0]}Z`,
+    `DTSTART;TZID=Asia/Kuwait:${ymd}T080000`, `DTEND;TZID=Asia/Kuwait:${ymd}T083000`, "RRULE:FREQ=WEEKLY;BYDAY=WE",
+    "SUMMARY:عمل الخطط الأسبوعية (القبلية والبعدية)", `DESCRIPTION:افتحي قسم الخطط في الموقع: ${url}`, `URL:${url}`,
+    "BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:موعد عمل الخطط الأسبوعية", "TRIGGER:PT0M", "END:VALARM", "END:VEVENT", "END:VCALENDAR"].join("\r\n");
+}
 
 const secLinks = (id) => { const m = G().sec_links; return Array.isArray(m?.[id]) ? m[id] : []; };
 
@@ -34,4 +47,12 @@ export default async function (main, { id }) {
     await setGuideData("sec_links", { ...(G().sec_links || {}), [id]: next }); paint();
   };
   paint();
+  if (id === "plans") {
+    const r = document.createElement("div");
+    r.className = "panel"; r.style.marginTop = "14px";
+    r.innerHTML = `<h2 class="ph">${icon("bell")} تذكير أسبوعي</h2><p class="hint">موعد الخطط الأسبوعية كل أربعاء الساعة 8 صباحاً. أضيفي التذكير لتقويم جوالك ليصلك تنبيه حتى لو كان الموقع مغلقاً.</p>
+      <div class="row" style="margin-top:8px"><button class="btn small" id="plans-ics">${icon("calendar")} إضافة التذكير للتقويم</button></div>`;
+    $(".hub", main).appendChild(r);
+    $("#plans-ics", r).onclick = () => { download(new Blob([plansIcs()], { type: "text/calendar;charset=utf-8" }), "تذكير-الخطط-الأسبوعية.ics"); toast("افتحي الملف واضغطي «إضافة» ليُحفظ في التقويم"); };
+  }
 }

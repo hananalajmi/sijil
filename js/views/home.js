@@ -30,6 +30,7 @@ export default async function (main) {
   const d0 = new Date(); const lastMonth = new Date(d0.getFullYear(), d0.getMonth() - 1, 1); const lm = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, "0")}`;
   if (d0.getDate() <= 10 && !monthly.some((m) => m.data.month === lm)) alerts.push(["", "لم يُنشأ ملف الإنجازات الشهرية المشترك للشهر الماضي بعد", `#/monthly-ach/new?month=${lm}`]);
   const missingTeacher = visits.filter((v) => !v.teacher_id || !v.school_id || !v.term);
+  if (d0.getDay() === 3) alerts.push(["", "اليوم الأربعاء: موعد عمل الخطط الأسبوعية (القبلية والبعدية)", "#/hub/plans"]);
   if (missingTeacher.length) alerts.push(["bad", `${missingTeacher.length} زيارة معلم ينقصها حقل إلزامي (المعلم أو المدرسة أو الفصل)`, "#/teacher-visits"]);
 
   const visited = new Set(visits.map((v) => v.teacher_id));
