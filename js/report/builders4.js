@@ -119,7 +119,7 @@ const WAVES_SVG = `<svg class="ce-bg" viewBox="0 0 297 210" preserveAspectRatio=
 export async function certificate(ctx) {
   const { certLines, certIntro, certNames, certTitle, DESIGN_DEFAULTS } = await import("../views/cert.js");
   const d = ctx.rec.data || {}, blank = !!d.blank, design = FORMS.cert.designs[d.design] ? d.design : "waves", D = DESIGN_DEFAULTS[design] || DESIGN_DEFAULTS.waves;
-  const IOS0 = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) || /[?&]ios=1\b/.test(location.search);
+  const IOS0 = false; // الآيفون والآيباد يطبعان الآن عبر ملف PDF بمقاس حقيقي، فتبقى الشهادة أفقية (لا تُدار)
   if (design === "golden") { // القالب الرسمي الذهبي: SVG متجهي بنصوص حقيقية (يُحفظ PDF بخطوط مضمّنة)
     const G = await import("./certGolden.js"); const dd = { ...G.goldDefaults(), ...d }; const res = await G.goldResources(dd);
     const bad = await loadCertFonts(); if (bad.length) { try { (await import("../ui.js")).toast("تعذّر تحميل خطوط الشهادة — تأكدي من الاتصال ثم أعيدي المعاينة قبل الطباعة", "err"); } catch (_) {} }
@@ -159,7 +159,7 @@ export async function certificate(ctx) {
       ${!blank && d.showDate ? `<div class="ce-date">تحريراً في: ${esc(fmtDateSlash(date))}${hijri(date) ? ` &nbsp;الموافق: ${esc(hijri(date))}` : ""}</div>` : ""}
       ${sigs}</div></div>`;
   const list = names.length ? names : [""];
-  const IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) || /[?&]ios=1\b/.test(location.search);
+  const IOS = false; // انظر IOS0 أعلاه
   // الشهادة تُرسم صورةً واحدة بدقة الطباعة: ما يظهر في المعاينة هو ما يُطبع بالضبط، بلا تداخل على أي جهاز.
   // في الآيباد والآيفون (طباعة طولية فقط) تُرسم الصورة مُدارة داخل صفحة طولية.
   try {
