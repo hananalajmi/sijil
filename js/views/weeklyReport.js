@@ -1,7 +1,7 @@
 // الإنجازات الأسبوعية — «تقرير زيارات التوجيه الفني للعلوم»
 // الزيارات وملخصاتها تُسحب تلقائياً من زيارات الأسبوع، وتبقى قابلة للتعديل.
 import { api } from "../api.js";
-import { state, G } from "../store.js";
+import { state, G, opts } from "../store.js";
 import { esc, $, $$, today, weekStart, addDays, fmtDate, dayName, academicYearOf, MONTHS_AR, toast } from "../ui.js";
 import { field, bindFields, recordPage, go } from "../kit.js";
 import { listView } from "./_list.js";
@@ -48,8 +48,8 @@ export default async function (main, { id, params }) {
       <div id="rows"></div></section>
     <section class="panel"><h2>ثالثاً: مستوى المعلمين والمتعلمين</h2>${field({ label: "كل نقطة في سطر", key: "level", type: "textarea", value: d.level, wide: true, rows: 5 })}</section>
     <section class="panel"><h2>رابعاً: الإيجابيات والسلبيات والمقترحات</h2><div class="form">
-      ${field({ label: "الإيجابيات", key: "positives", type: "textarea", value: d.positives })}${field({ label: "السلبيات", key: "negatives", type: "textarea", value: d.negatives })}${field({ label: "المقترحات", key: "suggestions", type: "textarea", value: d.suggestions })}</div></section>
-    <section class="panel"><h2>ملاحظات</h2>${field({ label: "ملاحظات (اختياري — مثل سبب عدم الزيارة). تُطبع بعد الإيجابيات والسلبيات فقط إذا كتبتِ فيها", key: "notes", type: "textarea", value: d.notes || "", wide: true, rows: 3 })}</section>
+      ${field({ label: "الإيجابيات", key: "positives", type: "textarea", value: d.positives })}${field({ label: "السلبيات", key: "negatives", type: "textarea", value: d.negatives })}${field({ label: "المقترحات", key: "suggestions", type: "textarea", value: d.suggestions })}
+      ${field({ label: "الملاحظات (اختياري)", key: "note", type: "select", options: opts("weekly_notes"), value: d.note || "", remember: "weekly_notes", hint: "تظهر في الطباعة فقط إذا اخترتِ ملاحظة — لملاحظة جديدة: «+ إضافة خيار جديد للقائمة»" })}</div></section>
     ${printOptionsPanel(ed, { sigsEveryPage: true })}`;
     const box = $("#rows", body);
     const paint = () => {

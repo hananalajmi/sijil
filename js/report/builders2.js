@@ -52,11 +52,8 @@ export async function weeklyReport(ctx) {
       <tr><td colspan="2" class="tl"><b>ملخص الزيارة:</b>${lines(r.summary)}</td></tr></table>` });
   }
   blocks.push({ group: { cls: "ach-txt", head: H("ثالثاً", "مستوى المعلمين والمتعلمين"), items: nl(d.level).map((x) => `<div class="ln">${x}</div>`) } });
-  const pns = [["الإيجابيات", d.positives], ["السلبيات", d.negatives], ["المقترحات", d.suggestions]].filter(([, t]) => (t || "").trim());
+  const pns = [["الإيجابيات", d.positives], ["السلبيات", d.negatives], ["المقترحات", d.suggestions], ["الملاحظات", d.note]].filter(([, t]) => (t || "").trim());
   blocks.push({ group: { cls: "ach-txt", head: H("رابعاً", "الإيجابيات والسلبيات والمقترحات"), items: pns.flatMap(([k, t]) => [`<div class="ach-sub">${k}:</div>`, ...nl(t).map((x) => `<div class="ln">${x}</div>`)]) } });
-  // ملاحظات: سطر بعد الإيجابيات والسلبيات والمقترحات، يظهر فقط إذا كُتب فيه
-  const notes = nl(d.notes);
-  if (notes.length) blocks.push({ group: { cls: "ach-txt", head: `<div class="ach-sub">ملاحظات:</div>`, items: notes.map((x) => `<div class="ln">${x}</div>`) } });
   const sigs = await finalSigs(ctx, "الموجه الفني");
   if (ctx.print?.sigsEveryPage === false) blocks.push({ html: `<div class="ach-endsig">${sigs}</div>` });
   return { orientation: "portrait", cls: "t-ach", covers: [cover, toc], header: running(ctx, WEEKLY_REPORT.title, period), identity: "", footer: ctx.print?.sigsEveryPage === false ? "" : sigs, blocks };
