@@ -337,8 +337,9 @@ function demoAdapter() {
       audit(o, "حذف نهائي"); persist();
     },
     async audit(recordId) { return clone(db.audit.filter((a) => a.record_id === recordId).reverse()); },
-    async rpc(name) {
+    async rpc(name, args = {}) {
       if (name === "admin_list_users") return [clone(db.profile)];
+      if (name === "admin_set_email") { const e = String(args.p_email || "").trim().toLowerCase(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) fail("البريد الإلكتروني غير صحيح"); if (args.p_id === db.profile.id) { db.profile.email = e; persist(); } return null; }
       if (name === "list_colleagues") return [];
       if (name === "collector_owners") return [{ id: uid, full_name: db.profile.full_name }];
       return null;
