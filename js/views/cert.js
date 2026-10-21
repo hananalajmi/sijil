@@ -132,7 +132,8 @@ function goldenEditor(body, ed, designSel) {
     if (on && !ed.rec.data.gStamp2_img) $("#cg-s2up", body).click(); repaint(); };
   $("#cg-s2pos", body).onchange = (e) => { ed.change((x) => { x.data.gStamp2Pos = e.target.value; }); repaint(); };
   $("#cg-s2up", body).onchange = async (e) => { const f = e.target.files[0]; e.target.value = ""; if (!f) return;
-    try { const url = await readLogo(f); ed.change((x) => { x.data.gStamp2 = true; x.data.gStamp2_img = url; }); $("#cg-stamp2", body).checked = true; $("#cg-s2box", body).style.display = ""; repaint(); toast("تم رفع الختم"); }
+    try { const { inkEditor } = await import("../inkclean.js"); const fc = await inkEditor(f, { modal, toast, title: "تنقية صورة الختم" }); if (!fc) return; // إزالة الخلفية والظل والقص حول الختم
+      const url = await readLogo(fc); ed.change((x) => { x.data.gStamp2 = true; x.data.gStamp2_img = url; }); $("#cg-stamp2", body).checked = true; $("#cg-s2box", body).style.display = ""; repaint(); toast("تم رفع الختم"); }
     catch (err) { toast(err.message || "تعذّر قراءة الصورة", "error"); } };
   $("#cg-s2del", body).onclick = () => { ed.change((x) => { x.data.gStamp2 = false; x.data.gStamp2_img = ""; }); $("#cg-stamp2", body).checked = false; $("#cg-s2box", body).style.display = "none"; repaint(); };
   $("#cg-art", body).onchange = (e) => { ed.change((x) => { x.data.titleArt = e.target.value; }); repaint(); };
