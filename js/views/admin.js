@@ -10,11 +10,12 @@ export default async function (main, { params }) {
   if (state.profile.role !== "admin") { main.innerHTML = `<div class="container"><div class="empty">هذه الصفحة للمشرف فقط.</div></div>`; return; }
   const tab = params.tab || "users";
   main.innerHTML = `<div class="container"><div class="page-head"><div><h1>إدارة الحسابات والصلاحيات</h1><div class="sub">المشرف يدير الصلاحيات فقط، ولا يطّلع على سجلات الموجّهين</div></div></div>
-    <div class="toolbar">${[["users", "الحسابات"], ["options", "القوائم المنسدلة"], ["sections", "أقسام التوجيه"], ["files", "صلاحيات الملفات المشتركة"]].map(([k, l]) => `<a class="btn ${k === tab ? "primary" : ""}" href="#/admin?tab=${k}">${l}</a>`).join("")}</div><div id="out"></div></div>`;
+    <div class="toolbar">${[["users", "الحسابات"], ["options", "القوائم المنسدلة"], ["sections", "أقسام التوجيه"], ["files", "صلاحيات الملفات المشتركة"], ["drive", "ربط Google Drive"]].map(([k, l]) => `<a class="btn ${k === tab ? "primary" : ""}" href="#/admin?tab=${k}">${l}</a>`).join("")}</div><div id="out"></div></div>`;
   const out = $("#out", main);
   if (tab === "users") return users(out);
   if (tab === "options") return options(out, params);
   if (tab === "sections") { const { sectionsAdmin } = await import("./sections.js"); return sectionsAdmin(out); }
+  if (tab === "drive") return driveSetup(out);
   return sharedFiles(out);
 }
 
@@ -63,6 +64,37 @@ async function options(out, params) {
     try { await api.saveOption(key, DEFAULT_OPTIONS[key]?.label || o.label, [...new Set(items)]); await loadOptions(); toast("حُفظت القائمة"); go(`#/admin?tab=options&key=${encodeURIComponent(key)}`); }
     catch (e) { toast(e.message, "error"); }
   };
+}
+
+// ربط Google Drive (مرة واحدة للموقع كله): معرّف العميل ومفتاح Picker معرّفات عامة تُقيَّد على رابط الموقع من Google Cloud
+async function driveSetup(out) {
+  await loadOptions();
+  const it = state.options?.google_drive?.items || [];
+  const origin = location.origin;
+  out.innerHTML = `<section class="panel"><h2>ربط Google Drive</h2>
+    <p class="hint" style="margin-top:0">بعد الربط يظهر لكل موجّه زر «رفع إلى الدرايف» في معاينة أي تقرير: يختار مجلده مرة واحدة (مثلاً المجلد الذي باسمه) ثم يرفع إليه بضغطة. كل موجّه يوافق من حسابه في قوقل، والموقع لا يرى إلا الملفات التي يرفعها.</p>
+    <details class="panel" style="background:var(--sunk)"><summary><b>خطوات الإعداد في Google Cloud (مجاني — مرة واحدة)</b></summary><ol style="line-height:2">
+      <li>افتحي <span dir="ltr">console.cloud.google.com</span> بحسابك وأنشئي مشروعاً جديداً (مثلاً: سجلات الموجه).</li>
+      <li>من «APIs &amp; Services ← Library» فعّلي: <b dir="ltr">Google Drive API</b> و <b dir="ltr">Google Picker API</b>.</li>
+      <li>من «OAuth consent screen»: النوع External، اسم التطبيق وبريدك، ثم أضيفي الصلاحية <span dir="ltr">…/auth/drive.file</span> واضغطي <b dir="ltr">Publish app</b> (هذه الصلاحية لا تحتاج مراجعة من قوقل).</li>
+      <li>من «Credentials ← Create credentials ← OAuth client ID»: النوع <b dir="ltr">Web application</b>، وفي <b dir="ltr">Authorized JavaScript origins</b> أضيفي: <b dir="ltr">${esc(origin)}</b>. انسخي <b dir="ltr">Client ID</b>.</li>
+      <li>من «Credentials ← Create credentials ← API key»: قيّديه على <b dir="ltr">Websites</b> برابط الموقع <b dir="ltr">${esc(origin)}/*</b> وعلى <b dir="ltr">Google Picker API</b> فقط. انسخيه.</li>
+      <li>رقم المشروع (Project number) من صفحة المشروع الرئيسية.</li></ol></details>
+    <div class="form" style="margin-top:10px">
+      <div class="f wide"><label for="gd-cid">Client ID</label><input id="gd-cid" dir="ltr" value="${esc(it[0] || "")}" placeholder="xxxxxxxx.apps.googleusercontent.com"></div>
+      <div class="f"><label for="gd-key">API key (لـ Picker، مقيّد على رابط الموقع)</label><input id="gd-key" dir="ltr" value="${esc(it[1] || "")}"></div>
+      <div class="f"><label for="gd-app">Project number</label><input id="gd-app" dir="ltr" value="${esc(it[2] || "")}"></div></div>
+    <p class="hint">هذه معرّفات عامة بطبيعتها وليست كلمات سر، وتُحفظ في قاعدة البيانات لا في كود الموقع. لا تضعي هنا أبداً «Client secret».</p>
+    <div class="row" style="margin-top:10px"><button class="btn primary" id="gd-save">حفظ</button><button class="btn ghost" id="gd-clear">إلغاء الربط</button></div></section>`;
+  const save = async (items) => { try { await api.saveOption("google_drive", "ربط Google Drive", items); await loadOptions(); toast(items.length ? "حُفظ الربط" : "أُلغي الربط"); } catch (e) { toast(e.message, "error"); } };
+  $("#gd-save", out).onclick = () => {
+    const cid = $("#gd-cid", out).value.trim(), key = $("#gd-key", out).value.trim(), app = $("#gd-app", out).value.trim();
+    if (!/\.apps\.googleusercontent\.com$/.test(cid)) return toast("Client ID يجب أن ينتهي بـ .apps.googleusercontent.com", "error");
+    if (/^GOCSPX-/i.test(key) || /^GOCSPX-/i.test(cid)) return toast("هذا «Client secret» وهو سري — لا يوضع هنا", "error");
+    if (!key) return toast("أدخلي API key", "error");
+    save([cid, key, app]);
+  };
+  $("#gd-clear", out).onclick = () => save([]);
 }
 
 async function sharedFiles(out) {

@@ -7,7 +7,8 @@ import { paginate, auditPages } from "../report/paginate.js";
 import { recordContext, visitStatsContext, examStatsContext, compiledMonthlyContext, monthlyDerived } from "../report/context.js";
 import { KIND_LABEL, KIND_ROUTE } from "../kit.js";
 import { HEAD_LOGOS, HEAD_LOGO_CHOICES, LOGOS } from "../templates.js";
-import { G, setHeadLogos } from "../store.js";
+import { G, setHeadLogos, setGuideData } from "../store.js";
+import { driveReady, preloadDrive, requestToken, pickFolder, uploadToDrive, folderIdFromLink, myDriveFolder } from "../gdrive.js";
 // نوع النموذج لشعارات الرأس (تقرير الفعالية تُختار شعاراته من صفحة التقرير نفسها)
 const headKindOf = (ctx) => { const k = ctx.kind || ctx.rec?.kind; if (k === "stats_visits" || k === "stats_exams") return "stats"; if (k === "form") return ctx.rec?.data?.type; return k; };
 
@@ -71,6 +72,7 @@ export default async function (main, { id, params }) {
       <button class="btn primary" id="print">طباعة / حفظ PDF</button>
       <button class="btn" id="word">تصدير Word</button>
       <button class="btn" id="share" title="يرسل الملف (Word) عبر واتساب أو البريد من جهازك">إرسال</button>
+      <button class="btn" id="gdrive" title="يرفع التقرير (Word) إلى مجلدك في Google Drive">رفع إلى الدرايف</button>
       ${!rec && id !== "compiled-ach" && !id.startsWith("blank-") ? `<button class="btn" id="freeze">حفظ نسخة معتمدة</button>` : ""}
     </div>
     <p class="hint no-print" style="margin:10px 0 0">لحفظ PDF: اضغطي «طباعة / حفظ PDF» ثم اختاري «حفظ كـ PDF» (في الجوال: مشاركة ← حفظ في الملفات). الملف مطابق لهذه المعاينة. «إرسال» يرسل الملف بصيغة Word عبر واتساب أو البريد، ولإرساله PDF: احفظيه PDF ثم أرسليه من الملفات.</p>
@@ -199,8 +201,45 @@ export default async function (main, { id, params }) {
         }
         download(blob, fname); toast("نُزّل الملف؛ أرسليه من البريد أو واتساب"); return;
       }
+      if (mode === "blob") return { blob, fname };
       download(blob, fname);
     } catch (e) { console.error(e); toast("تعذر إنشاء ملف Word: " + e.message, "error"); }
+  };
+  // ---------- الرفع إلى مجلدي في Google Drive ----------
+  preloadDrive().catch(() => {});
+  const chooseFolder = async (tok) => {
+    const cur = myDriveFolder();
+    const link = await modal({ title: "اختيار مجلدك في الدرايف", body: `<p>افتحي الدرايف وادخلي إلى مجلدك (مثلاً المجلد الذي باسمك)، ثم: النقاط الثلاث ← «نسخ الرابط»، والصقيه هنا. تُفتح بعدها نافذة قوقل على المجلد، اضغطي «اختيار».</p>
+        <div class="f"><label for="gd-link">رابط المجلد (اختياري)</label><input id="gd-link" dir="ltr" placeholder="https://drive.google.com/drive/folders/…" value="${esc(cur?.link || "")}"></div>
+        <p class="hint">يُحفظ مجلدك لحسابك فقط، ويمكن تغييره لاحقاً. يلزم أن تكون صلاحيتك على المجلد «محرر».</p>`,
+      actions: [{ label: "إلغاء", value: null }, { label: "متابعة", kind: "primary", value: (b) => ({ link: b.querySelector("#gd-link").value }) }] });
+    if (!link) return null;
+    const f = await pickFolder(tok, folderIdFromLink(link.link));
+    if (!f) return null;
+    const saved = { ...f, link: f.link || link.link || "" }; await setGuideData("drive_folder", saved); return saved;
+  };
+  $("#gdrive", main).onclick = async () => {
+    if (!driveReady()) {
+      const admin = state.profile?.role === "admin";
+      const v = await modal({ title: "الرفع إلى الدرايف غير مفعّل بعد", body: `<p>يحتاج الموقع ربطاً بقوقل مرة واحدة يضبطه المشرف من «الحسابات والصلاحيات ← ربط Google Drive».</p>
+          ${myDriveFolder()?.link ? `<p>يمكنك الآن حفظ الملف ثم فتح مجلدك ورفعه يدوياً.</p>` : ""}`,
+        actions: [{ label: "إغلاق", value: null }, ...(myDriveFolder()?.link ? [{ label: "فتح مجلدي", value: "open" }] : []), ...(admin ? [{ label: "إعداد الربط", kind: "primary", value: "setup" }] : [])] });
+      if (v === "setup") location.hash = "#/admin?tab=drive"; else if (v === "open") window.open(myDriveFolder().link, "_blank", "noopener");
+      return;
+    }
+    let tokP; try { tokP = requestToken(); } catch (e) { toast(e.message, "error"); return; } // داخل حدث الضغط مباشرة
+    try {
+      const tok = await tokP;
+      let f = myDriveFolder(); if (!f?.id) f = await chooseFolder(tok); if (!f) return;
+      const out = await word("blob"); if (!out) return;
+      toast("جارٍ الرفع إلى الدرايف…");
+      let r;
+      try { r = await uploadToDrive(tok, out.blob, out.fname, f.id); }
+      catch (e) { if (!e.folder) throw e; toast(e.message, "error"); f = await chooseFolder(tok); if (!f) return; r = await uploadToDrive(tok, out.blob, out.fname, f.id); }
+      const v = await modal({ title: "تم الرفع إلى الدرايف", body: `<p>رُفع الملف <b>${esc(r.name || out.fname)}</b> إلى مجلد <b>${esc(f.name || "")}</b>.</p>`,
+        actions: [{ label: "تغيير المجلد", value: "change" }, ...(r.webViewLink ? [{ label: "فتح الملف", value: "open" }] : []), { label: "تم", kind: "primary", value: null }] });
+      if (v === "open") window.open(r.webViewLink, "_blank", "noopener"); else if (v === "change") { await chooseFolder(tok); toast("حُفظ المجلد الجديد للمرات القادمة"); }
+    } catch (e) { console.error(e); toast(e.message || "تعذر الرفع", "error"); }
   };
   $("#word", main).onclick = () => word();
   $("#share", main).onclick = () => word("share");
