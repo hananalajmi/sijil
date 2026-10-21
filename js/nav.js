@@ -7,7 +7,7 @@ export const SECTIONS = [
   { id: "curr", label: "المناهج التابعة للتوجيه الفني", short: "المناهج", icon: "book", card: "curr", desc: "مكتبة الطالب ومكتبة المعلم في وزارة التربية",
     items: [["https://elibrary.moe.edu.kw/StudentsLibrary", "مكتبة الطالب", "book", "كتب الطالب من مكتبة وزارة التربية الإلكترونية"], ["https://elibrary.moe.edu.kw/TeachersLibrary", "مكتبة المعلم", "book", "كتب المعلم وأدلته من مكتبة وزارة التربية الإلكترونية"]] },
   { id: "plans", label: "الخطط", icon: "calendar", card: "plans", desc: "الخطة الشهرية والتقويم الدراسي والتواريخ الهامة",
-    items: [["monthly", "الخطة الشهرية", "calendar", "تُعبأ تلقائياً من التواريخ والزيارات"], ["dates", "التقويم والتواريخ الهامة", "clock", "التقويم الدراسي الثابت وفعالياتك"], ["https://forms.cloud.microsoft/r/6DQKABdVES", "الخطة الأسبوعية البعدية", "doc", "نموذج Microsoft Forms"]] },
+    items: [["monthly", "الخطة الشهرية", "calendar", "تُعبأ تلقائياً من التواريخ والزيارات"], ["dates", "التقويم والتواريخ الهامة", "clock", "التقويم الدراسي الثابت وفعالياتك"], ["https://forms.cloud.microsoft/r/N46DUrLyFn", "الخطة الأسبوعية القبلية", "doc", "نموذج Microsoft Forms"], ["https://forms.cloud.microsoft/r/6DQKABdVES", "الخطة الأسبوعية البعدية", "doc", "نموذج Microsoft Forms"]] },
   { id: "visits", label: "الزيارات الميدانية", icon: "pin", card: "visits", desc: "تسجيل ومتابعة الزيارات المدرسية",
     items: [["school-visits", "زيارة الموجه للمدرسة", "school", "تُسجَّل فيها زيارات المعلمين تلقائياً"], ["teacher-visits", "زيارة المعلم / رئيس القسم", "user", "بنود الزيارة بالمستويات الثلاثة"], ["exams", "متابعة الامتحانات", "check", "النظري والعملي"]] },
   { id: "reports", label: "التقارير", icon: "doc", card: "reports", desc: "إعداد التقارير واعتمادها وطباعتها",
