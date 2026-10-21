@@ -83,6 +83,8 @@ export async function paginate(rep, container) {
       let node = build(g.items, false);
       body.appendChild(node);
       if (!overflows(body)) return;
+      // مربع قابل للضغط (مثل «خامساً: الملاحظات»): تُقلَّل المسافة فوقه ليبقى في الصفحة نفسها بدل صفحة جديدة
+      if (g.squeeze) { node.classList.add("squeezed"); if (!overflows(body)) return; node.classList.remove("squeezed"); }
       body.removeChild(node);
       // 2) إن كان المربع يتسع في صفحة كاملة: يُنقل كاملاً إلى الصفحة التالية (حتى لو بقي فراغ)
       body.appendChild(node);
@@ -165,6 +167,12 @@ export async function paginate(rep, container) {
     place(b);
   }
   await Promise.all(pages.map(waitImages));
+  // التوقيعات كحاشية في آخر صفحة فقط: مساحتها محجوزة في كل الصفحات، وتظهر في الأخيرة فقط (لا تنتقل وحدها لصفحة جديدة)
+  // الكتل «اللاحقة» (class trail، مثل «خامساً: الملاحظات») لا تحمل التوقيع: إن انتقلت وحدها لصفحة جديدة يبقى التوقيع في صفحة التقرير الأخيرة
+  const body_ = pages.filter((p) => !p.classList.contains("bare"));
+  const trailOnly = (p) => { const k = [...p.querySelectorAll(".pg-body > .blk")]; return k.length > 0 && k.every((x) => x.classList.contains("trail")); };
+  const main_ = body_.filter((p) => !trailOnly(p)), lastMain = main_[main_.length - 1];
+  body_.forEach((p) => { if (rep.footerLastOnly ? p !== lastMain : trailOnly(p)) p.querySelector(".pg-footer").style.visibility = "hidden"; });
   if (pages.length > 1) pages.forEach((p, i) => (p.querySelector(".pg-num").textContent = `صفحة ${i + 1} من ${pages.length}`));
   return pages;
 }

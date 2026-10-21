@@ -55,10 +55,10 @@ export async function weeklyReport(ctx) {
   blocks.push({ group: { cls: "ach-txt", head: H("ثالثاً", "مستوى المعلمين والمتعلمين"), items: nl(d.level).map((x) => `<div class="ln">${x}</div>`) } });
   const pns = [["الإيجابيات", d.positives], ["السلبيات", d.negatives], ["المقترحات", d.suggestions]].filter(([, t]) => (t || "").trim());
   blocks.push({ group: { cls: "ach-txt", head: H("رابعاً", "الإيجابيات والسلبيات والمقترحات"), items: pns.flatMap(([k, t]) => [`<div class="ach-sub">${k}:</div>`, ...nl(t).map((x) => `<div class="ln">${x}</div>`)]) } });
-  if (note) blocks.push({ group: { cls: "ach-txt ach-note", head: H("خامساً", "الملاحظات"), items: nl(note).map((x) => `<div class="ln">${x}</div>`) } });
+  if (note) blocks.push({ group: { squeeze: true, cls: "ach-txt ach-note trail", head: H("خامساً", "الملاحظات"), items: nl(note).map((x) => `<div class="ln">${x}</div>`) } });
   const sigs = await finalSigs(ctx, "الموجه الفني");
-  if (ctx.print?.sigsEveryPage === false) blocks.push({ html: `<div class="ach-endsig">${sigs}</div>` });
-  return { orientation: "portrait", cls: "t-ach", covers: [cover, toc], header: running(ctx, WEEKLY_REPORT.title, period), identity: "", footer: ctx.print?.sigsEveryPage === false ? "" : sigs, blocks };
+  // التوقيع والختم حاشية أسفل الصفحة: في كل صفحة، أو في آخر صفحة فقط (لا تنتقل وحدها لصفحة جديدة)
+  return { orientation: "portrait", cls: "t-ach", covers: [cover, toc], header: running(ctx, WEEKLY_REPORT.title, period), identity: "", footer: sigs, footerLastOnly: ctx.print?.sigsEveryPage === false, blocks };
 }
 
 /* ============================== الإنجازات الشهرية ============================== */

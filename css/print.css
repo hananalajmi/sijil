@@ -476,3 +476,4 @@
 
 /* خامساً: الملاحظات — بعيدة عن الإيجابيات والسلبيات بنحو 3 أسطر، وبخط أوضح */
 .t-ach .ach-note { margin-top: 18mm; } .t-ach .ach-note .ln { font-size: 13pt; line-height: 1.7; }
+.t-ach .ach-note.squeezed { margin-top: 3mm; }

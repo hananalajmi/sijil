@@ -164,10 +164,11 @@ export default async function (main, { id, params }) {
       const tmp = document.createElement("div"); tmp.className = "sheets"; flow.appendChild(tmp);
       // نسخة متصلة بلا تقسيم صفحات؛ Word يقسم الصفحات بنفسه ويكرر الرأس والتذييل
       const flowRep = { ...rep, blocks: rep.blocks.flatMap((b) => (b.keep ? b.keep : [b])) };
+      if (rep.footerLastOnly) { flowRep.blocks = [...flowRep.blocks, { html: rep.footer || "" }]; flowRep.footer = ""; } // Word: التوقيعات في آخر التقرير فقط
       const { paginate: _p } = await import("../report/paginate.js");
       const sheet = document.createElement("section");
       sheet.className = `sheet ${rep.orientation} ${rep.cls || ""}`; if (rep.style) sheet.setAttribute("style", rep.style);
-      sheet.innerHTML = `<div class="sheet-inner ${rep.frame ? "framed" : ""}"><div class="pg-header">${rep.header || ""}</div><div class="pg-identity">${rep.identity || ""}</div><div class="pg-body"></div><div class="pg-footer">${rep.footer || ""}</div></div>`;
+      sheet.innerHTML = `<div class="sheet-inner ${rep.frame ? "framed" : ""}"><div class="pg-header">${rep.header || ""}</div><div class="pg-identity">${rep.identity || ""}</div><div class="pg-body"></div><div class="pg-footer">${flowRep.footer ?? rep.footer ?? ""}</div></div>`;
       tmp.appendChild(sheet);
       const body = sheet.querySelector(".pg-body");
       // الغلاف وصفحة المحتوى: كل منها في صفحة مستقلة داخل ملف Word
@@ -182,7 +183,7 @@ export default async function (main, { id, params }) {
       }
       await Promise.all([...sheet.querySelectorAll("img")].map((i) => (i.complete ? 0 : new Promise((r) => (i.onload = i.onerror = r)))));
       const { exportDocx } = await import("../report/docx.js");
-      const blob = await exportDocx(rep, tmp, name);
+      const blob = await exportDocx(flowRep, tmp, name);
       const fname = `${name.replace(/[\\/:*?"<>|]/g, "-")}.docx`;
       flow.innerHTML = "";
       window.__lastDocx = blob;
