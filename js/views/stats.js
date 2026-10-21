@@ -2,7 +2,7 @@
 import { api } from "../api.js";
 import { state, opts, schoolById } from "../store.js";
 import { esc, $, $$, dayName, fmtDate, toast } from "../ui.js";
-import { go, schoolOptions, promptNewOption } from "../kit.js";
+import { go, schoolOptions } from "../kit.js";
 import { visitStatsContext, examStatsContext } from "../report/context.js";
 import { STATS } from "../templates.js";
 
@@ -30,14 +30,13 @@ export default async function view(main, { name, params }) {
       ${ctx.rows.length ? `<div class="tbl-wrap"><table class="data"><thead><tr><th>م</th><th>المدرسة</th><th>اسم المعلم</th><th>الزيارة الأولى</th><th>الزيارة الثانية</th><th>الزيارة الثالثة</th><th>سبب عدم الزيارة</th></tr></thead><tbody>
         ${ctx.rows.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.school)}</td><td>${esc(r.teacher)}</td>
           ${[0, 1, 2].map((k) => { const v = r.visits[k]; return `<td>${v ? `<a class="src-link" href="#/teacher-visits/${v.id}" title="فتح الزيارة المصدر">${dayName(v.date)} ${fmtDate(v.date)}</a><br><small>${esc(v.cls)}</small>` : ""}</td>`; }).join("")}
-          <td>${r.visits.length >= 3 ? "" : term ? `<select class="why" data-t="${r.teacher_id}" aria-label="سبب عدم زيارة ${esc(r.teacher)}"><option value="">—</option>${[...new Set([...opts("no_visit_reasons"), r.reason].filter(Boolean))].map((o) => `<option ${o === r.reason ? "selected" : ""}>${esc(o)}</option>`).join("")}<option value="__custom">+ إضافة سبب جديد للقائمة…</option></select>` : `<span class="why-t">${esc(r.reason)}</span>`}</td></tr>`).join("")}</tbody></table></div>`
+          <td>${r.visits.length >= 3 ? "" : term ? `<select class="why" data-t="${r.teacher_id}" aria-label="سبب عدم زيارة ${esc(r.teacher)}"><option value="">—</option>${[...new Set([...opts("no_visit_reasons"), r.reason].filter(Boolean))].map((o) => `<option ${o === r.reason ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>` : `<span class="why-t">${esc(r.reason)}</span>`}</td></tr>`).join("")}</tbody></table></div>`
         : `<div class="empty">لا توجد أسماء معلمات بعد. <a href="#/schools">أضيفيها من صفحة المدارس</a></div>`}
       <p class="hint">اضغطي على أي تاريخ لفتح الزيارة التي جاء منها. إذا لم تُزر المعلمة لسبب (إجازة دراسية، مجلس، وضع…) اختاريه من «سبب عدم الزيارة»${term ? "" : " بعد اختيار الفترة"}، فيظهر في الطباعة مكان الزيارات الناقصة.</p></div>`;
     const nav = () => go(`#/stats-visits?${qs({ term: $("#term", main).value, school: $("#school", main).value })}`);
     $("#term", main).onchange = nav; $("#school", main).onchange = nav;
     $$("select.why", main).forEach((sel) => (sel.onchange = async () => {
       const i = state.teachers.findIndex((t) => t.id === sel.dataset.t); if (i < 0) return;
-      if (sel.value === "__custom" && !(await promptNewOption(sel, "no_visit_reasons"))) { sel.value = state.teachers[i].data?.no_visit?.[`${state.year}|${term}`] || ""; return; }
       const t = state.teachers[i], key = `${state.year}|${term}`;
       const no_visit = { ...(t.data?.no_visit || {}) };
       if (sel.value) no_visit[key] = sel.value; else delete no_visit[key];

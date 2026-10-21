@@ -43,9 +43,14 @@ export async function weeklyReport(ctx) {
   </div>`;
   const toc = contentsPage(WEEKLY_REPORT.contents.map((t, i) => [MONTHLY_ACH.ordinals[i].replace("اً", "ا"), t]));
   const rows = (d.rows || []).filter((r) => r.date || r.place || r.goal || r.summary);
+  // أيام بدون زيارة (لها سبب) تظهر في جدول الزيارات بترتيب التاريخ
+  const have = new Set(rows.map((r) => r.date));
+  const nvRows = Object.entries(d.no_visit_days || {}).filter(([dt, why]) => why && !have.has(dt) && (!ws || (dt >= ws && dt <= we))).map(([dt, why]) => ({ date: dt, none: why }));
+  const tRows = [...rows, ...nvRows].sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
   const blocks = [];
   blocks.push({ table: { before: H("أولاً", "زيارات الموجه الفني للعلوم"), cls: "grid ach-t", thead: `<tr><th class="c-n">م</th><th>التاريخ</th><th>اليوم</th><th>مكان الزيارة</th><th>الهدف من الزيارة</th></tr>`,
-    rows: (rows.length ? rows : [{}]).map((r, i) => `<tr><td>${rows.length ? i + 1 : "&nbsp;"}</td><td>${fmtDateSlash(r.date)}</td><td>${val(dayName(r.date))}</td><td>${val(r.place)}</td><td class="tl">${nl(r.goal).join("<br>")}</td></tr>`) } });
+    rows: (tRows.length ? tRows : [{}]).map((r, i) => r.none ? `<tr class="ach-none"><td>${i + 1}</td><td>${fmtDateSlash(r.date)}</td><td>${val(dayName(r.date))}</td><td>لا توجد زيارة</td><td class="tl"><b>السبب:</b> ${val(r.none)}</td></tr>`
+      : `<tr><td>${tRows.length ? i + 1 : "&nbsp;"}</td><td>${fmtDateSlash(r.date)}</td><td>${val(dayName(r.date))}</td><td>${val(r.place)}</td><td class="tl">${nl(r.goal).join("<br>")}</td></tr>`) } });
   blocks.push({ html: H("ثانياً", "ملخص ما تم إنجازه في الزيارات") });
   for (const r of rows.length ? rows : [{}]) {
     blocks.push({ html: `<table class="grid ach-sum"><tr><th>اليوم والتاريخ:</th><th>مكان الزيارة:</th></tr><tr><td>${val(dayName(r.date))} ${fmtDateSlash(r.date)}</td><td>${val(r.place)}</td></tr>

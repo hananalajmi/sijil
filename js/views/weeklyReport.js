@@ -3,7 +3,8 @@
 import { api } from "../api.js";
 import { state, G } from "../store.js";
 import { esc, $, $$, today, weekStart, addDays, fmtDate, dayName, academicYearOf, MONTHS_AR, toast } from "../ui.js";
-import { field, bindFields, recordPage, go } from "../kit.js";
+import { field, bindFields, recordPage, go, promptNewOption } from "../kit.js";
+import { opts } from "../store.js";
 import { listView } from "./_list.js";
 import { weeklyAuto, mergeRows, weekLabel } from "../report/context.js";
 import { WEEKLY_REPORT } from "../templates.js";
@@ -45,7 +46,9 @@ export default async function (main, { id, params }) {
     <section class="panel"><div class="page-head" style="margin-bottom:8px"><div><h2>أولاً وثانياً: الزيارات وملخص ما تم إنجازه</h2>
       <div class="sub">صف لكل مدرسة في كل يوم، مرتبط بزيارة الموجه للمدرسة وزيارات المعلمين: يتحدث تلقائياً كلما عدّلتِ الزيارة. الصف الذي تعدّلينه هنا يبقى كما كتبتِه.</div></div>
       <div class="row"><button class="btn" id="sync">تحديث من السجلات</button><button class="btn" id="addrow">+ صف يدوي</button></div></div>
-      <div id="rows"></div></section>
+      <div id="rows"></div>
+      <h3 style="margin:14px 0 6px">أيام بدون زيارة</h3><p class="hint" style="margin:0 0 8px">كل يوم عمل في الأسبوع ما فيه زيارة يظهر هنا: اختاري السبب، أو أضيفي سبباً جديداً للقائمة. يُطبع في جدول الزيارات مكان الزيارة.</p>
+      <div id="novisit"></div></section>
     <section class="panel"><h2>ثالثاً: مستوى المعلمين والمتعلمين</h2>${field({ label: "كل نقطة في سطر", key: "level", type: "textarea", value: d.level, wide: true, rows: 5 })}</section>
     <section class="panel"><h2>رابعاً: الإيجابيات والسلبيات والمقترحات</h2><div class="form">
       ${field({ label: "الإيجابيات", key: "positives", type: "textarea", value: d.positives })}${field({ label: "السلبيات", key: "negatives", type: "textarea", value: d.negatives })}${field({ label: "المقترحات", key: "suggestions", type: "textarea", value: d.suggestions })}</div></section>
@@ -71,6 +74,21 @@ export default async function (main, { id, params }) {
         el.querySelector("[data-c=date]").addEventListener("change", paint);
         el.querySelector("[data-del]").onclick = () => { ed.change((x) => x.data.rows.splice(i, 1)); paint(); };
       });
+      paintNoVisit();
+    };
+    // أيام العمل (الأحد إلى الخميس) التي لا توجد فيها زيارة: سبب من قائمة منسدلة قابلة للإضافة
+    const paintNoVisit = () => {
+      const nb = $("#novisit", body); if (!nb) return;
+      const ws = ed.rec.data.week_start, have = new Set((ed.rec.data.rows || []).map((x) => x.date).filter(Boolean)), nv = ed.rec.data.no_visit_days || {};
+      const days = ws ? [0, 1, 2, 3, 4].map((k) => addDays(ws, k)).filter((dt) => !have.has(dt)) : [];
+      nb.innerHTML = days.length ? `<div class="tbl-wrap"><table class="data"><thead><tr><th>اليوم</th><th>التاريخ</th><th>سبب عدم الزيارة</th></tr></thead><tbody>${days.map((dt) => { const v = nv[dt] || "";
+          return `<tr><td>${esc(dayName(dt))}</td><td>${esc(fmtDate(dt))}</td><td><select data-nv="${dt}" aria-label="سبب عدم الزيارة يوم ${esc(dayName(dt))}"><option value="">— بدون —</option>${[...new Set([...opts("no_visit_day_reasons"), v].filter(Boolean))].map((o) => `<option ${o === v ? "selected" : ""}>${esc(o)}</option>`).join("")}<option value="__custom">+ إضافة سبب جديد للقائمة…</option></select></td></tr>`; }).join("")}</tbody></table></div>`
+        : `<p class="hint">كل أيام الأسبوع فيها زيارات.</p>`;
+      $$("[data-nv]", nb).forEach((sel) => (sel.onchange = async () => {
+        const dt = sel.dataset.nv; let v = sel.value;
+        if (v === "__custom") { v = await promptNewOption(sel, "no_visit_day_reasons"); if (!v) { sel.value = (ed.rec.data.no_visit_days || {})[dt] || ""; return; } }
+        ed.change((x) => { const m = { ...(x.data.no_visit_days || {}) }; if (v) m[dt] = v; else delete m[dt]; x.data.no_visit_days = m; });
+      }));
     };
     paint();
     $("#sync", body).onclick = async () => {
