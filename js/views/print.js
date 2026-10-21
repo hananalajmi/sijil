@@ -132,7 +132,7 @@ export default async function (main, { id, params }) {
     const share = async () => { if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: name }); return true; } catch (e) { if (e.name === "AbortError") return true; } } return false; };
     // المشاركة تحتاج ضغطة مباشرة، فيُعرض زر بعد تجهيز الملف
     const v = await modal({ title: "الملف جاهز للطباعة", body: `<p>اضغطي «طباعة / مشاركة» ثم اختاري <b>طباعة</b> (أو «حفظ في الملفات»). يُطبع بدون رابط الموقع والتاريخ.</p>`,
-      actions: [{ label: "إلغاء", value: null }, { label: "الطباعة العادية", value: "plain" }, { label: "طباعة / مشاركة", kind: "primary", value: () => share() }] });
+      actions: [{ label: "إلغاء", value: null }, { label: "طباعة / مشاركة", kind: "primary", value: () => share() }] });
     if (v === "plain") { try { window.print(); } catch (_) {} }
     else if (v === false) { download(file, file.name); toast("نُزّل ملف PDF — افتحيه واطبعيه"); } // المشاركة غير متاحة في هذا المتصفح
   };

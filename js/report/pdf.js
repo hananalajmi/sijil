@@ -50,9 +50,34 @@ async function fontCss(root) {
 async function inlineClone(sheet) {
   const c = sheet.cloneNode(true);
   c.style.margin = "0"; c.style.transform = "none"; c.style.zoom = "";
-  await Promise.all([...c.querySelectorAll("img")].map(async (im) => { im.setAttribute("src", await toDataUrl(im.getAttribute("src"))); im.removeAttribute("srcset"); }));
+  // الصور العادية (الشعارات والتوقيع والختم) لا تُرسم داخل الصورة لأن سفاري (آيفون/آيباد) قد يتركها فارغة؛
+  // تُخفى هنا مع بقاء مكانها، ثم تُرسم مباشرة فوق الصفحة من الصور الأصلية المحمّلة (drawImgs)
+  c.querySelectorAll("img").forEach((im) => { im.style.visibility = "hidden"; im.removeAttribute("srcset"); im.setAttribute("src", "data:image/gif;base64,R0lGODlhAQABAAAAACw="); });
   await Promise.all([...c.querySelectorAll("image")].map(async (im) => { const h = im.getAttribute("href") || im.getAttribute("xlink:href"); if (h) im.setAttribute("href", await toDataUrl(new URL(h, document.baseURI).href)); }));
   return c;
+}
+
+// رسم صور الصفحة فوق اللوحة في مواضعها الظاهرة (مع احترام object-fit/position)
+async function drawImgs(sheet, r, g, k) {
+  for (const im of sheet.querySelectorAll("img")) {
+    const cs = getComputedStyle(im);
+    if (cs.display === "none" || cs.visibility === "hidden" || Number(cs.opacity) === 0) continue;
+    if (!im.complete || !im.naturalWidth) { try { await im.decode(); } catch (_) { continue; } }
+    const b = im.getBoundingClientRect(); if (b.width < 1 || b.height < 1) continue;
+    const px = (v) => parseFloat(v) || 0;
+    let x = b.left + px(cs.borderLeftWidth) + px(cs.paddingLeft), y = b.top + px(cs.borderTopWidth) + px(cs.paddingTop);
+    let w = b.width - px(cs.borderLeftWidth) - px(cs.borderRightWidth) - px(cs.paddingLeft) - px(cs.paddingRight);
+    let h = b.height - px(cs.borderTopWidth) - px(cs.borderBottomWidth) - px(cs.paddingTop) - px(cs.paddingBottom);
+    const nw = im.naturalWidth, nh = im.naturalHeight, fit = cs.objectFit;
+    if (fit === "contain" || fit === "scale-down" || fit === "cover") {
+      let s2 = fit === "cover" ? Math.max(w / nw, h / nh) : Math.min(w / nw, h / nh); if (fit === "scale-down") s2 = Math.min(1, s2);
+      const dw = nw * s2, dh = nh * s2, [ox, oy] = (cs.objectPosition || "50% 50%").split(" ");
+      const pos = (v, free) => (/%$/.test(v || "") ? parseFloat(v) / 100 * free : v === "left" || v === "top" ? 0 : v === "right" || v === "bottom" ? free : /px$/.test(v || "") ? parseFloat(v) : free / 2);
+      g.save(); g.beginPath(); g.rect((x - r.left) * k, (y - r.top) * k, w * k, h * k); g.clip();
+      x += pos(ox, w - dw); y += pos(oy, h - dh); w = dw; h = dh;
+      g.drawImage(im, (x - r.left) * k, (y - r.top) * k, w * k, h * k); g.restore();
+    } else g.drawImage(im, (x - r.left) * k, (y - r.top) * k, w * k, h * k);
+  }
 }
 
 // رسم صفحة واحدة: SVG بداخله HTML (foreignObject) ← لوحة ← JPEG
@@ -69,6 +94,7 @@ async function renderSheet(sheet, css, scale) {
   await new Promise((r2) => setTimeout(r2, 60));
   const cv = document.createElement("canvas"); cv.width = Math.round(w * scale); cv.height = Math.round(h * scale);
   const g = cv.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(img, 0, 0, cv.width, cv.height);
+  await drawImgs(sheet, r, g, cv.width / r.width);
   let data; try { data = cv.toDataURL("image/jpeg", 0.9); } catch (_) { const e = new Error("هذا المتصفح لا يسمح بإنشاء PDF مباشرة. احفظيه من «طباعة / حفظ PDF» ثم ارفعيه للدرايف"); e.tainted = true; throw e; }
   const out = { jpeg: Uint8Array.from(atob(data.split(",")[1]), (ch) => ch.charCodeAt(0)), w: cv.width, h: cv.height, land: w > h };
   cv.width = cv.height = 0; return out;
