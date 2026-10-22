@@ -1,6 +1,6 @@
 // التواريخ الهامة (إجازات، اجتماعات، دورات) — تُعبأ تلقائياً في الخطة الشهرية والإنجازات الشهرية
 import { api } from "../api.js";
-import { state, opts, officialDates, schoolById } from "../store.js";
+import { state, opts, officialDates, schoolById, G, setGuideData } from "../store.js";
 import { today, fmtDate, academicYearOf, esc, $, $$, DAYS, MONTHS_AR, pad2, addDays, modal, toast } from "../ui.js";
 import { field, bindFields, recordPage, go } from "../kit.js";
 import { listView } from "./_list.js";
@@ -54,12 +54,13 @@ async function calendar(main, params) {
         const pins = pinned.filter((o) => o.from <= iso && o.to >= iso);
         const vis = visits.filter((v) => v.record_date === iso);
         return `<div class="cal-d ${iso === t ? "today" : ""} ${k % 7 >= 5 ? "we" : ""} ${pins.some((o) => o.holiday) ? "hol" : ""}" data-date="${iso}" tabindex="0" role="button" aria-label="إضافة على ${d} ${MONTHS_AR[m - 1]}">
-          <span class="cal-n">${d}</span>${pins.map((o) => `<span class="cal-ev cal-pin ${o.holiday ? "hol" : ""} ${o.subject ? "subj" : ""}" data-pin="${o.id}" role="button" tabindex="0" title="${esc(o.details || o.title)}">${o.subject ? "⚗️" : "📌"} ${esc(o.title)}</span>`).join("")}${evs.map((e) => `<a class="cal-ev pill ${TYPE_CLS[e.data.type] ?? ""}" href="#/dates/${e.id}" title="${esc(e.data.type || "")}">${esc(e.title || e.data.type)}</a>`).join("")}${vis.map((v) => `<a class="cal-ev cal-visit" href="#/school-visits/${v.id}" title="زيارة مدرسة${v.data?.visit_type ? " — " + esc(v.data.visit_type) : ""}">🏫 ${esc(schoolById(v.school_id)?.title || "زيارة مدرسة")}</a>`).join("")}</div>`;
+          <span class="cal-n">${d}</span>${dayNote(iso) ? `<span class="cal-ev cal-note" data-note role="button" tabindex="0" title="ملاحظتي" aria-label="ملاحظتي ليوم ${d}">🗒️ ملاحظة</span>` : ""}${pins.map((o) => `<span class="cal-ev cal-pin ${o.holiday ? "hol" : ""} ${o.subject ? "subj" : ""}" data-pin="${o.id}" role="button" tabindex="0" title="${esc(o.details || o.title)}">${o.subject ? "⚗️" : "📌"} ${esc(o.title)}</span>`).join("")}${evs.map((e) => `<a class="cal-ev pill ${TYPE_CLS[e.data.type] ?? ""}" href="#/dates/${e.id}" title="${esc(e.data.type || "")}">${esc(e.title || e.data.type)}</a>`).join("")}${vis.map((v) => `<a class="cal-ev cal-visit" href="#/school-visits/${v.id}" title="زيارة مدرسة${v.data?.visit_type ? " — " + esc(v.data.visit_type) : ""}">🏫 ${esc(schoolById(v.school_id)?.title || "زيارة مدرسة")}</a>`).join("")}</div>`;
       }).join("")}</div>
     <p class="hint">🏫 زياراتك للمدارس تظهر تلقائياً باسم المدرسة في يوم الزيارة (اضغطي عليها لفتح الزيارة). 📌 التواريخ الثابتة من التقويم الدراسي و⚗️ تواريخ مادتك (الإنماء المهني والتدريب الميداني) تظهر تلقائياً ولا تُحذف، والعطل منها تُعلَّم تلقائياً في الخطة الشهرية. ولكل فعالية أضفتِها: اضغطي عليها لتعديلها أو حذفها.</p></div>`;
   $$(".cal-d[data-date]", main).forEach((c) => {
     const open = async (e) => {
       if (e.target.closest("a.cal-ev")) return;
+      if (e.target.closest("[data-note]")) return editNote(c.dataset.date, main, month);
       const pin = e.target.closest("[data-pin]");
       if (pin) { // تفاصيل التاريخ الثابت كاملة
         const o = pinned.find((x) => x.id === pin.dataset.pin);
@@ -76,8 +77,9 @@ async function calendar(main, params) {
         ${field({ label: "العنوان", key: "title", placeholder: "مثال: اجتماع اللجنة الفنية المشتركة" })}
         ${field({ label: "إلى تاريخ (لأكثر من يوم)", key: "end_date", type: "date", value: "" })}
         ${field({ label: "المكان", key: "place" })}</div>`;
-      const v = await modal({ title: `إضافة على ${fmtDate(date)}`, body, actions: [{ label: "إلغاء", value: null }, { label: "تفاصيل أكثر…", value: "more" },
+      const v = await modal({ title: `إضافة على ${fmtDate(date)}`, body, actions: [{ label: "إلغاء", value: null }, { label: dayNote(date) ? "🗒️ ملاحظتي" : "🗒️ ملاحظة لي", value: "note" }, { label: "تفاصيل أكثر…", value: "more" },
         { label: "إضافة", kind: "primary", value: (b) => Object.fromEntries($$("[data-key]", b).map((x) => [x.dataset.key, x.value.trim()])) }] });
+      if (v === "note") return editNote(date, main, month);
       if (v === "more") return go(`#/dates/new?date=${date}`);
       if (!v) return;
       if (!v.title) v.title = v.type;
@@ -89,4 +91,20 @@ async function calendar(main, params) {
     c.addEventListener("click", open);
     c.addEventListener("keydown", (e) => { if (e.key === "Enter") open(e); });
   });
+}
+
+/* ---------------- ملاحظاتي اليومية (ورقة لاصقة): خاصة بك، لا تظهر في الخطة الشهرية ولا في أي تقرير ---------------- */
+const dayNote = (iso) => String((G().day_notes || {})[iso] || "").trim();
+async function editNote(date, main, month) {
+  const cur = dayNote(date);
+  const b = document.createElement("div");
+  b.innerHTML = `<p class="hint" style="margin-top:0">ملاحظة خاصة بك لهذا اليوم (مهام، تذكير…). لا تظهر في الخطة الشهرية ولا في أي تقرير.</p>
+    <textarea id="dn-t" rows="8" class="sticky-note" aria-label="ملاحظتي" placeholder="مثال:&#10;- الاتصال بمدرسة …&#10;- تجهيز أوراق الاجتماع">${esc(cur)}</textarea>`;
+  const v = await modal({ title: `🗒️ ملاحظتي — ${fmtDate(date)}`, body: b,
+    actions: [...(cur ? [{ label: "حذف", value: "del" }] : []), { label: "إغلاق", value: null }, { label: "حفظ", kind: "primary", value: (x) => ({ text: x.querySelector("#dn-t").value }) }] });
+  if (!v) return;
+  const all = { ...(G().day_notes || {}) }, t = v === "del" ? "" : v.text.trim();
+  if (t) all[date] = t; else delete all[date];
+  await setGuideData("day_notes", all);
+  toast(t ? "حُفظت الملاحظة" : "حُذفت الملاحظة"); calendar(main, { month });
 }

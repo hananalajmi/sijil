@@ -583,3 +583,8 @@ input.cid-ok { border-color: var(--good) !important; background: var(--good-soft
 .cg-live { border: 1px solid var(--line, #ddd); border-radius: 10px; overflow: hidden; background: #fff; box-shadow: 0 6px 18px rgba(20, 37, 74, .08); }
 .cg-live svg { display: block; width: 100%; height: auto; }
 .cg-logo .btn.sm { font-size: 13px; padding: 5px 10px; }
+
+/* ملاحظتي اليومية: ورقة لاصقة صفراء */
+.cal-ev.cal-note { background: #fff3a8; color: #5c4a00; border: 1px solid #ecd770; cursor: pointer; }
+.sticky-note { width: 100%; box-sizing: border-box; background: #fff8c4; color: #3d3200; border: 1px solid #ecd770; border-radius: 10px; padding: 12px; line-height: 1.8; font: inherit; box-shadow: 0 4px 10px rgba(120, 100, 0, .12); }
+:root[data-theme="dark"] .sticky-note, :root[data-theme="dark"] .cal-ev.cal-note { background: #fff3a8; color: #3d3200; }
