@@ -6,7 +6,7 @@ import { BUILDERS } from "../report/builders.js";
 import { paginate, auditPages } from "../report/paginate.js";
 import { recordContext, visitStatsContext, examStatsContext, compiledMonthlyContext, monthlyDerived } from "../report/context.js";
 import { KIND_LABEL, KIND_ROUTE } from "../kit.js";
-import { HEAD_LOGOS, HEAD_LOGO_CHOICES, LOGOS } from "../templates.js";
+import { HEAD_LOGOS, HEAD_LOGO_CHOICES, LOGOS, canonLogo } from "../templates.js";
 import { G, setHeadLogos } from "../store.js";
 // نوع النموذج لشعارات الرأس (تقرير الفعالية تُختار شعاراته من صفحة التقرير نفسها)
 const headKindOf = (ctx) => { const k = ctx.kind || ctx.rec?.kind; if (k === "stats_visits" || k === "stats_exams") return "stats"; if (k === "form") return ctx.rec?.data?.type; return k; };
@@ -160,10 +160,10 @@ export default async function (main, { id, params }) {
   const hb = $("#hlogos", main);
   if (hb) hb.onclick = async () => {
     const kind = headKindOf(ctx), D = HEAD_LOGOS[kind], U = (G().head_logos || {})[kind] || {}, cur = (k) => (U[k] !== undefined ? U[k] : D[k]);
-    const sel = (k, l) => `<div class="f"><label for="hl-${k}">شعار ${l}</label><select id="hl-${k}"><option value="">بدون</option>${HEAD_LOGO_CHOICES.filter((x) => LOGOS[x]).map((x) => `<option value="${x}" ${x === cur(k) ? "selected" : ""}>${esc(LOGOS[x].label)}</option>`).join("")}</select></div>`;
+    const sel = (k, l) => `<div class="f"><label for="hl-${k}">شعار ${l}</label><select id="hl-${k}"><option value="">بدون</option>${HEAD_LOGO_CHOICES.filter((x) => LOGOS[x]).map((x) => `<option value="${x}" ${x === canonLogo(cur(k)) ? "selected" : ""}>${esc(LOGOS[x].label)}</option>`).join("")}</select></div>`;
     const v = await modal({ title: `شعارات رأس «${D.label}»`, body: `<p class="hint">اختاري شعاراً أو اثنين أو ثلاثة، وحددي مكان كل شعار. يُطبق على كل نماذج «${esc(D.label)}».</p><div class="form">${sel("r", "اليمين")}${sel("c", "الوسط")}${sel("l", "اليسار")}</div>`,
       actions: [{ label: "إلغاء", value: null }, { label: "الافتراضي", value: () => ({ r: D.r, c: D.c, l: D.l }) },
-        { label: "حفظ", kind: "primary", value: (b) => ({ r: b.querySelector("#hl-r").value, c: b.querySelector("#hl-c").value, l: b.querySelector("#hl-l").value }) }], wide: true });
+        { label: "حفظ", kind: "primary", value: (b) => Object.fromEntries(["r", "c", "l"].map((k) => { const x = b.querySelector("#hl-" + k).value; return [k, x && x === canonLogo(cur(k)) ? cur(k) : x]; })) }], wide: true });
     if (!v) return;
     const val = v;
     const saving = setHeadLogos(kind, val);

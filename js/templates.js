@@ -296,30 +296,34 @@ export const HEAD_LOGOS = {
   criteria: { label: "بطاقة قياس المعايير", r: "emblem", c: "", l: "" },
 };
 // الشعارات المتاحة للاختيار في رأس النماذج
-export const HEAD_LOGO_CHOICES = ["ministry_hd", "ministry", "ministry_small", "ministry_color", "ministry_event", "emblem", "seal_gold", "stats_r", "dep_r", "directorate", "directorate_event", "dep_l", "stats_l", "region", "science_guidance", "general_science", "stats_c", "new_kuwait"];
+export const HEAD_LOGO_CHOICES = ["ministry_hd", "ministry", "ministry_event", "emblem", "seal_gold", "directorate", "stats_r", "ministry_color", "general_science", "new_kuwait", "stats_c"];
 // الشعارات الافتراضية المستخرجة من الملفات الرسمية المرفقة (قابلة للاستبدال من الإعدادات)
+// alias: نسخة مكررة من شعار آخر (نفس الشعار بحجم/دقة النموذج الرسمي). لا تظهر في القوائم والإعدادات،
+// وتتبع الشعار الأصلي إذا استُبدل من الإعدادات، وإلا تُطبع بصورتها الأصلية كما في النموذج.
 export const LOGOS = {
-  seal_gold: { label: "ختم وزارة التربية الذهبي (من نموذج الشهادة)", src: "assets/logos/ministry-seal-gold.png" },
-  emblem: { label: "شعار الوزارة (الواجهة الافتتاحية والصفحة الرئيسية)", src: "assets/logos/ministry-emblem.png" },
-  ministry_hd: { label: "شعار وزارة التربية بدقة عالية (غلاف الإنجازات الشهرية)", src: "assets/logos/ministry-hd.png" },
-  ministry: { label: "شعار وزارة التربية", src: "assets/logos/ministry-wide.png" },
-  ministry_small: { label: "شعار وزارة التربية (مختصر)", src: "assets/logos/ministry-stacked.png" },
-  directorate: { label: "شعار الإدارة العامة للمنطقة — التوجيه الفني للعلوم", src: "assets/logos/ahmadi-science.png" },
-  new_kuwait: { label: "شعار كويت جديدة", src: "assets/logos/new-kuwait.png" },
-  general_science: { label: "شعار التوجيه الفني العام للعلوم", src: "assets/logos/general-science.jpg" },
-  science_guidance: { label: "شعار إدارة التوجيه الفني للعلوم (الإنجازات والتقارير الأسبوعية)", src: "assets/logos/science-guidance.png" },
-  ministry_color: { label: "شعار وزارة التربية (الإنجازات والتقارير الأسبوعية)", src: "assets/logos/ministry-color.jpg" },
-  region: { label: "شعار المنطقة / المراقبة (غلاف الإنجازات الشهرية)", src: "assets/logos/ahmadi-science.png" },
-  ministry_event: { label: "شعار وزارة التربية (تقرير الفعالية)", src: "assets/logos/ministry-event.jpg" },
-  directorate_event: { label: "شعار الإدارة العامة (تقرير الفعالية)", src: "assets/logos/ahmadi-science-event.jpg" },
-  stats_r: { label: "الإحصائيات: الشعار الأيمن (وزارة التربية — الإدارة العامة)", src: "assets/logos/stats-logo-right.png" },
-  stats_c: { label: "الإحصائيات: الشعار الأوسط", src: "assets/logos/stats-logo-center.png" },
-  stats_l: { label: "الإحصائيات: الشعار الأيسر (التوجيه الفني للعلوم)", src: "assets/logos/stats-logo-left.png" },
-  dep_r: { label: "بيانات الأقسام: الشعار الأيمن (وزارة التربية)", src: "assets/logos/dep-logo-right.png" },
-  dep_l: { label: "بيانات الأقسام: الشعار الأيسر (التوجيه الفني للعلوم)", src: "assets/logos/dep-logo-left.png" },
-  stats_strip: { label: "ترويسة الإحصائيات", src: "assets/logos/stats-strip.png" },
-  departments_strip: { label: "ترويسة بيانات الأقسام العلمية", src: "assets/logos/departments-strip.jpg" },
+  emblem: { label: "شعار الوزارة (الصقر فقط)", src: "assets/logos/ministry-emblem.png" },
+  ministry: { label: "وزارة التربية (عرضي)", src: "assets/logos/ministry-wide.png" },
+  ministry_hd: { label: "وزارة التربية (طولي)", src: "assets/logos/ministry-hd.png" },
+  ministry_event: { label: "وزارة التربية (بالخط العربي)", src: "assets/logos/ministry-event.jpg" },
+  seal_gold: { label: "ختم وزارة التربية الذهبي", src: "assets/logos/ministry-seal-gold.png" },
+  directorate: { label: "الإدارة العامة لمنطقة الأحمدي — التوجيه الفني للعلوم", src: "assets/logos/ahmadi-science.png" },
+  stats_r: { label: "الإدارة العامة لمنطقة الأحمدي التعليمية (مع شعار الوزارة)", src: "assets/logos/stats-logo-right.png" },
+  ministry_color: { label: "إدارة التوجيه الفني للعلوم", src: "assets/logos/ministry-color.jpg" },
+  general_science: { label: "التوجيه الفني العام للعلوم", src: "assets/logos/general-science.jpg" },
+  new_kuwait: { label: "كويت جديدة", src: "assets/logos/new-kuwait.png" },
+  stats_c: { label: "الكويت عاصمة الثقافة الإسلامية", src: "assets/logos/stats-logo-center.png" },
+  // نسخ مكررة (مستعملة في نماذج رسمية بعينها)
+  ministry_small: { alias: "ministry_hd", src: "assets/logos/ministry-stacked.png" },
+  science_guidance: { alias: "ministry_hd", src: "assets/logos/science-guidance.png" },
+  dep_r: { alias: "ministry_event", src: "assets/logos/dep-logo-right.png" },
+  region: { alias: "directorate", src: "assets/logos/ahmadi-science.png" },
+  directorate_event: { alias: "directorate", src: "assets/logos/ahmadi-science-event.jpg" },
+  stats_l: { alias: "directorate", src: "assets/logos/stats-logo-left.png" },
+  dep_l: { alias: "directorate", src: "assets/logos/dep-logo-left.png" },
 };
+for (const v of Object.values(LOGOS)) if (v.alias) v.label = LOGOS[v.alias].label;
+export const canonLogo = (k) => LOGOS[k]?.alias || k;
+export const MAIN_LOGOS = Object.keys(LOGOS).filter((k) => !LOGOS[k].alias);
 
 // ---------------- النماذج الرسمية (للتوقيع والإرسال) ----------------
 // كل نموذج: عنوانه وحقوله الافتراضية. يمكن إضافة نماذج أخرى هنا لاحقاً بنفس الشكل.
@@ -340,7 +344,7 @@ export const FORMS = {
     prefixes: { f: ["الأستاذة", "المعلمة", "رئيسة القسم", "الطالبة", ""], m: ["الأستاذ", "المعلم", "رئيس القسم", "الطالب", ""] },
     designs: { golden: "الرسمية الذهبية (إطار ذهبي وزخارف)", waves: "أمواج كحلية وذهبية" },
     titleFonts: { ruqaa: "خط رقعة (مزخرف)", kufi: "خط كوفي", naskh: "خط نسخ (أميري)" },
-    logos: { ministry: ["ministry_hd", "شعار وزارة التربية"], seal: ["emblem", "ختم الوزارة الذهبي (الشعار داخل دائرة ذهبية)"], directorate: ["directorate", "الإدارة العامة لمنطقة الأحمدي — التوجيه الفني للعلوم"], science: ["science_guidance", "إدارة التوجيه الفني للعلوم"], new_kuwait: ["new_kuwait", "كويت جديدة"], gold_seal: ["seal_gold", "ختم الوزارة الذهبي (دائري)"] },
+    logos: { ministry: ["ministry_hd", "شعار وزارة التربية"], seal: ["emblem", "ختم الوزارة الذهبي (الشعار داخل دائرة ذهبية)"], directorate: ["directorate", "الإدارة العامة لمنطقة الأحمدي — التوجيه الفني للعلوم"], science: ["ministry_color", "إدارة التوجيه الفني للعلوم"], new_kuwait: ["new_kuwait", "كويت جديدة"], gold_seal: ["seal_gold", "ختم الوزارة الذهبي (دائري)"] },
   },
   // بطاقة قياس المعايير الفنية للمواد الأساسية (منطقة الأحمدي التعليمية) — من الملف المرفق.
   // [البند، الدرجة التفصيلية]، والمجموع 45 كما في الملف الأصلي.

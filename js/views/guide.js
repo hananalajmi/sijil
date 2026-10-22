@@ -37,7 +37,7 @@ export default async function (main, { name }) {
     <section class="panel" id="logos"><h2>الشعارات الرسمية</h2>
       <p class="hint">الشعارات الافتراضية مأخوذة من النماذج الرسمية المرفقة. يمكنك استبدال أي منها، والرجوع للأصل في أي وقت.</p>
       <div class="tbl-wrap"><table class="data"><tr><th>الشعار</th><th>الحالي</th><th></th></tr>
-      ${Object.entries(LOGOS).map(([k, l]) => `<tr data-k="${k}"><td>${esc(l.label)}</td><td><img alt="" style="max-height:44px;max-width:220px;background:#fff" data-img></td>
+      ${Object.entries(LOGOS).filter(([, l]) => !l.alias).map(([k, l]) => `<tr data-k="${k}"><td>${esc(l.label)}</td><td><img alt="" style="max-height:44px;max-width:220px;background:#fff" data-img></td>
         <td class="row"><label class="btn small">استبدال<input type="file" accept="image/*" hidden></label><button class="btn small ghost" data-reset ${G().logos?.[k] ? "" : "hidden"}>استعادة الأصل</button></td></tr>`).join("")}</table></div></section>
 
     <section class="panel" id="look"><h2>المظهر</h2><p class="hint">خاص بك وحدك، ويُحفظ مع حسابك فيظهر على كل أجهزتك. التغيير يظهر فوراً.</p><div class="form">

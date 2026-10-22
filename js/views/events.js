@@ -5,10 +5,10 @@ import { $, today, dayName, fmtDate, academicYearOf } from "../ui.js";
 import { field, bindFields, recordPage, schoolOptions, photoSlots } from "../kit.js";
 import { listView } from "./_list.js";
 import { printOptionsPanel, bindPrintOptions } from "./teacherVisit.js";
-import { LOGOS } from "../templates.js";
+import { LOGOS, canonLogo } from "../templates.js";
 import { EV_LOGO_DEFAULT } from "../report/builders.js";
 // الشعارات المتاحة لرأس تقرير الفعالية
-const EV_LOGO_CHOICES = ["ministry_event", "ministry_hd", "ministry", "emblem", "seal_gold", "directorate_event", "directorate", "general_science", "science_guidance", "new_kuwait"];
+const EV_LOGO_CHOICES = ["ministry_event", "ministry_hd", "ministry", "emblem", "seal_gold", "directorate", "stats_r", "ministry_color", "general_science", "new_kuwait", "stats_c"];
 
 export default async function (main, { id }) {
   if (!id) return listView(main, { kind: "event_report", title: "تقرير الفعالية / التنمية المهنية", newLabel: "+ تقرير فعالية",
@@ -31,7 +31,7 @@ export default async function (main, { id }) {
       </div></section>
       <section class="panel"><h2>الشعارات في رأس التقرير</h2><p class="hint">اختاري شعاراً أو اثنين أو ثلاثة، وحددي مكان كل شعار. «بدون» يترك المكان فارغاً.</p><div class="form">
         ${[["r", "اليمين"], ["c", "الوسط"], ["l", "اليسار"]].map(([k, l]) => { const v = (d.evLogos || EV_LOGO_DEFAULT)[k] ?? ""; return `<div class="f"><label for="evl-${k}">شعار ${l}</label><select id="evl-${k}" data-evl="${k}">
-          <option value="" ${!v ? "selected" : ""}>بدون</option>${EV_LOGO_CHOICES.filter((x) => LOGOS[x]).map((x) => `<option value="${x}" ${x === v ? "selected" : ""}>${LOGOS[x].label}</option>`).join("")}</select></div>`; }).join("")}
+          <option value="" ${!v ? "selected" : ""}>بدون</option>${EV_LOGO_CHOICES.filter((x) => LOGOS[x]).map((x) => `<option value="${x === canonLogo(v) ? v : x}" ${x === canonLogo(v) ? "selected" : ""}>${LOGOS[x].label}</option>`).join("")}</select></div>`; }).join("")}
       </div></section>
       <section class="panel"><h2>صور معبرة</h2><p class="hint">أضيفي صورة أو أكثر؛ تُطبع كلها بنفس الحجم وحولها إطار بسيط.</p><div id="photo"></div></section>${printOptionsPanel(ed)}`;
       bindFields(body, (k, v) => {

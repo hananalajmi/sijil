@@ -104,8 +104,8 @@ export async function fileUrl(fileId) {
 }
 // شعار: مخصص من الإعدادات أو الافتراضي من القوالب الرسمية
 export async function logoSrc(key) {
-  const custom = G().logos?.[key];
-  if (custom) { const u = await fileUrl(custom); if (u) return u; }
+  // صورة مستبدلة لهذا الشعار، أو للشعار الأصلي إن كان هذا نسخة مكررة منه، وإلا الصورة الافتراضية
+  for (const k of [key, LOGOS[key]?.alias]) { const custom = k && G().logos?.[k]; if (custom) { const u = await fileUrl(custom); if (u) return u; } }
   return LOGOS[key]?.src || "";
 }
 
