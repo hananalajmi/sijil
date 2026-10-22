@@ -7,8 +7,7 @@ import { paginate, auditPages } from "../report/paginate.js";
 import { recordContext, visitStatsContext, examStatsContext, compiledMonthlyContext, monthlyDerived } from "../report/context.js";
 import { KIND_LABEL, KIND_ROUTE } from "../kit.js";
 import { HEAD_LOGOS, HEAD_LOGO_CHOICES, LOGOS, canonLogo } from "../templates.js";
-import { G, setHeadLogos, setGuideData } from "../store.js";
-import { DAYS, MONTHS_AR } from "../ui.js";
+import { G, setHeadLogos } from "../store.js";
 // نوع النموذج لشعارات الرأس (تقرير الفعالية تُختار شعاراته من صفحة التقرير نفسها)
 const headKindOf = (ctx) => { const k = ctx.kind || ctx.rec?.kind; if (k === "stats_visits" || k === "stats_exams") return "stats"; if (k === "form") return ctx.rec?.data?.type; return k; };
 
@@ -72,7 +71,6 @@ export default async function (main, { id, params }) {
       <button class="btn primary" id="print">طباعة / حفظ PDF</button>
       <button class="btn" id="word">تصدير Word</button>
       <button class="btn" id="share" title="يرسل الملف (Word) عبر واتساب أو البريد من جهازك">إرسال</button>
-      ${ctx.days && ctx.month ? `<button class="btn" id="wa" title="إرسال الخطة إلى رقم واتساب محفوظ">واتساب</button>` : ""}
       ${!rec && id !== "compiled-ach" && !id.startsWith("blank-") ? `<button class="btn" id="freeze">حفظ نسخة معتمدة</button>` : ""}
     </div>
     <p class="hint no-print" style="margin:10px 0 0">لحفظ PDF: اضغطي «طباعة / حفظ PDF» ثم اختاري «حفظ كـ PDF» (في الجوال: مشاركة ← حفظ في الملفات). الملف مطابق لهذه المعاينة. «إرسال» يرسل الملف بصيغة Word عبر واتساب أو البريد، ولإرساله PDF: احفظيه PDF ثم أرسليه من الملفات.</p>
@@ -220,27 +218,6 @@ export default async function (main, { id, params }) {
       }
       download(blob, fname);
     } catch (e) { console.error(e); toast("تعذر إنشاء ملف Word: " + e.message, "error"); }
-  };
-  // الخطة الشهرية إلى واتساب: ملف PDF عبر المشاركة (يُختار واتساب ثم المحادثة)، أو رسالة نصية تفتح محادثة الرقم المحفوظ مباشرة
-  const wa = $("#wa", main);
-  if (wa) wa.onclick = async () => {
-    const [y, m] = ctx.month.split("-").map(Number), monthName = `${MONTHS_AR[m - 1]} ${y}`;
-    const lines = Object.entries(ctx.days).filter(([, c]) => c?.text?.trim()).map(([d, c]) => `• ${d} (${DAYS[new Date(y, m - 1, Number(d)).getDay()]}): ${c.text.trim().replace(/\n+/g, " — ")}`);
-    const text = `الخطة الشهرية — ${monthName}${G().full_name ? "\n" + G().full_name : ""}\n\n${lines.join("\n") || "لا توجد مواعيد مسجلة"}`;
-    let file = null;
-    try { toast("جارٍ تجهيز ملف الخطة…"); const { sheetsToPdf } = await import("../report/pdf.js"); const blob = await sheetsToPdf(sheets);
-      file = new File([blob], `${name.replace(/[\\/:*?"<>|]/g, "-")}.pdf`, { type: "application/pdf" }); } catch (e) { console.warn(e); }
-    const num = (v) => { let n = String(v || "").replace(/[^\d]/g, "").replace(/^00/, ""); if (n.length === 8) n = "965" + n; return n; };
-    const canFile = !!(file && navigator.canShare && navigator.canShare({ files: [file] }));
-    const v = await modal({ title: "إرسال الخطة إلى واتساب", body: `<div class="form" style="grid-template-columns:1fr">
-        <div class="f"><label for="wa-n">رقم الواتساب (يُحفظ لك)</label><input id="wa-n" type="tel" dir="ltr" inputmode="tel" value="${esc(G().wa_plan || "")}" placeholder="مثال: 9xxxxxxx"></div></div>
-      <p class="hint">«رسالة للرقم مباشرة» تفتح محادثة الرقم وفيها مواعيد الخطة مكتوبة. «إرسال ملف PDF» يرسل الخطة كاملة كملف: اختاري واتساب ثم المحادثة (واتساب لا يسمح للمواقع بإرسال ملف إلى رقم مباشرة).</p>`,
-      actions: [{ label: "إلغاء", value: null },
-        { label: canFile ? "إرسال ملف PDF" : "تنزيل ملف PDF", value: (b) => { const n = b.querySelector("#wa-n").value.trim(); if (file) { if (canFile) navigator.share({ files: [file], title: name }).catch(() => {}); else download(file, file.name); } return { n, done: !!file }; } },
-        { label: "رسالة للرقم مباشرة", kind: "primary", value: (b) => { const n = b.querySelector("#wa-n").value.trim(), d = num(n); if (d.length < 8) { toast("اكتبي رقم الواتساب", "error"); return { n }; }
-          window.open(`https://wa.me/${d}?text=${encodeURIComponent(text)}`, "_blank", "noopener"); return { n, done: true }; } }] });
-    if (v && v.n !== (G().wa_plan || "")) setGuideData("wa_plan", v.n);
-    if (v && !v.done && !file) toast("تعذّر إنشاء ملف PDF في هذا المتصفح", "error");
   };
   $("#word", main).onclick = () => word();
   $("#share", main).onclick = () => word("share");
