@@ -48,8 +48,25 @@ export default async function (main) {
     inp.value = ""; await save([...list(), { id: uid(), text: v, done: false, at: new Date().toISOString() }]); paint(); inp.focus(); };
   $("#tk-pen", main).onclick = async () => {
     const { drawSignature } = await import("../sigpad.js");
-    const f = await drawSignature({ modal, toast, title: "مهمة جديدة بالقلم", hint: "اكتبي المهمة داخل المربع بالقلم أو بإصبعك.", saveLabel: "إضافة المهمة", line: false });
-    if (!f) return;
+    const r = await drawSignature({ modal, toast, title: "مهمة جديدة بالقلم", hint: "اكتبي المهمة داخل المربع بالقلم أو بإصبعك، ثم «تحويل إلى نص» لتصير كتابة كيبورد، أو احفظيها بخط يدك.", saveLabel: "حفظ بخط اليد", line: false, toText: true });
+    if (!r) return;
+    let f = r;
+    if (r.toText) {
+      f = r.file;
+      try { toast("جارٍ تحويل الكتابة إلى نص…"); const { recognizeInk } = await import("../handwriting.js"); const cands = await recognizeInk(r.ink);
+        const bx = document.createElement("div");
+        bx.innerHTML = `<p class="hint" style="margin-top:0">اختاري الأقرب لما كتبتِ، وعدّليه إن احتاج:</p>
+            <div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:10px">${cands.map((c, i) => `<button type="button" class="btn small ${i ? "ghost" : ""}" data-cand="${esc(c)}">${esc(c)}</button>`).join("")}</div>
+            <div class="f"><input id="tk-rc" type="text" value="${esc(cands[0])}" aria-label="نص المهمة"></div>
+            <p class="hint">يُرسل شكل خطوط القلم فقط إلى خدمة Google المجانية للتعرف على الكتابة اليدوية.</p>`;
+        bx.querySelectorAll("[data-cand]").forEach((c) => (c.onclick = () => { bx.querySelector("#tk-rc").value = c.dataset.cand;
+          bx.querySelectorAll("[data-cand]").forEach((o) => o.classList.toggle("ghost", o !== c)); }));
+        const v = await modal({ title: "تحويل إلى نص", body: bx,
+          actions: [{ label: "إلغاء", value: null }, { label: "حفظ بخط اليد", value: "ink" }, { label: "إضافة كنص", kind: "primary", value: (b) => b.querySelector("#tk-rc").value.trim() }] });
+        if (v === null) return;
+        if (v !== "ink") { if (!v) return; await save([...list(), { id: uid(), text: v, done: false, at: new Date().toISOString() }]); paint(); toast("أُضيفت المهمة"); return; }
+      } catch (err) { toast(err.message + " — حُفظت بخط اليد", "error"); }
+    }
     try { const ink = await fileToInk(f); await save([...list(), { id: uid(), ink, done: false, at: new Date().toISOString() }]); paint(); toast("أُضيفت المهمة"); }
     catch (err) { toast("تعذّر حفظ المهمة: " + (err.message || ""), "error"); }
   };

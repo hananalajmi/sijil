@@ -1,5 +1,5 @@
 // لوحة رسم التوقيع بالإصبع أو القلم (Apple Pencil): خلفية شفافة، تُقص حول التوقيع وتُعاد كصورة PNG
-export async function drawSignature({ modal, toast, title = "رسم التوقيع", hint = "وقّعي داخل المربع بإصبعك أو بالقلم.", saveLabel = "حفظ التوقيع", line = true }) {
+export async function drawSignature({ modal, toast, title = "رسم التوقيع", hint = "وقّعي داخل المربع بإصبعك أو بالقلم.", saveLabel = "حفظ التوقيع", line = true, toText = false }) {
   const box = document.createElement("div");
   box.innerHTML = `<p class="hint" style="margin:0 0 8px">${hint}</p>
     <div style="position:relative;border:1px dashed var(--line,#bbb);border-radius:10px;background:#fff;touch-action:none">
@@ -21,7 +21,7 @@ export async function drawSignature({ modal, toast, title = "رسم التوقي
     if (P.length < 3) { g.fillStyle = s.col; g.beginPath(); g.arc(P[0].x * dpr, P[0].y * dpr, s.w * dpr * 0.6, 0, 7); g.fill(); return; }
     let a = P[0]; for (let i = 1; i < P.length - 1; i++) { seg(s, a, P[i], P[i + 1]); a = { x: (P[i].x + P[i + 1].x) / 2, y: (P[i].y + P[i + 1].y) / 2, p: P[i].p }; } };
   const redraw = () => { if (!g) return; g.clearRect(0, 0, cv.width, cv.height); strokes.forEach(drawStroke); };
-  const pt = (e) => { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top, p: e.pointerType === "pen" && e.pressure ? e.pressure : 0.5 }; };
+  const pt = (e) => { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top, p: e.pointerType === "pen" && e.pressure ? e.pressure : 0.5, t: Math.round(e.timeStamp || performance.now()) }; };
   const bind = () => {
     if (!setup()) return requestAnimationFrame(bind);
     cv.addEventListener("pointerdown", (e) => { e.preventDefault(); cv.setPointerCapture?.(e.pointerId);
@@ -34,8 +34,14 @@ export async function drawSignature({ modal, toast, title = "رسم التوقي
     box.querySelector("#sp-col").onchange = (e) => { strokes.forEach((s) => (s.col = e.target.value)); redraw(); };
   };
   requestAnimationFrame(bind);
-  const blob = await modal({ title, body: box, actions: [{ label: "إلغاء", value: null }, { label: saveLabel, kind: "primary", value: () => exportPng() }] });
-  return blob ? new File([blob], "signature-drawn.png", { type: "image/png" }) : null;
+  // toText: زر إضافي يحوّل خط اليد إلى نص (يعيد الصورة والخطوط معاً)
+  const inkData = () => ({ w: cv.clientWidth, h: cv.clientHeight, strokes: strokes.filter((s) => s.pts.length).map((s) => s.pts.map(({ x, y, t }) => ({ x, y, t }))) });
+  const actions = [{ label: "إلغاء", value: null }, { label: saveLabel, kind: toText ? "" : "primary", value: () => exportPng() }];
+  if (toText) actions.push({ label: "تحويل إلى نص", kind: "primary", value: () => { const p = exportPng(); return p ? Promise.resolve(p).then((b) => (b ? { text: true, blob: b, ink: inkData() } : null)) : null; } });
+  const out = await modal({ title, body: box, actions });
+  if (!out) return null;
+  if (out.text) return { toText: true, file: new File([out.blob], "drawn.png", { type: "image/png" }), ink: out.ink };
+  return new File([out], "signature-drawn.png", { type: "image/png" });
 
   // قص حول الرسم بهامش صغير وتصدير PNG شفاف (يُستدعى قبل إغلاق النافذة)
   function exportPng() {
