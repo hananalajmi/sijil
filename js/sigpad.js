@@ -1,10 +1,10 @@
 // لوحة رسم التوقيع بالإصبع أو القلم (Apple Pencil): خلفية شفافة، تُقص حول التوقيع وتُعاد كصورة PNG
-export async function drawSignature({ modal, toast, title = "رسم التوقيع" }) {
+export async function drawSignature({ modal, toast, title = "رسم التوقيع", hint = "وقّعي داخل المربع بإصبعك أو بالقلم.", saveLabel = "حفظ التوقيع", line = true }) {
   const box = document.createElement("div");
-  box.innerHTML = `<p class="hint" style="margin:0 0 8px">وقّعي داخل المربع بإصبعك أو بالقلم.</p>
+  box.innerHTML = `<p class="hint" style="margin:0 0 8px">${hint}</p>
     <div style="position:relative;border:1px dashed var(--line,#bbb);border-radius:10px;background:#fff;touch-action:none">
       <canvas id="sp-cv" style="display:block;width:100%;height:220px;touch-action:none;cursor:crosshair" aria-label="مساحة التوقيع"></canvas>
-      <div style="position:absolute;inset-inline:24px;bottom:46px;border-bottom:1px solid #d9d4c7;pointer-events:none"></div></div>
+      ${line ? '<div style="position:absolute;inset-inline:24px;bottom:46px;border-bottom:1px solid #d9d4c7;pointer-events:none"></div>' : ""}</div>
     <div class="row" style="gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
       <label>اللون <select id="sp-col"><option value="#14254a">كحلي</option><option value="#1d4ed8">أزرق</option><option value="#111111">أسود</option></select></label>
       <label>السُّمك <select id="sp-w"><option value="2">رفيع</option><option value="3" selected>متوسط</option><option value="4.5">عريض</option></select></label>
@@ -34,12 +34,12 @@ export async function drawSignature({ modal, toast, title = "رسم التوقي
     box.querySelector("#sp-col").onchange = (e) => { strokes.forEach((s) => (s.col = e.target.value)); redraw(); };
   };
   requestAnimationFrame(bind);
-  const blob = await modal({ title, body: box, actions: [{ label: "إلغاء", value: null }, { label: "حفظ التوقيع", kind: "primary", value: () => exportPng() }] });
+  const blob = await modal({ title, body: box, actions: [{ label: "إلغاء", value: null }, { label: saveLabel, kind: "primary", value: () => exportPng() }] });
   return blob ? new File([blob], "signature-drawn.png", { type: "image/png" }) : null;
 
   // قص حول الرسم بهامش صغير وتصدير PNG شفاف (يُستدعى قبل إغلاق النافذة)
   function exportPng() {
-    if (!strokes.some((s) => s.pts.length)) { toast("لم يُرسم توقيع"); return null; }
+    if (!strokes.some((s) => s.pts.length)) { toast("لم يُرسم شيء"); return null; }
     const d = g.getImageData(0, 0, cv.width, cv.height).data; let x0 = cv.width, y0 = cv.height, x1 = -1, y1 = -1;
     for (let y = 0; y < cv.height; y++) for (let x = 0; x < cv.width; x++) if (d[(y * cv.width + x) * 4 + 3] > 10) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
     if (x1 < 0) return null;

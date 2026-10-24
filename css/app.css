@@ -588,3 +588,22 @@ input.cid-ok { border-color: var(--good) !important; background: var(--good-soft
 .cal-ev.cal-note { background: #fff3a8; color: #5c4a00; border: 1px solid #ecd770; cursor: pointer; }
 .sticky-note { width: 100%; box-sizing: border-box; background: #fff8c4; color: #3d3200; border: 1px solid #ecd770; border-radius: 10px; padding: 12px; line-height: 1.8; font: inherit; box-shadow: 0 4px 10px rgba(120, 100, 0, .12); }
 :root[data-theme="dark"] .sticky-note, :root[data-theme="dark"] .cal-ev.cal-note { background: #fff3a8; color: #3d3200; }
+
+/* قائمة المهام */
+.tasks { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.task { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card, #fff); }
+.tk-box { position: relative; flex: none; width: 30px; height: 30px; cursor: pointer; }
+.tk-box input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.tk-box span { position: absolute; inset: 0; border: 2px solid var(--accent, #1f3a6e); border-radius: 8px; background: #fff; pointer-events: none; }
+.tk-box input:checked + span { background: #1f8a4c; border-color: #1f8a4c; }
+.tk-box input:checked + span::after { content: "✓"; position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-size: 20px; font-weight: 800; line-height: 1; }
+.tk-box input:focus-visible + span { outline: 3px solid var(--accent-soft, #c9d6ef); outline-offset: 2px; }
+.tk-body { flex: 1; min-width: 0; cursor: default; }
+.tk-body[role=button] { cursor: text; }
+.tk-text { font-size: 1.05em; line-height: 1.7; overflow-wrap: anywhere; }
+.tk-ink { position: relative; display: inline-block; max-width: 100%; }
+.tk-ink img { display: block; max-width: 100%; max-height: 90px; }
+.task.done { opacity: .6; }
+.task.done .tk-text { text-decoration: line-through; text-decoration-thickness: 2px; }
+.task.done .tk-ink::after { content: ""; position: absolute; inset-inline: -4px; top: 50%; border-top: 2.5px solid #333; transform: rotate(-2deg); }
+.tk-del { flex: none; }
