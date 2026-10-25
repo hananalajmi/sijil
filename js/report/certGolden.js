@@ -56,7 +56,8 @@ export const goldDefaults = () => ({ bg: "frame", titleArt: "art", titleColor: "
   intro: "يتقدم التوجيه الفني للعلوم بمنطقة الأحمدي التعليمية بخالص الشكر والتقدير إلى", jobTitle: "المعلمة", phrase: "لجهودها المتميزة وعطائها وإخلاصها في العمل", body: "لجهودها المتميزة وعطائها وإخلاصها في العمل", closing: "مع تمنياتنا لكم بمزيد من التقدم والازدهار",
   nameFont: "plex", nameColor: "", textFont: "notosans", textColor: "#1d2333", sizeK: 100,
   gLogoR: "ministry", gLogoL: "directorate", gLogoR_img: "", gLogoL_img: "", firstSupName: "", signTitle: "الموجه الأول للعلوم",
-  gSig: false, gStamp: false, gStamp2: false, gStamp2_img: "", gStamp2Pos: "right" });
+  gSig: false, gStamp: false, gStamp2: false, gStamp2_img: "", gStamp2Pos: "right",
+  sign2On: false, sign2Title: "الموجه الفني", sign2Name: "", gMarksSide: "left" });
 
 // قياس النص بنفس الخط المستعمل في الرسم
 let mctx = null;
@@ -178,11 +179,18 @@ export function goldSVG(d, name, res, { portrait = false, blank = false, cls = "
     y += x.h + x.gapB;
   }
   // التوقيع: أسفل اليسار دائماً
-  const S = B.sign, sup = blank ? "" : String(d.firstSupName || "").trim();
-  const sT = String(d.signTitle ?? SIGN_TITLES_DEFAULT).trim(), sF = FN("sign"), sP = SS.sign.size;
-  if (sT) out.push(T(S.x, S.y, sT, sF, fitPt(sT, sF, sP, 76, 10), SS.sign.color, 'class="cg-sign"'));
-  if (sup) out.push(T(S.x, S.y + sP * PT * 1.55, "أ/ " + sup, sF, fitPt("أ/ " + sup, sF, sP * .92, 76, 10), C.navy, 'class="cg-sup"'));
-  out.push(`<path d="M${S.x - 30} ${S.y + 26}H${S.x + 30}" stroke="${C.goldDark}" stroke-width=".3" stroke-dasharray="1 1.4"/>`, T(S.x, S.y + 30.5, "التوقيع", GOLD_FONTS.text, 9.5, "#8b7d63"));
+  // التوقيع: أسفل اليسار، وتوقيع ثانٍ اختياري أسفل اليمين (في موضع مقابل)
+  const S1 = B.sign, S2 = { x: W - B.sign.x, y: B.sign.y }, sF = FN("sign"), sP = SS.sign.size;
+  const signAt = (S, title, person, cls) => {
+    const sT = String(title || "").trim(), sup = blank ? "" : String(person || "").trim();
+    if (sT) out.push(T(S.x, S.y, sT, sF, fitPt(sT, sF, sP, 76, 10), SS.sign.color, `class="cg-sign ${cls}"`));
+    if (sup) out.push(T(S.x, S.y + sP * PT * 1.55, "أ/ " + sup, sF, fitPt("أ/ " + sup, sF, sP * .92, 76, 10), C.navy, `class="cg-sup ${cls}"`));
+    out.push(`<path d="M${S.x - 30} ${S.y + 26}H${S.x + 30}" stroke="${C.goldDark}" stroke-width=".3" stroke-dasharray="1 1.4"/>`, T(S.x, S.y + 30.5, "التوقيع", GOLD_FONTS.text, 9.5, "#8b7d63"));
+  };
+  signAt(S1, d.signTitle ?? SIGN_TITLES_DEFAULT, d.firstSupName, "s1");
+  const two = !!d.sign2On;
+  if (two) signAt(S2, d.sign2Title, d.sign2Name, "s2");
+  const S = two && d.gMarksSide === "right" ? S2 : S1; // مكان صورة توقيعي وختمي
   // صورة التوقيع والختم فوق خط التوقيع، والختم الإضافي أسفل اليمين أو في الوسط
   const put = (L, box, cls) => { if (!L?.src) return; const [iw, ih] = L.size || [1, 1], s = Math.min(box.w / iw, box.h / ih), w = iw * s, h = ih * s;
     out.push(`<image class="${cls}" href="${L.src}" x="${(box.x + (box.w - w) / 2).toFixed(2)}" y="${(box.y + (box.h - h) / 2).toFixed(2)}" width="${w.toFixed(2)}" height="${h.toFixed(2)}" preserveAspectRatio="xMidYMid meet" style="mix-blend-mode:multiply"/>`); };
@@ -190,7 +198,10 @@ export function goldSVG(d, name, res, { portrait = false, blank = false, cls = "
     const both = res?.sig?.src && res?.stamp?.src;
     put(res?.sig, { x: S.x - (both ? 20 : 15), y: S.y + 11.5, w: 30, h: 14 }, "cg-sigimg");
     put(res?.stamp, { x: both ? S.x + 7 : S.x - 12, y: S.y + 7, w: 24, h: 21 }, "cg-stampimg");
-    const p2 = d.gStamp2Pos === "center" ? { x: CX - 15, y: S.y - 2, w: 30, h: 28 } : { x: W - S.x - 16, y: S.y - 4, w: 32, h: 30 };
+    // الختم الآخر: أسفل الوسط، أو على الجهة المقابلة لتوقيعي (فوق خط التوقيع الثاني إن وُجد)
+    const other = S === S1 ? S2 : S1;
+    const p2 = d.gStamp2Pos === "center" ? { x: CX - 15, y: S.y - 2, w: 30, h: 28 }
+      : two ? { x: other.x - 13, y: other.y + 5, w: 26, h: 23 } : { x: W - S.x - 16, y: S.y - 4, w: 32, h: 30 };
     put(res?.stamp2, p2, "cg-stamp2");
   }
   const defs = `<defs><linearGradient id="cgG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9cf86"/><stop offset=".5" stop-color="${C.gold}"/><stop offset="1" stop-color="#8a6526"/></linearGradient>

@@ -99,15 +99,20 @@ function goldenEditor(body, ed, designSel) {
     <section class="panel"><h2>التوقيع (أسفل اليسار)</h2><div class="form">
       ${field({ label: "المسمى", key: "signTitle", type: "select", options: opts("cert_g_signers"), value: d.signTitle ?? "الموجه الأول للعلوم", remember: "cert_g_signers" })}
       ${field({ label: "اسم الشخص (اختياري)", key: "firstSupName", value: d.firstSupName || "" })}</div>
+      <label class="row" style="gap:8px;margin-top:12px"><input type="checkbox" id="cg-s2on" ${d.sign2On ? "checked" : ""}> <b>إضافة توقيع ثانٍ (أسفل اليمين)</b></label>
+      <div class="form" id="cg-s2f" style="margin-top:8px;${d.sign2On ? "" : "display:none"}">
+        ${field({ label: "مسمى التوقيع الثاني", key: "sign2Title", type: "select", options: opts("cert_g_signers"), value: d.sign2Title ?? "الموجه الفني", remember: "cert_g_signers" })}
+        ${field({ label: "اسم الشخص (اختياري)", key: "sign2Name", value: d.sign2Name || "" })}</div>
       <p class="hint">لا يُطبع تاريخ في هذا القالب.</p></section>
     <section class="panel"><h2>التوقيع والأختام على الشهادة</h2>
       <div class="checks" style="display:flex;flex-wrap:wrap;gap:14px">
         <label><input type="checkbox" id="cg-sig" ${d.gSig ? "checked" : ""}> توقيعي</label>
         <label><input type="checkbox" id="cg-stamp" ${d.gStamp ? "checked" : ""}> ختمي</label>
         <label><input type="checkbox" id="cg-stamp2" ${d.gStamp2 ? "checked" : ""}> ختم آخر</label></div>
+      <div class="form" id="cg-sidebox" style="margin-top:8px;${d.sign2On ? "" : "display:none"}"><div class="f"><label for="cg-side">مكان توقيعي وختمي</label><select id="cg-side">${opt("left", d.gMarksSide || "left", "فوق التوقيع الأيسر")}${opt("right", d.gMarksSide, "فوق التوقيع الأيمن")}</select></div></div>
       <p class="hint" id="cg-mk-hint">${!G().signature || !G().stamp ? `صورة ${!G().signature && !G().stamp ? "التوقيع والختم" : !G().signature ? "التوقيع" : "الختم"} غير مرفوعة — ارفعيها من <a href="#/guide">بيانات الموجّه الفني</a>.` : "التوقيع والختم من بيانات الموجّه الفني، ويظهران فوق خط التوقيع."}</p>
       <div class="form" id="cg-s2box" style="${d.gStamp2 ? "" : "display:none"}">
-        <div class="f"><label for="cg-s2pos">مكان الختم الآخر</label><select id="cg-s2pos">${opt("right", d.gStamp2Pos || "right", "أسفل اليمين")}${opt("center", d.gStamp2Pos, "أسفل الوسط")}</select></div>
+        <div class="f"><label for="cg-s2pos">مكان الختم الآخر</label><select id="cg-s2pos">${opt("right", d.gStamp2Pos || "right", "الجهة الأخرى (فوق التوقيع المقابل)")}${opt("center", d.gStamp2Pos, "أسفل الوسط")}</select></div>
         <div class="f"><span class="lab">صورة الختم الآخر</span><div class="row" style="gap:6px"><label class="btn sm">${d.gStamp2_img ? "استبدال الصورة" : "رفع صورة الختم"}<input type="file" accept="image/*" id="cg-s2up" hidden></label>
           <button class="btn sm ghost" type="button" id="cg-s2del">حذف</button></div></div></div></section>`;
   // المعاينة المباشرة
@@ -126,6 +131,11 @@ function goldenEditor(body, ed, designSel) {
       if (P.defLogoR && (x.data.gLogoR || "ministry") === "ministry") x.data.gLogoR = P.defLogoR; else if (!P.defLogoR && prev?.defLogoR && x.data.gLogoR === prev.defLogoR) x.data.gLogoR = "ministry"; });
     $("#cg-R", body).value = ed.rec.data.gLogoR || ""; repaint(); };
   // التوقيع والأختام
+  $("#cg-s2on", body).onchange = (e) => { const on = e.target.checked; ed.change((x) => { x.data.sign2On = on;
+      if (on && !x.data.sign2Name) { const g = G(), t = x.data.sign2Title ?? "الموجه الفني"; x.data.sign2Title = t; x.data.sign2Name = /الأول/.test(t) ? g.first_supervisor || FIRST_SUPERVISOR.name || "" : g.full_name || state.profile?.full_name || ""; } });
+    const nm = $("[data-key='sign2Name']", body); if (nm) nm.value = ed.rec.data.sign2Name || "";
+    $("#cg-s2f", body).style.display = on ? "" : "none"; $("#cg-sidebox", body).style.display = on ? "" : "none"; repaint(); };
+  $("#cg-side", body).onchange = (e) => { ed.change((x) => { x.data.gMarksSide = e.target.value; }); repaint(); };
   $("#cg-sig", body).onchange = (e) => { ed.change((x) => { x.data.gSig = e.target.checked; }); repaint(); };
   $("#cg-stamp", body).onchange = (e) => { ed.change((x) => { x.data.gStamp = e.target.checked; }); repaint(); };
   $("#cg-stamp2", body).onchange = (e) => { const on = e.target.checked; ed.change((x) => { x.data.gStamp2 = on; }); $("#cg-s2box", body).style.display = on ? "" : "none";
@@ -156,6 +166,8 @@ function goldenEditor(body, ed, designSel) {
     if (k === "phrase" && v) setBody(genderize(v, gOf(ed.rec.data.jobTitle)));
     if (k === "signTitle") { const g = G(), first = g.first_supervisor || FIRST_SUPERVISOR.name || "", me = g.full_name || state.profile?.full_name || "", cur = ed.rec.data.firstSupName || "";
       const auto = /الأول/.test(v) ? first : /الموجه|الموجهة/.test(v) ? me : ""; if (!cur || cur === first || cur === me) { ed.change((x) => { x.data.firstSupName = auto; }); const el = $("[data-key='firstSupName']", body); if (el) el.value = auto; } }
+    if (k === "sign2Title") { const g = G(), first = g.first_supervisor || FIRST_SUPERVISOR.name || "", me = g.full_name || state.profile?.full_name || "", cur = ed.rec.data.sign2Name || "";
+      const auto = /الأول/.test(v) ? first : /الموجه|الموجهة/.test(v) ? me : ""; if (!cur || cur === first || cur === me) { ed.change((x) => { x.data.sign2Name = auto; }); const el = $("[data-key='sign2Name']", body); if (el) el.value = auto; } }
     if (k === "jobTitle") { const ph = ed.rec.data.phrase || "", cur = $("#cg-body", body).value; // تُعاد صياغة العبارة فقط إن لم تُعدَّل يدوياً
       if (ph && [genderize(ph, "f"), genderize(ph, "m")].includes(cur)) setBody(genderize(ph, gOf(v))); }
     repaint(); });
