@@ -71,6 +71,17 @@ export async function paginate(rep, container) {
     : b.table ? `<div class="blk tbl">${b.table.before || ""}<table class="${b.table.cls || ""}">${b.table.colgroup || ""}<thead>${b.table.thead || ""}</thead><tbody>${b.table.rows.join("")}</tbody></table></div>` : "";
   const place = (b) => {
     if (b.pageBreak) { if (!isEmpty()) fresh(); return; }
+    // fill: كتلة تملأ المساحة الباقية في الصفحة (مثل صور تقرير الفعالية)؛ إن بقي أقل من min مم تنتقل لصفحة جديدة
+    if (b.fill) {
+      const node = el(`<div class="blk fill">${b.html}</div>`);
+      const mm = 96 / 25.4, fit = () => { node.style.height = "0px"; const cs = getComputedStyle(node);
+        const rem = body.getBoundingClientRect().bottom - node.getBoundingClientRect().top - (parseFloat(cs.marginBottom) || 0) - 1;
+        node.style.height = Math.max(0, Math.floor(rem)) + "px"; return rem; };
+      body.appendChild(node);
+      if (fit() < (b.fill.min || 30) * mm && body.childElementCount > 1) { body.removeChild(node); fresh(); body.appendChild(node); fit(); }
+      b.fill.fit?.(node);
+      return;
+    }
     if (b.html) {
       const node = el(`<div class="blk">${b.html}</div>`);
       placeAtomic(node);

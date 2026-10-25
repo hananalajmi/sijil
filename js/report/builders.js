@@ -238,13 +238,25 @@ export async function eventReport(ctx) {
   const imgs = await Promise.all(photos.map((p) => img(p, "photo")));
   if (!imgs.length) blocks.push({ html: `<div class="ev-box ev-photo"><div class="ev-box-h">صورة معبرة</div><div class="ev-img"></div></div>` });
   else {
-    const per = 2, rowsHtml = [];
-    for (let i = 0; i < imgs.length; i += per) rowsHtml.push(`<div class="ev-ph-row">${imgs.slice(i, i + per).map((x) => `<div class="ev-ph">${x}</div>`).join("")}</div>`);
-    // كل صف صور كتلة مستقلة لا تنقسم؛ العنوان ملتصق بالصف الأول
-    rowsHtml.forEach((row, i) => blocks.push({ html: `<div class="ev-box ev-photos ${i ? "cont" : ""}">${i ? "" : `<div class="ev-box-h">${imgs.length > 1 ? "صور معبرة" : "صورة معبرة"}</div>`}<div class="grp-items">${row}</div></div>` }));
+    // مربع واحد يملأ المساحة الباقية في الصفحة، والصور بنفس الحجم مرتبة بأكبر حجم يتسع داخل الإطار (التقرير في صفحة واحدة)
+    blocks.push({ html: `<div class="ev-box ev-photos ev-fill"><div class="ev-box-h">${imgs.length > 1 ? "صور معبرة" : "صورة معبرة"}</div><div class="ev-grid">${imgs.map((x) => `<div class="ev-ph">${x}</div>`).join("")}</div></div>`,
+      fill: { min: 40, fit: fitPhotos } });
   }
   const footer = await sigRow([{ ...mySig(ctx, "الموجهة الفنية:"), prefix: "أ." }], "ev-sigs one");
   return { orientation: "portrait", cls: "t-ev", header, identity: "", footer, blocks };
+}
+
+// ترتيب صور الفعالية داخل مساحة المربع: يُختار عدد الأعمدة الذي يعطي أكبر صورة (نسبة 4:3) دون تجاوز الإطار
+export function fitPhotos(node) {
+  const g = node.querySelector(".ev-grid"); if (!g) return;
+  const items = [...g.children], n = items.length; if (!n) return;
+  const cs = getComputedStyle(g), gap = parseFloat(cs.columnGap) || 0;
+  const W = g.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), H = g.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  let best = { w: 0, c: 1 };
+  for (let c = 1; c <= n; c++) { const r = Math.ceil(n / c); const w = Math.min((W - gap * (c - 1)) / c, ((H - gap * (r - 1)) / r) * 4 / 3); if (w > best.w) best = { w, c }; }
+  const w = Math.floor(best.w * 100) / 100 - 0.5;
+  g.style.gridTemplateColumns = `repeat(${best.c}, ${w}px)`;
+  items.forEach((it) => { it.style.width = w + "px"; it.style.height = (w * 3) / 4 + "px"; });
 }
 
 /* ============================== بيانات الأقسام العلمية ============================== */

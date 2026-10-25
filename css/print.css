@@ -272,6 +272,12 @@
 
 /* تقرير الفعالية: صور متعددة بنفس الحجم وإطار بسيط، وتوقيع الموجهة وحدها */
 .t-ev .ev-photos .grp-items { padding: 3mm; display: flex; flex-direction: column; gap: 3mm; }
+/* المربع يملأ باقي الصفحة والصور داخله دائماً (fitPhotos يحدد الأعمدة والحجم) */
+.t-ev .blk.fill { box-sizing: border-box; display: flex; flex-direction: column; }
+.t-ev .ev-fill { flex: 1; min-height: 0; display: flex; flex-direction: column; box-sizing: border-box; overflow: hidden; }
+.t-ev .ev-grid { flex: 1; min-height: 0; display: flex; flex-wrap: wrap; gap: 4mm; padding: 3mm; justify-content: center; align-content: center; box-sizing: border-box; }
+.t-ev .ev-grid .ev-ph { flex: none; }
+.t-ev .ev-grid .ev-ph { aspect-ratio: auto; box-sizing: border-box; min-width: 0; overflow: hidden; }
 .t-ev .ev-ph-row { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
 .t-ev .ev-ph { border: 1pt solid #555; padding: 1.5mm; background: #fff; aspect-ratio: 4 / 3; display: flex; }
 .t-ev .ev-ph .photo { width: 100%; height: 100%; object-fit: cover; display: block; }
