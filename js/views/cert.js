@@ -96,7 +96,7 @@ function goldenEditor(body, ed, designSel) {
         <td><select data-ss="${k}" aria-label="حجم ${esc(l)}">${STYLE_SIZES.map((n) => opt(String(n), String(S.size), n + " نقطة")).join("")}</select></td>
         <td><input type="color" data-sc="${k}" value="${esc(S.color || GOLD_BGS[d.bg || "frame"].nameColor || "#14254a")}" aria-label="لون ${esc(l)}"></td></tr>`; }).join("")}</tbody></table></div>
       <p class="hint">${Object.keys(TEXT_FONTS).length} خطاً عربياً مجانياً من Google Fonts. إذا زاد الكلام يصغر الكل بنسبة واحدة تلقائياً حتى يبقى بعيداً عن الزخارف والتوقيع.</p></section>
-    <section class="panel"><h2>التوقيع</h2><p class="hint" style="margin-top:0">لكل شخص خانة كاملة تحت بعض: المسمى ← الاسم ← الختم ← التوقيع ← التاريخ. اختاري جهة الخانة الأولى، والثانية في الجهة الأخرى.</p><div class="form">
+    <section class="panel"><h2>التوقيع</h2><p class="hint" style="margin-top:0">لكل شخص خانة كاملة: المسمى ← الاسم ← التوقيع + الختم (ثم التاريخ). اختاري جهة الخانة الأولى، والثانية في الجهة الأخرى. توقيعك وختمك يظهران في خانة «الموجه الفني» أو اسمك، والشخص الآخر يرفع ختمه وتوقيعه في خانته.</p><div class="form">
       <div class="f"><label for="cg-sside">جهة التوقيع الأول</label><select id="cg-sside">${opt("left", d.signSide || "left", "يسار")}${opt("right", d.signSide, "يمين")}</select></div>
       ${field({ label: "المسمى", key: "signTitle", type: "select", options: opts("cert_g_signers"), value: d.signTitle ?? "الموجه الأول للعلوم", remember: "cert_g_signers" })}
       ${field({ label: "اسم الشخص (اختياري)", key: "firstSupName", value: d.firstSupName || "" })}</div>
@@ -104,9 +104,9 @@ function goldenEditor(body, ed, designSel) {
       <div class="form" id="cg-s2f" style="margin-top:8px;${d.sign2On ? "" : "display:none"}">
         ${field({ label: "مسمى التوقيع الثاني", key: "sign2Title", type: "select", options: opts("cert_g_signers"), value: d.sign2Title ?? "الموجه الفني", remember: "cert_g_signers" })}
         ${field({ label: "اسم الشخص (اختياري)", key: "sign2Name", value: d.sign2Name || "" })}
-        <div class="f"><span class="lab">ختمه (يظهر تحت اسمه)</span><div class="row" style="gap:6px;flex-wrap:wrap"><label class="btn sm">رفع صورة الختم<input type="file" accept="image/*" data-o-up="stamp" hidden></label>
+        <div class="f"><span class="lab">ختمه (تحت اسمه بجانب توقيعه)</span><div class="row" style="gap:6px;flex-wrap:wrap"><label class="btn sm">رفع صورة الختم<input type="file" accept="image/*" data-o-up="stamp" hidden></label>
           <button class="btn sm ghost" type="button" data-o-del="stamp">حذف</button><span class="hint" data-o-st="stamp">${d.gStamp2_img ? "✓ مرفوع" : ""}</span></div></div>
-        <div class="f"><span class="lab">توقيعه (تحت الختم)</span><div class="row" style="gap:6px;flex-wrap:wrap"><label class="btn sm">رفع صورة<input type="file" accept="image/*" data-o-up="sig" hidden></label>
+        <div class="f"><span class="lab">توقيعه (تحت اسمه)</span><div class="row" style="gap:6px;flex-wrap:wrap"><label class="btn sm">رفع صورة<input type="file" accept="image/*" data-o-up="sig" hidden></label>
           <button class="btn sm" type="button" id="cg-o-draw">✍️ يوقّع باليد</button><button class="btn sm ghost" type="button" data-o-del="sig">حذف</button><span class="hint" data-o-st="sig">${d.gSig2_img ? "✓ مرفوع" : ""}</span></div></div></div>
       <div class="form" style="margin-top:12px"><label class="row" style="gap:8px;align-self:end"><input type="checkbox" id="cg-showdate" ${d.gShowDate !== false ? "checked" : ""}> <b>التاريخ تحت توقيعي</b></label>
         <div class="f"><label for="cg-date">التاريخ</label><input type="date" id="cg-date" value="${esc(d.gDate || today())}"></div></div></section>
