@@ -37,10 +37,10 @@ export async function drawSignature({ modal, toast, title = "رسم التوقي
   // toText: زر إضافي يحوّل خط اليد إلى نص (يعيد الصورة والخطوط معاً)
   const inkData = () => ({ w: cv.clientWidth, h: cv.clientHeight, strokes: strokes.filter((s) => s.pts.length).map((s) => s.pts.map(({ x, y, t }) => ({ x, y, t }))) });
   const actions = [{ label: "إلغاء", value: null }, { label: saveLabel, kind: toText ? "" : "primary", value: () => exportPng() }];
-  if (toText) actions.push({ label: "تحويل إلى نص", kind: "primary", value: () => { const p = exportPng(); return p ? Promise.resolve(p).then((b) => (b ? { text: true, blob: b, ink: inkData() } : null)) : null; } });
+  if (toText) actions.push({ label: "تحويل إلى نص", kind: "primary", value: () => { const p = exportPng(); return p ? Promise.resolve(p).then((b) => (b ? { __toText: true, blob: b, ink: inkData() } : null)) : null; } });
   const out = await modal({ title, body: box, actions });
   if (!out) return null;
-  if (out.text) return { toText: true, file: new File([out.blob], "drawn.png", { type: "image/png" }), ink: out.ink };
+  if (out.__toText) return { toText: true, file: new File([out.blob], "drawn.png", { type: "image/png" }), ink: out.ink };
   return new File([out], "signature-drawn.png", { type: "image/png" });
 
   // قص حول الرسم بهامش صغير وتصدير PNG شفاف (يُستدعى قبل إغلاق النافذة)

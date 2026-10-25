@@ -103,23 +103,23 @@ function goldenEditor(body, ed, designSel) {
       <label class="row" style="gap:8px;margin-top:12px"><input type="checkbox" id="cg-s2on" ${d.sign2On ? "checked" : ""}> <b>إضافة توقيع ثانٍ (في الجهة الأخرى)</b></label>
       <div class="form" id="cg-s2f" style="margin-top:8px;${d.sign2On ? "" : "display:none"}">
         ${field({ label: "مسمى التوقيع الثاني", key: "sign2Title", type: "select", options: opts("cert_g_signers"), value: d.sign2Title ?? "الموجه الفني", remember: "cert_g_signers" })}
-        ${field({ label: "اسم الشخص (اختياري)", key: "sign2Name", value: d.sign2Name || "" })}</div>
+        ${field({ label: "اسم الشخص (اختياري)", key: "sign2Name", value: d.sign2Name || "" })}
+        <div class="f"><span class="lab">ختمه (يظهر تحت اسمه)</span><div class="row" style="gap:6px;flex-wrap:wrap"><label class="btn sm">رفع صورة الختم<input type="file" accept="image/*" data-o-up="stamp" hidden></label>
+          <button class="btn sm ghost" type="button" data-o-del="stamp">حذف</button><span class="hint" data-o-st="stamp">${d.gStamp2_img ? "✓ مرفوع" : ""}</span></div></div>
+        <div class="f"><span class="lab">توقيعه (تحت الختم)</span><div class="row" style="gap:6px;flex-wrap:wrap"><label class="btn sm">رفع صورة<input type="file" accept="image/*" data-o-up="sig" hidden></label>
+          <button class="btn sm" type="button" id="cg-o-draw">✍️ يوقّع باليد</button><button class="btn sm ghost" type="button" data-o-del="sig">حذف</button><span class="hint" data-o-st="sig">${d.gSig2_img ? "✓ مرفوع" : ""}</span></div></div></div>
       <div class="form" style="margin-top:12px"><label class="row" style="gap:8px;align-self:end"><input type="checkbox" id="cg-showdate" ${d.gShowDate !== false ? "checked" : ""}> <b>التاريخ تحت توقيعي</b></label>
         <div class="f"><label for="cg-date">التاريخ</label><input type="date" id="cg-date" value="${esc(d.gDate || today())}"></div></div></section>
     <section class="panel"><h2>التوقيع والأختام على الشهادة</h2>
       <div class="checks" style="display:flex;flex-wrap:wrap;gap:14px">
         <label><input type="checkbox" id="cg-sig" ${d.gSig ? "checked" : ""}> توقيعي</label>
-        <label><input type="checkbox" id="cg-stamp" ${d.gStamp ? "checked" : ""}> ختمي</label>
-        <label><input type="checkbox" id="cg-stamp2" ${d.gStamp2 ? "checked" : ""}> ختم آخر</label></div>
+        <label><input type="checkbox" id="cg-stamp" ${d.gStamp ? "checked" : ""}> ختمي</label></div>
       <p class="hint" id="cg-mk-hint">${!G().signature || !G().stamp ? `صورة ${!G().signature && !G().stamp ? "التوقيع والختم" : !G().signature ? "التوقيع" : "الختم"} غير مرفوعة — ارفعيها من <a href="#/guide">بيانات الموجّه الفني</a>.` : "التوقيع والختم من بيانات الموجّه الفني، ويظهران في خانة توقيعك أنتِ (حسب المسمى «الموجه الفني» أو اسمك)."}</p>
-      <div class="form" id="cg-s2box" style="${d.gStamp2 ? "" : "display:none"}">
-        <div class="f"><label for="cg-s2pos">مكان الختم الآخر</label><select id="cg-s2pos">${opt("right", d.gStamp2Pos || "right", "الجهة الأخرى (فوق التوقيع المقابل)")}${opt("center", d.gStamp2Pos, "أسفل الوسط")}</select></div>
-        <div class="f"><span class="lab">صورة الختم الآخر</span><div class="row" style="gap:6px"><label class="btn sm">${d.gStamp2_img ? "استبدال الصورة" : "رفع صورة الختم"}<input type="file" accept="image/*" id="cg-s2up" hidden></label>
-          <button class="btn sm ghost" type="button" id="cg-s2del">حذف</button></div></div></div></section>`;
+</section>`;
   // المعاينة المباشرة
   let res = null, tm = 0, resKey = "";
   const live = $("#cg-live", body);
-  const paint = async () => { const x = { ...goldDefaults(), ...ed.rec.data }, key = [x.gLogoR, x.gLogoL, (x.gLogoR_img || "").length, (x.gLogoL_img || "").length, x.gSig, x.gStamp, x.gStamp2, (x.gStamp2_img || "").length].join("|");
+  const paint = async () => { const x = { ...goldDefaults(), ...ed.rec.data }, key = [x.gLogoR, x.gLogoL, (x.gLogoR_img || "").length, (x.gLogoL_img || "").length, x.gSig, x.gStamp, x.gStamp2, (x.gStamp2_img || "").length, (x.gSig2_img || "").length].join("|");
     if (!res || key !== resKey) { res = await goldResources(x, { sig: G().signature, stamp: G().stamp }); resKey = key; }
     await Promise.all(Object.values(styleOf(x)).map((y) => loadTextFont(y.font)));
     live.innerHTML = goldSVG(x, certNames(x)[0] || "", res, { me: G().full_name || state.profile?.full_name || "" }); };
@@ -141,14 +141,15 @@ function goldenEditor(body, ed, designSel) {
     $("#cg-s2f", body).style.display = on ? "" : "none"; repaint(); };
   $("#cg-sig", body).onchange = (e) => { ed.change((x) => { x.data.gSig = e.target.checked; }); repaint(); };
   $("#cg-stamp", body).onchange = (e) => { ed.change((x) => { x.data.gStamp = e.target.checked; }); repaint(); };
-  $("#cg-stamp2", body).onchange = (e) => { const on = e.target.checked; ed.change((x) => { x.data.gStamp2 = on; }); $("#cg-s2box", body).style.display = on ? "" : "none";
-    if (on && !ed.rec.data.gStamp2_img) $("#cg-s2up", body).click(); repaint(); };
-  $("#cg-s2pos", body).onchange = (e) => { ed.change((x) => { x.data.gStamp2Pos = e.target.value; }); repaint(); };
-  $("#cg-s2up", body).onchange = async (e) => { const f = e.target.files[0]; e.target.value = ""; if (!f) return;
-    try { const { inkEditor } = await import("../inkclean.js"); const fc = await inkEditor(f, { modal, toast, title: "تنقية صورة الختم" }); if (!fc) return; // إزالة الخلفية والظل والقص حول الختم
-      const url = await readLogo(fc); ed.change((x) => { x.data.gStamp2 = true; x.data.gStamp2_img = url; }); $("#cg-stamp2", body).checked = true; $("#cg-s2box", body).style.display = ""; repaint(); toast("تم رفع الختم"); }
-    catch (err) { toast(err.message || "تعذّر قراءة الصورة", "error"); } };
-  $("#cg-s2del", body).onclick = () => { ed.change((x) => { x.data.gStamp2 = false; x.data.gStamp2_img = ""; }); $("#cg-stamp2", body).checked = false; $("#cg-s2box", body).style.display = "none"; repaint(); };
+  // ختم صاحب التوقيع الثاني وتوقيعه: داخل خانته (تحت اسمه)
+  const OK = { stamp: "gStamp2_img", sig: "gSig2_img" };
+  const setO = (w, url) => { ed.change((x) => { x.data[OK[w]] = url; if (w === "stamp") x.data.gStamp2 = !!url; }); const st = $(`[data-o-st='${w}']`, body); if (st) st.textContent = url ? "✓ مرفوع" : ""; repaint(); };
+  $$("[data-o-up]", body).forEach((inp) => (inp.onchange = async () => { const w = inp.dataset.oUp, f = inp.files[0]; inp.value = ""; if (!f) return;
+    try { const { inkEditor } = await import("../inkclean.js"); const fc = await inkEditor(f, { modal, toast, title: w === "stamp" ? "تنقية صورة الختم" : "تنقية صورة التوقيع" }); if (!fc) return;
+      setO(w, await readLogo(fc)); toast(w === "stamp" ? "تم رفع الختم" : "تم رفع التوقيع"); }
+    catch (err) { toast(err.message || "تعذّر قراءة الصورة", "error"); } }));
+  $$("[data-o-del]", body).forEach((b) => (b.onclick = () => setO(b.dataset.oDel, "")));
+  $("#cg-o-draw", body).onclick = async () => { const { drawSignature } = await import("../sigpad.js"); const f = await drawSignature({ modal, toast, title: "توقيع صاحب التوقيع الثاني" }); if (f) setO("sig", await readLogo(f)); };
   $("#cg-art", body).onchange = (e) => { ed.change((x) => { x.data.titleArt = e.target.value; }); repaint(); };
   $("#cg-tc", body).onchange = (e) => { ed.change((x) => { x.data.titleColor = e.target.value; }); repaint(); };
   $$("[data-side]", body).forEach((sel) => (sel.onchange = () => { const s = sel.dataset.side;

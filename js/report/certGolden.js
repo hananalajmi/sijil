@@ -56,7 +56,7 @@ export const goldDefaults = () => ({ bg: "frame", titleArt: "art", titleColor: "
   intro: "يتقدم التوجيه الفني للعلوم بمنطقة الأحمدي التعليمية بخالص الشكر والتقدير إلى", jobTitle: "المعلمة", phrase: "لجهودها المتميزة وعطائها وإخلاصها في العمل", body: "لجهودها المتميزة وعطائها وإخلاصها في العمل", closing: "مع تمنياتنا لكم بمزيد من التقدم والازدهار",
   nameFont: "plex", nameColor: "", textFont: "notosans", textColor: "#1d2333", sizeK: 100,
   gLogoR: "ministry", gLogoL: "directorate", gLogoR_img: "", gLogoL_img: "", firstSupName: "", signTitle: "الموجه الأول للعلوم",
-  gSig: false, gStamp: false, gStamp2: false, gStamp2_img: "", gStamp2Pos: "right",
+  gSig: false, gStamp: false, gStamp2: false, gStamp2_img: "", gSig2_img: "",
   sign2On: false, sign2Title: "الموجه الفني", sign2Name: "", signSide: "left", gShowDate: true, gDate: "" });
 
 // قياس النص بنفس الخط المستعمل في الرسم
@@ -103,9 +103,9 @@ export async function goldResources(d, marks = {}) {
   const P = GOLD_BGS[d.bg] || GOLD_BGS.frame;
   if (P.img) await new Promise((r) => { const im = new Image(); im.onload = im.onerror = r; im.src = P.img; }); // في الذاكرة قبل المعاينة والطباعة
   const mark = async (fileId) => { if (!fileId) return null; try { const { img } = await import("./builders.js"); const h = await img(fileId, "sig-img"); const u = await toDataUrl((h.match(/src="([^"]+)"/) || [])[1]); return u ? { src: u, size: await imgSize(u) } : null; } catch (_) { return null; } };
-  const extra = d.gStamp2 && d.gStamp2_img ? await toDataUrl(d.gStamp2_img) : "";
+  const img2 = async (u) => { const x = u ? await toDataUrl(u) : ""; return x ? { src: x, size: await imgSize(x) } : null; };
   return { R: await one(d.gLogoR, d.gLogoR_img), L: await one(d.gLogoL, d.gLogoL_img),
-    sig: d.gSig ? await mark(marks.sig) : null, stamp: d.gStamp ? await mark(marks.stamp) : null, stamp2: extra ? { src: extra, size: await imgSize(extra) } : null };
+    sig: d.gSig ? await mark(marks.sig) : null, stamp: d.gStamp ? await mark(marks.stamp) : null, stamp2: d.sign2On ? await img2(d.gStamp2_img) : null, sig2: d.sign2On ? await img2(d.gSig2_img) : null };
 }
 
 // يبني الشهادة لاسم واحد. portrait: تُدار داخل صفحة طولية (الآيباد والآيفون)
@@ -189,25 +189,24 @@ export function goldSVG(d, name, res, { portrait = false, blank = false, cls = "
     const y = box.y + (box.h - h) / 2;
     out.push(`<image class="${cls}" href="${L.src}" x="${(box.x + (box.w - w) / 2).toFixed(2)}" y="${y.toFixed(2)}" width="${w.toFixed(2)}" height="${h.toFixed(2)}" preserveAspectRatio="xMidYMid meet" style="mix-blend-mode:multiply"/>`); return y + h; };
   const dateTxt = (() => { if (blank || d.gShowDate === false) return ""; const iso = d.gDate || new Date().toISOString().slice(0, 10), [yy, mm, dd] = iso.split("-"); return yy && mm && dd ? `التاريخ: ${Number(dd)}/${Number(mm)}/${yy}` : ""; })();
-  const signAt = (S, title, person, cls, isMine) => {
+  // marks: صورتا الختم والتوقيع لصاحب الخانة (لي: ختمي وتوقيعي، وللآخر: ختمه وتوقيعه المرفوعان)
+  const signAt = (S, title, person, cls, isMine, marks = {}) => {
     const sT = String(title || "").trim(), sup = blank ? "" : String(person || "").trim();
     if (sT) out.push(T(S.x, S.y, sT, sF, fitPt(sT, sF, sP, 76, 10), SS.sign.color, `class="cg-sign ${cls}"`));
     let y = S.y + 3;
     if (sup) { out.push(T(S.x, S.y + sP * PT * 1.55, "أ/ " + sup, sF, fitPt("أ/ " + sup, sF, sP * .92, 76, 10), C.navy, `class="cg-sup ${cls}"`)); y = S.y + sP * PT * 1.55 + 3; }
-    const st = isMine && !blank ? put(res?.stamp, { x: S.x - 13, y: y, w: 26, h: 16 }, "cg-stampimg") : null;
+    const st = !blank ? put(marks.stamp, { x: S.x - 13, y: y, w: 26, h: 16 }, isMine ? "cg-stampimg" : "cg-stamp2") : null;
     const sgTop = st ? st - 3 : y + 1;
-    const sg = isMine && !blank ? put(res?.sig, { x: S.x - 17, y: sgTop, w: 34, h: 11 }, "cg-sigimg") : null;
+    const sg = !blank ? put(marks.sig, { x: S.x - 17, y: sgTop, w: 34, h: 11 }, isMine ? "cg-sigimg" : "cg-sig2img") : null;
     let after;
     if (sg) after = sg + 4.2;
     else { const ly = Math.max(sgTop + 10, S.y + 22); out.push(`<path d="M${S.x - 30} ${ly}H${S.x + 30}" stroke="${C.goldDark}" stroke-width=".3" stroke-dasharray="1 1.4"/>`, T(S.x, ly + 4.5, "التوقيع", GOLD_FONTS.text, 9.5, "#8b7d63")); after = ly + 9.5; }
     if (isMine && dateTxt) out.push(T(S.x, Math.min(after, H - 13), dateTxt, sF, Math.max(10, sP * .7), C.navy, `class="cg-date ${cls}"`));
     return { st };
   };
-  signAt(A, tA, d.firstSupName, "s1", mine === "A");
-  if (two) signAt(Bp, d.sign2Title, d.sign2Name, "s2", mine === "B");
-  // الختم الآخر: أسفل الوسط، أو مكان الختم في الخانة المقابلة لتوقيعي
-  if (!blank && res?.stamp2) { const other = mine === "A" ? Bp : A;
-    put(res.stamp2, d.gStamp2Pos === "center" ? { x: CX - 15, y: sY + 2, w: 30, h: 28 } : { x: other.x - 14, y: sY + (two ? 9.5 : 2), w: 28, h: two ? 17 : 26 }, "cg-stamp2"); }
+  const myM = { stamp: res?.stamp, sig: res?.sig }, oM = { stamp: res?.stamp2, sig: res?.sig2 };
+  signAt(A, tA, d.firstSupName, "s1", mine === "A", mine === "A" ? myM : two ? oM : {});
+  if (two) signAt(Bp, d.sign2Title, d.sign2Name, "s2", mine === "B", mine === "B" ? myM : oM);
   const defs = `<defs><linearGradient id="cgG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9cf86"/><stop offset=".5" stop-color="${C.gold}"/><stop offset="1" stop-color="#8a6526"/></linearGradient>
     <linearGradient id="cgL" gradientUnits="userSpaceOnUse" x1="${CX - 100}" y1="0" x2="${CX + 100}" y2="0"><stop offset="0" stop-color="${C.gold}" stop-opacity="0"/><stop offset=".5" stop-color="${C.gold}"/><stop offset="1" stop-color="${C.gold}" stop-opacity="0"/></linearGradient></defs>`;
   const body = defs + out.join("");
