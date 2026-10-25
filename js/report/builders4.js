@@ -124,7 +124,7 @@ export async function certificate(ctx) {
     const G = await import("./certGolden.js"); const dd = { ...G.goldDefaults(), ...d }; const res = await G.goldResources(dd, blank ? {} : { sig: ctx.guide?.signature, stamp: ctx.guide?.stamp });
     const bad = await loadCertFonts(); if (bad.length) { try { (await import("../ui.js")).toast("تعذّر تحميل خطوط الشهادة — تأكدي من الاتصال ثم أعيدي المعاينة قبل الطباعة", "err"); } catch (_) {} }
     const names = blank ? [""] : certNames(d).length ? certNames(d) : [""], blocks = [];
-    names.forEach((n, i) => { if (i) blocks.push({ pageBreak: true }); blocks.push({ html: G.goldSVG(dd, n, res, { portrait: IOS0, blank }) }); });
+    names.forEach((n, i) => { if (i) blocks.push({ pageBreak: true }); blocks.push({ html: G.goldSVG(dd, n, res, { portrait: IOS0, blank, me: ctx.guide?.full_name || "" }) }); });
     return { orientation: IOS0 ? "portrait" : "landscape", cls: "t-ce t-ce-img t-ce-svg", header: "", identity: "", footer: "", blocks };
   }
   const titleText = blank ? (FORMS.cert.types[d.ctype] || FORMS.cert.types.thanks).title : certTitle(d);

@@ -109,8 +109,7 @@ function goldenEditor(body, ed, designSel) {
         <label><input type="checkbox" id="cg-sig" ${d.gSig ? "checked" : ""}> توقيعي</label>
         <label><input type="checkbox" id="cg-stamp" ${d.gStamp ? "checked" : ""}> ختمي</label>
         <label><input type="checkbox" id="cg-stamp2" ${d.gStamp2 ? "checked" : ""}> ختم آخر</label></div>
-      <div class="form" id="cg-sidebox" style="margin-top:8px;${d.sign2On ? "" : "display:none"}"><div class="f"><label for="cg-side">مكان توقيعي وختمي</label><select id="cg-side">${opt("left", d.gMarksSide || "left", "فوق التوقيع الأيسر")}${opt("right", d.gMarksSide, "فوق التوقيع الأيمن")}</select></div></div>
-      <p class="hint" id="cg-mk-hint">${!G().signature || !G().stamp ? `صورة ${!G().signature && !G().stamp ? "التوقيع والختم" : !G().signature ? "التوقيع" : "الختم"} غير مرفوعة — ارفعيها من <a href="#/guide">بيانات الموجّه الفني</a>.` : "التوقيع والختم من بيانات الموجّه الفني، ويظهران فوق خط التوقيع."}</p>
+      <p class="hint" id="cg-mk-hint">${!G().signature || !G().stamp ? `صورة ${!G().signature && !G().stamp ? "التوقيع والختم" : !G().signature ? "التوقيع" : "الختم"} غير مرفوعة — ارفعيها من <a href="#/guide">بيانات الموجّه الفني</a>.` : "التوقيع والختم من بيانات الموجّه الفني، ويظهران فوق توقيعك أنتِ (يمين أو يسار حسب المسمى أو الاسم)."}</p>
       <div class="form" id="cg-s2box" style="${d.gStamp2 ? "" : "display:none"}">
         <div class="f"><label for="cg-s2pos">مكان الختم الآخر</label><select id="cg-s2pos">${opt("right", d.gStamp2Pos || "right", "الجهة الأخرى (فوق التوقيع المقابل)")}${opt("center", d.gStamp2Pos, "أسفل الوسط")}</select></div>
         <div class="f"><span class="lab">صورة الختم الآخر</span><div class="row" style="gap:6px"><label class="btn sm">${d.gStamp2_img ? "استبدال الصورة" : "رفع صورة الختم"}<input type="file" accept="image/*" id="cg-s2up" hidden></label>
@@ -121,7 +120,7 @@ function goldenEditor(body, ed, designSel) {
   const paint = async () => { const x = { ...goldDefaults(), ...ed.rec.data }, key = [x.gLogoR, x.gLogoL, (x.gLogoR_img || "").length, (x.gLogoL_img || "").length, x.gSig, x.gStamp, x.gStamp2, (x.gStamp2_img || "").length].join("|");
     if (!res || key !== resKey) { res = await goldResources(x, { sig: G().signature, stamp: G().stamp }); resKey = key; }
     await Promise.all(Object.values(styleOf(x)).map((y) => loadTextFont(y.font)));
-    live.innerHTML = goldSVG(x, certNames(x)[0] || "", res); };
+    live.innerHTML = goldSVG(x, certNames(x)[0] || "", res, { me: G().full_name || state.profile?.full_name || "" }); };
   const repaint = () => { clearTimeout(tm); tm = setTimeout(paint, 120); };
   paint();
   const paintCount = () => { const n = certNames(ed.rec.data).length; $("#ct-count", body).textContent = n ? `سيُطبع ${n} ${n === 1 ? "شهادة" : n === 2 ? "شهادتان" : n <= 10 ? "شهادات" : "شهادة"} بحجم A4 أفقي (شهادة لكل اسم). المعاينة تعرض الاسم الأول.` : "بدون اسم تُطبع شهادة بسطر فارغ للكتابة باليد."; };
@@ -134,8 +133,7 @@ function goldenEditor(body, ed, designSel) {
   $("#cg-s2on", body).onchange = (e) => { const on = e.target.checked; ed.change((x) => { x.data.sign2On = on;
       if (on && !x.data.sign2Name) { const g = G(), t = x.data.sign2Title ?? "الموجه الفني"; x.data.sign2Title = t; x.data.sign2Name = /الأول/.test(t) ? g.first_supervisor || FIRST_SUPERVISOR.name || "" : g.full_name || state.profile?.full_name || ""; } });
     const nm = $("[data-key='sign2Name']", body); if (nm) nm.value = ed.rec.data.sign2Name || "";
-    $("#cg-s2f", body).style.display = on ? "" : "none"; $("#cg-sidebox", body).style.display = on ? "" : "none"; repaint(); };
-  $("#cg-side", body).onchange = (e) => { ed.change((x) => { x.data.gMarksSide = e.target.value; }); repaint(); };
+    $("#cg-s2f", body).style.display = on ? "" : "none"; repaint(); };
   $("#cg-sig", body).onchange = (e) => { ed.change((x) => { x.data.gSig = e.target.checked; }); repaint(); };
   $("#cg-stamp", body).onchange = (e) => { ed.change((x) => { x.data.gStamp = e.target.checked; }); repaint(); };
   $("#cg-stamp2", body).onchange = (e) => { const on = e.target.checked; ed.change((x) => { x.data.gStamp2 = on; }); $("#cg-s2box", body).style.display = on ? "" : "none";

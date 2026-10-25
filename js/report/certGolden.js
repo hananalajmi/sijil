@@ -57,7 +57,7 @@ export const goldDefaults = () => ({ bg: "frame", titleArt: "art", titleColor: "
   nameFont: "plex", nameColor: "", textFont: "notosans", textColor: "#1d2333", sizeK: 100,
   gLogoR: "ministry", gLogoL: "directorate", gLogoR_img: "", gLogoL_img: "", firstSupName: "", signTitle: "الموجه الأول للعلوم",
   gSig: false, gStamp: false, gStamp2: false, gStamp2_img: "", gStamp2Pos: "right",
-  sign2On: false, sign2Title: "الموجه الفني", sign2Name: "", gMarksSide: "left" });
+  sign2On: false, sign2Title: "الموجه الفني", sign2Name: "" });
 
 // قياس النص بنفس الخط المستعمل في الرسم
 let mctx = null;
@@ -109,7 +109,7 @@ export async function goldResources(d, marks = {}) {
 }
 
 // يبني الشهادة لاسم واحد. portrait: تُدار داخل صفحة طولية (الآيباد والآيفون)
-export function goldSVG(d, name, res, { portrait = false, blank = false, cls = "" } = {}) {
+export function goldSVG(d, name, res, { portrait = false, blank = false, cls = "", me = "" } = {}) {
   const P = GOLD_BGS[d.bg] || GOLD_BGS.frame, dy = P.dy || 0, out = [];
   const B = { ...GOLD_BOX, logoR: P.logoR, logoL: P.logoL, sign: P.sign };
   // بدون السطرين التعريفيين يرتفع باقي الكلام ليملأ المساحة (الشعاران والعنوان والتوقيع ثابتة)
@@ -190,7 +190,11 @@ export function goldSVG(d, name, res, { portrait = false, blank = false, cls = "
   signAt(S1, d.signTitle ?? SIGN_TITLES_DEFAULT, d.firstSupName, "s1");
   const two = !!d.sign2On;
   if (two) signAt(S2, d.sign2Title, d.sign2Name, "s2");
-  const S = two && d.gMarksSide === "right" ? S2 : S1; // مكان صورة توقيعي وختمي
+  // صورة توقيعي وختمي تذهب للجهة التي أوقّع فيها: من اسمي، أو من المسمى «الموجه/ة الفني/ة» (لا الأول)
+  const norm = (x) => String(x || "").replace(/\s+/g, " ").trim();
+  const isMe = (title, person) => (me && norm(person) && norm(person) === norm(me)) || (/الموجه(ة)?\s+الفني(ة)?/.test(title || "") && !/الأول|الأولى/.test(title || ""));
+  const meL = isMe(d.signTitle ?? SIGN_TITLES_DEFAULT, d.firstSupName), meR = two && isMe(d.sign2Title, d.sign2Name);
+  const S = meR && (!meL || (me && norm(d.sign2Name) === norm(me))) ? S2 : S1; // مكان صورة توقيعي وختمي
   // صورة التوقيع والختم فوق خط التوقيع، والختم الإضافي أسفل اليمين أو في الوسط
   const put = (L, box, cls) => { if (!L?.src) return; const [iw, ih] = L.size || [1, 1], s = Math.min(box.w / iw, box.h / ih), w = iw * s, h = ih * s;
     out.push(`<image class="${cls}" href="${L.src}" x="${(box.x + (box.w - w) / 2).toFixed(2)}" y="${(box.y + (box.h - h) / 2).toFixed(2)}" width="${w.toFixed(2)}" height="${h.toFixed(2)}" preserveAspectRatio="xMidYMid meet" style="mix-blend-mode:multiply"/>`); };
