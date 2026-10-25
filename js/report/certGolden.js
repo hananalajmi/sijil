@@ -57,7 +57,7 @@ export const goldDefaults = () => ({ bg: "frame", titleArt: "art", titleColor: "
   nameFont: "plex", nameColor: "", textFont: "notosans", textColor: "#1d2333", sizeK: 100,
   gLogoR: "ministry", gLogoL: "directorate", gLogoR_img: "", gLogoL_img: "", firstSupName: "", signTitle: "الموجه الأول للعلوم",
   gSig: false, gStamp: false, gStamp2: false, gStamp2_img: "", gStamp2Pos: "right",
-  sign2On: false, sign2Title: "الموجه الفني", sign2Name: "" });
+  sign2On: false, sign2Title: "الموجه الفني", sign2Name: "", signSide: "left", gShowDate: true, gDate: "" });
 
 // قياس النص بنفس الخط المستعمل في الرسم
 let mctx = null;
@@ -149,7 +149,7 @@ export function goldSVG(d, name, res, { portrait = false, blank = false, cls = "
   const bodySrc = blank ? [] : String(d.body ?? d.phrase ?? "").split(/\n+/).map((x) => x.trim()).filter(Boolean);
   const closing = blank ? "" : genderClosing(String(d.closing || "").trim(), d.jobTitle);
   const ncol = SS.name.color || P.nameColor || C.navy;
-  const top = TB.y + TB.h / 2 + (P.divider ? 5 : 3), bottom = B.sign.y - 9, K = (Number(d.sizeK) || 100) / 100;
+  const top = TB.y + TB.h / 2 + (P.divider ? 5 : 3), bottom = B.sign.y - 19, K = (Number(d.sizeK) || 100) / 100;
   const layout = (f) => { const it = [], wAt = (y, h) => room(y, h);
     const add = (text, k, cls, gapB) => { const pt = SS[k].size * f; it.push({ text, font: FN(k), pt, col: k === "name" ? ncol : SS[k].color, cls, h: pt * PT * 1.62, gapB }); };
     for (const k of ["line1", "line2"]) { const t = String(d[k] || "").trim(); if (t) add(t, "lines", "cg-line", 1); }
@@ -178,36 +178,36 @@ export function goldSVG(d, name, res, { portrait = false, blank = false, cls = "
     else out.push(T(CX, cy, x.text, x.font, fitPt(x.text, x.font, x.pt, room(cy, x.h), 10), x.col, x.cls ? `class="${x.cls}"` : ""));
     y += x.h + x.gapB;
   }
-  // التوقيع: أسفل اليسار دائماً
-  // التوقيع: أسفل اليسار، وتوقيع ثانٍ اختياري أسفل اليمين (في موضع مقابل)
-  const S1 = B.sign, S2 = { x: W - B.sign.x, y: B.sign.y }, sF = FN("sign"), sP = SS.sign.size;
-  const signAt = (S, title, person, cls) => {
-    const sT = String(title || "").trim(), sup = blank ? "" : String(person || "").trim();
-    if (sT) out.push(T(S.x, S.y, sT, sF, fitPt(sT, sF, sP, 76, 10), SS.sign.color, `class="cg-sign ${cls}"`));
-    if (sup) out.push(T(S.x, S.y + sP * PT * 1.55, "أ/ " + sup, sF, fitPt("أ/ " + sup, sF, sP * .92, 76, 10), C.navy, `class="cg-sup ${cls}"`));
-    out.push(`<path d="M${S.x - 30} ${S.y + 26}H${S.x + 30}" stroke="${C.goldDark}" stroke-width=".3" stroke-dasharray="1 1.4"/>`, T(S.x, S.y + 30.5, "التوقيع", GOLD_FONTS.text, 9.5, "#8b7d63"));
-  };
-  signAt(S1, d.signTitle ?? SIGN_TITLES_DEFAULT, d.firstSupName, "s1");
-  const two = !!d.sign2On;
-  if (two) signAt(S2, d.sign2Title, d.sign2Name, "s2");
-  // صورة توقيعي وختمي تذهب للجهة التي أوقّع فيها: من اسمي، أو من المسمى «الموجه/ة الفني/ة» (لا الأول)
+  // خانات التوقيع: لكل شخص جهة (يمين أو يسار، يختارها المستخدم) وتحت بعض: المسمى ← الاسم ← الختم ← التوقيع ← التاريخ
+  const sY = B.sign.y - 10, SL = { x: B.sign.x, y: sY }, SR = { x: W - B.sign.x, y: sY }, sF = FN("sign"), sP = SS.sign.size;
+  const two = !!d.sign2On, A = d.signSide === "right" ? SR : SL, Bp = A === SL ? SR : SL;
   const norm = (x) => String(x || "").replace(/\s+/g, " ").trim();
   const isMe = (title, person) => (me && norm(person) && norm(person) === norm(me)) || (/الموجه(ة)?\s+الفني(ة)?/.test(title || "") && !/الأول|الأولى/.test(title || ""));
-  const meL = isMe(d.signTitle ?? SIGN_TITLES_DEFAULT, d.firstSupName), meR = two && isMe(d.sign2Title, d.sign2Name);
-  const S = meR && (!meL || (me && norm(d.sign2Name) === norm(me))) ? S2 : S1; // مكان صورة توقيعي وختمي
-  // صورة التوقيع والختم فوق خط التوقيع، والختم الإضافي أسفل اليمين أو في الوسط
-  const put = (L, box, cls) => { if (!L?.src) return; const [iw, ih] = L.size || [1, 1], s = Math.min(box.w / iw, box.h / ih), w = iw * s, h = ih * s;
-    out.push(`<image class="${cls}" href="${L.src}" x="${(box.x + (box.w - w) / 2).toFixed(2)}" y="${(box.y + (box.h - h) / 2).toFixed(2)}" width="${w.toFixed(2)}" height="${h.toFixed(2)}" preserveAspectRatio="xMidYMid meet" style="mix-blend-mode:multiply"/>`); };
-  if (!blank) {
-    const both = res?.sig?.src && res?.stamp?.src;
-    put(res?.sig, { x: S.x - (both ? 20 : 15), y: S.y + 11.5, w: 30, h: 14 }, "cg-sigimg");
-    put(res?.stamp, { x: both ? S.x + 7 : S.x - 12, y: S.y + 7, w: 24, h: 21 }, "cg-stampimg");
-    // الختم الآخر: أسفل الوسط، أو على الجهة المقابلة لتوقيعي (فوق خط التوقيع الثاني إن وُجد)
-    const other = S === S1 ? S2 : S1;
-    const p2 = d.gStamp2Pos === "center" ? { x: CX - 15, y: S.y - 2, w: 30, h: 28 }
-      : two ? { x: other.x - 13, y: other.y + 5, w: 26, h: 23 } : { x: W - S.x - 16, y: S.y - 4, w: 32, h: 30 };
-    put(res?.stamp2, p2, "cg-stamp2");
-  }
+  const tA = d.signTitle ?? SIGN_TITLES_DEFAULT, meA = isMe(tA, d.firstSupName), meB = two && isMe(d.sign2Title, d.sign2Name);
+  const mine = meB && (!meA || (me && norm(d.sign2Name) === norm(me))) ? "B" : "A"; // خانة توقيعي وختمي
+  const put = (L, box, cls) => { if (!L?.src) return null; const [iw, ih] = L.size || [1, 1], s = Math.min(box.w / iw, box.h / ih), w = iw * s, h = ih * s;
+    const y = box.y + (box.h - h) / 2;
+    out.push(`<image class="${cls}" href="${L.src}" x="${(box.x + (box.w - w) / 2).toFixed(2)}" y="${y.toFixed(2)}" width="${w.toFixed(2)}" height="${h.toFixed(2)}" preserveAspectRatio="xMidYMid meet" style="mix-blend-mode:multiply"/>`); return y + h; };
+  const dateTxt = (() => { if (blank || d.gShowDate === false) return ""; const iso = d.gDate || new Date().toISOString().slice(0, 10), [yy, mm, dd] = iso.split("-"); return yy && mm && dd ? `التاريخ: ${Number(dd)}/${Number(mm)}/${yy}` : ""; })();
+  const signAt = (S, title, person, cls, isMine) => {
+    const sT = String(title || "").trim(), sup = blank ? "" : String(person || "").trim();
+    if (sT) out.push(T(S.x, S.y, sT, sF, fitPt(sT, sF, sP, 76, 10), SS.sign.color, `class="cg-sign ${cls}"`));
+    let y = S.y + 3;
+    if (sup) { out.push(T(S.x, S.y + sP * PT * 1.55, "أ/ " + sup, sF, fitPt("أ/ " + sup, sF, sP * .92, 76, 10), C.navy, `class="cg-sup ${cls}"`)); y = S.y + sP * PT * 1.55 + 3; }
+    const st = isMine && !blank ? put(res?.stamp, { x: S.x - 13, y: y, w: 26, h: 16 }, "cg-stampimg") : null;
+    const sgTop = st ? st - 3 : y + 1;
+    const sg = isMine && !blank ? put(res?.sig, { x: S.x - 17, y: sgTop, w: 34, h: 11 }, "cg-sigimg") : null;
+    let after;
+    if (sg) after = sg + 4.2;
+    else { const ly = Math.max(sgTop + 10, S.y + 22); out.push(`<path d="M${S.x - 30} ${ly}H${S.x + 30}" stroke="${C.goldDark}" stroke-width=".3" stroke-dasharray="1 1.4"/>`, T(S.x, ly + 4.5, "التوقيع", GOLD_FONTS.text, 9.5, "#8b7d63")); after = ly + 9.5; }
+    if (isMine && dateTxt) out.push(T(S.x, Math.min(after, H - 13), dateTxt, sF, Math.max(10, sP * .7), C.navy, `class="cg-date ${cls}"`));
+    return { st };
+  };
+  signAt(A, tA, d.firstSupName, "s1", mine === "A");
+  if (two) signAt(Bp, d.sign2Title, d.sign2Name, "s2", mine === "B");
+  // الختم الآخر: أسفل الوسط، أو مكان الختم في الخانة المقابلة لتوقيعي
+  if (!blank && res?.stamp2) { const other = mine === "A" ? Bp : A;
+    put(res.stamp2, d.gStamp2Pos === "center" ? { x: CX - 15, y: sY + 2, w: 30, h: 28 } : { x: other.x - 14, y: sY + (two ? 9.5 : 2), w: 28, h: two ? 17 : 26 }, "cg-stamp2"); }
   const defs = `<defs><linearGradient id="cgG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9cf86"/><stop offset=".5" stop-color="${C.gold}"/><stop offset="1" stop-color="#8a6526"/></linearGradient>
     <linearGradient id="cgL" gradientUnits="userSpaceOnUse" x1="${CX - 100}" y1="0" x2="${CX + 100}" y2="0"><stop offset="0" stop-color="${C.gold}" stop-opacity="0"/><stop offset=".5" stop-color="${C.gold}"/><stop offset="1" stop-color="${C.gold}" stop-opacity="0"/></linearGradient></defs>`;
   const body = defs + out.join("");

@@ -96,20 +96,22 @@ function goldenEditor(body, ed, designSel) {
         <td><select data-ss="${k}" aria-label="حجم ${esc(l)}">${STYLE_SIZES.map((n) => opt(String(n), String(S.size), n + " نقطة")).join("")}</select></td>
         <td><input type="color" data-sc="${k}" value="${esc(S.color || GOLD_BGS[d.bg || "frame"].nameColor || "#14254a")}" aria-label="لون ${esc(l)}"></td></tr>`; }).join("")}</tbody></table></div>
       <p class="hint">${Object.keys(TEXT_FONTS).length} خطاً عربياً مجانياً من Google Fonts. إذا زاد الكلام يصغر الكل بنسبة واحدة تلقائياً حتى يبقى بعيداً عن الزخارف والتوقيع.</p></section>
-    <section class="panel"><h2>التوقيع (أسفل اليسار)</h2><div class="form">
+    <section class="panel"><h2>التوقيع</h2><p class="hint" style="margin-top:0">لكل شخص خانة كاملة تحت بعض: المسمى ← الاسم ← الختم ← التوقيع ← التاريخ. اختاري جهة الخانة الأولى، والثانية في الجهة الأخرى.</p><div class="form">
+      <div class="f"><label for="cg-sside">جهة التوقيع الأول</label><select id="cg-sside">${opt("left", d.signSide || "left", "يسار")}${opt("right", d.signSide, "يمين")}</select></div>
       ${field({ label: "المسمى", key: "signTitle", type: "select", options: opts("cert_g_signers"), value: d.signTitle ?? "الموجه الأول للعلوم", remember: "cert_g_signers" })}
       ${field({ label: "اسم الشخص (اختياري)", key: "firstSupName", value: d.firstSupName || "" })}</div>
-      <label class="row" style="gap:8px;margin-top:12px"><input type="checkbox" id="cg-s2on" ${d.sign2On ? "checked" : ""}> <b>إضافة توقيع ثانٍ (أسفل اليمين)</b></label>
+      <label class="row" style="gap:8px;margin-top:12px"><input type="checkbox" id="cg-s2on" ${d.sign2On ? "checked" : ""}> <b>إضافة توقيع ثانٍ (في الجهة الأخرى)</b></label>
       <div class="form" id="cg-s2f" style="margin-top:8px;${d.sign2On ? "" : "display:none"}">
         ${field({ label: "مسمى التوقيع الثاني", key: "sign2Title", type: "select", options: opts("cert_g_signers"), value: d.sign2Title ?? "الموجه الفني", remember: "cert_g_signers" })}
         ${field({ label: "اسم الشخص (اختياري)", key: "sign2Name", value: d.sign2Name || "" })}</div>
-      <p class="hint">لا يُطبع تاريخ في هذا القالب.</p></section>
+      <div class="form" style="margin-top:12px"><label class="row" style="gap:8px;align-self:end"><input type="checkbox" id="cg-showdate" ${d.gShowDate !== false ? "checked" : ""}> <b>التاريخ تحت توقيعي</b></label>
+        <div class="f"><label for="cg-date">التاريخ</label><input type="date" id="cg-date" value="${esc(d.gDate || today())}"></div></div></section>
     <section class="panel"><h2>التوقيع والأختام على الشهادة</h2>
       <div class="checks" style="display:flex;flex-wrap:wrap;gap:14px">
         <label><input type="checkbox" id="cg-sig" ${d.gSig ? "checked" : ""}> توقيعي</label>
         <label><input type="checkbox" id="cg-stamp" ${d.gStamp ? "checked" : ""}> ختمي</label>
         <label><input type="checkbox" id="cg-stamp2" ${d.gStamp2 ? "checked" : ""}> ختم آخر</label></div>
-      <p class="hint" id="cg-mk-hint">${!G().signature || !G().stamp ? `صورة ${!G().signature && !G().stamp ? "التوقيع والختم" : !G().signature ? "التوقيع" : "الختم"} غير مرفوعة — ارفعيها من <a href="#/guide">بيانات الموجّه الفني</a>.` : "التوقيع والختم من بيانات الموجّه الفني، ويظهران فوق توقيعك أنتِ (يمين أو يسار حسب المسمى أو الاسم)."}</p>
+      <p class="hint" id="cg-mk-hint">${!G().signature || !G().stamp ? `صورة ${!G().signature && !G().stamp ? "التوقيع والختم" : !G().signature ? "التوقيع" : "الختم"} غير مرفوعة — ارفعيها من <a href="#/guide">بيانات الموجّه الفني</a>.` : "التوقيع والختم من بيانات الموجّه الفني، ويظهران في خانة توقيعك أنتِ (حسب المسمى «الموجه الفني» أو اسمك)."}</p>
       <div class="form" id="cg-s2box" style="${d.gStamp2 ? "" : "display:none"}">
         <div class="f"><label for="cg-s2pos">مكان الختم الآخر</label><select id="cg-s2pos">${opt("right", d.gStamp2Pos || "right", "الجهة الأخرى (فوق التوقيع المقابل)")}${opt("center", d.gStamp2Pos, "أسفل الوسط")}</select></div>
         <div class="f"><span class="lab">صورة الختم الآخر</span><div class="row" style="gap:6px"><label class="btn sm">${d.gStamp2_img ? "استبدال الصورة" : "رفع صورة الختم"}<input type="file" accept="image/*" id="cg-s2up" hidden></label>
@@ -130,6 +132,9 @@ function goldenEditor(body, ed, designSel) {
       if (P.defLogoR && (x.data.gLogoR || "ministry") === "ministry") x.data.gLogoR = P.defLogoR; else if (!P.defLogoR && prev?.defLogoR && x.data.gLogoR === prev.defLogoR) x.data.gLogoR = "ministry"; });
     $("#cg-R", body).value = ed.rec.data.gLogoR || ""; repaint(); };
   // التوقيع والأختام
+  $("#cg-sside", body).onchange = (e) => { ed.change((x) => { x.data.signSide = e.target.value; }); repaint(); };
+  $("#cg-showdate", body).onchange = (e) => { ed.change((x) => { x.data.gShowDate = e.target.checked; }); repaint(); };
+  $("#cg-date", body).onchange = (e) => { ed.change((x) => { x.data.gDate = e.target.value; }); repaint(); };
   $("#cg-s2on", body).onchange = (e) => { const on = e.target.checked; ed.change((x) => { x.data.sign2On = on;
       if (on && !x.data.sign2Name) { const g = G(), t = x.data.sign2Title ?? "الموجه الفني"; x.data.sign2Title = t; x.data.sign2Name = /الأول/.test(t) ? g.first_supervisor || FIRST_SUPERVISOR.name || "" : g.full_name || state.profile?.full_name || ""; } });
     const nm = $("[data-key='sign2Name']", body); if (nm) nm.value = ed.rec.data.sign2Name || "";
