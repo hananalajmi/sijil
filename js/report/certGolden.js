@@ -178,7 +178,7 @@ export function goldSVG(d, name, res, { portrait = false, blank = false, cls = "
     else out.push(T(CX, cy, x.text, x.font, fitPt(x.text, x.font, x.pt, room(cy, x.h), 10), x.col, x.cls ? `class="${x.cls}"` : ""));
     y += x.h + x.gapB;
   }
-  // خانات التوقيع: لكل شخص جهة (يمين أو يسار، يختارها المستخدم) وتحت بعض: المسمى ← الاسم ← (التوقيع + الختم) ← التاريخ
+  // خانات التوقيع: لكل شخص جهة (يمين أو يسار، يختارها المستخدم) وتحت بعض: المسمى ← الاسم ← الختم ← التوقيع ← التاريخ
   const sY = B.sign.y - 10, SL = { x: B.sign.x, y: sY }, SR = { x: W - B.sign.x, y: sY }, sF = FN("sign"), sP = SS.sign.size;
   const two = !!d.sign2On, A = d.signSide === "right" ? SR : SL, Bp = A === SL ? SR : SL;
   const norm = (x) => String(x || "").replace(/\s+/g, " ").trim();
@@ -195,10 +195,10 @@ export function goldSVG(d, name, res, { portrait = false, blank = false, cls = "
     if (sT) out.push(T(S.x, S.y, sT, sF, fitPt(sT, sF, sP, 76, 10), SS.sign.color, `class="cg-sign ${cls}"`));
     let y = S.y + 3;
     if (sup) { out.push(T(S.x, S.y + sP * PT * 1.55, "أ/ " + sup, sF, fitPt("أ/ " + sup, sF, sP * .92, 76, 10), C.navy, `class="cg-sup ${cls}"`)); y = S.y + sP * PT * 1.55 + 3; }
-    // تحت الاسم في سطر واحد: التوقيع (يميناً) + الختم (يساراً)، وإن وُجد أحدهما فقط يتوسط
-    const hasS = !blank && marks.sig?.src, hasT = !blank && marks.stamp?.src, both = hasS && hasT;
-    const sg = hasS ? put(marks.sig, both ? { x: S.x + 0.5, y: y + 1.5, w: 30, h: 14 } : { x: S.x - 17, y: y + 1, w: 34, h: 15 }, isMine ? "cg-sigimg" : "cg-sig2img") : null;
-    const st = hasT ? put(marks.stamp, both ? { x: S.x - 27.5, y: y, w: 26, h: 17 } : { x: S.x - 13, y: y, w: 26, h: 17 }, isMine ? "cg-stampimg" : "cg-stamp2") : null;
+    // تحت الاسم: الختم ثم التوقيع تحته، بحجمين متناسقين (الختم بارتفاع قريب من التوقيع)
+    const hasS = !blank && marks.sig?.src, hasT = !blank && marks.stamp?.src;
+    const st = hasT ? put(marks.stamp, { x: S.x - 11, y: y, w: 22, h: 13.5 }, isMine ? "cg-stampimg" : "cg-stamp2") : null;
+    const sg = hasS ? put(marks.sig, { x: S.x - 15, y: st ? st - 1.5 : y + 1, w: 30, h: 12 }, isMine ? "cg-sigimg" : "cg-sig2img") : null;
     const sgTop = y + 1;
     let after;
     if (sg || st) after = Math.max(sg || 0, st || 0) + 4.2;
