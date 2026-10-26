@@ -2,7 +2,7 @@
 // يُحفظ كسجل مشترك (نفس صلاحيات ملف الإنجازات المشترك) ويُميَّز بـ data.doc = "weekly_meeting".
 // النص الثابت في النموذج (العنوان، «الفترة»، «تم اجتماع موجهي وموجهات…»، «الحضور»، «الغياب»، «ونوقشت فيه البنود») لا يُعدَّل؛ الباقي يُعبّأ.
 import { api } from "../api.js";
-import { state, G, opts, canFillShared } from "../store.js";
+import { state, G, opts } from "../store.js";
 import { esc, $, $$, today, fmtDate, academicYearOf, weekStart, addDays, toast, modal } from "../ui.js";
 import { field, bindFields, recordPage, go } from "../kit.js";
 import { FIRST_SUPERVISOR } from "../templates.js";
@@ -10,46 +10,50 @@ import { FIRST_SUPERVISOR } from "../templates.js";
 export const DOC = "weekly_meeting";
 const KIND = "shared_achievements";
 export const isMeeting = (r) => r?.data?.doc === DOC;
-const keyOf = (ws) => `wm:${ws}`;
+const me = () => state.profile?.id || "";
+const keyOf = (ws) => `wm:${ws}:${me()}`; // تقرير لكل مقرر في الأسبوع (لكل مادة/فريق تقريره)
+// يعدّل التقرير: المقرر (صاحبه) والأعضاء الذين يختارهم والمشرف
+export const canEditMeeting = (r) => !!r && (r.owner_id === me() || state.profile?.role === "admin" || (r.data?.members || []).includes(me()));
 export const ABSENCE_REASONS = ["للتكليف", "إجازة", "مهمة رسمية", "دورة تدريبية", "عذر"];
 const myName = () => G().full_name || state.profile?.full_name || "";
 
 export function emptyMeeting(ws) {
   return { doc: DOC, month: keyOf(ws), week_start: ws, subject: G().subject || "الكيمياء", period_from: ws, period_to: addDays(ws, 4), meeting_date: addDays(ws, 4),
-    attendees: [], absent: [], items: [], reporter: "", first_name: G().first_supervisor || FIRST_SUPERVISOR.name || "" };
+    attendees: [], absent: [], items: [], reporter: myName(), members: [], first_name: G().first_supervisor || FIRST_SUPERVISOR.name || "" };
 }
 
-// أسماء الموجهين للقوائم المنسدلة: زملاء الحساب + اسمي + الأسماء المضافة للقائمة
-async function guideNames() {
-  const col = await api.rpc("list_colleagues").catch(() => []);
-  return [...new Set([myName(), ...(col || []).map((c) => c.full_name), ...opts("meeting_guides")].map((x) => String(x || "").trim()).filter(Boolean))];
-}
+let colCache = null;
+const colleagues = async () => (colCache ||= (await api.rpc("list_colleagues").catch(() => [])) || []);
 
 export default async function (main, { id, params }) {
   if (!id) return list(main);
   let rec;
   if (id === "new") {
     const ws = weekStart(params.week || today());
-    const ex = (await api.list({ kind: KIND })).find((r) => isMeeting(r) && r.data.month === keyOf(ws));
+    const ex = (await api.list({ kind: KIND })).find((r) => isMeeting(r) && r.data.week_start === ws && r.owner_id === me());
     if (ex) { location.replace(`#/meeting/${ex.id}`); return; }
-    if (!canFillShared()) { main.innerHTML = `<div class="container"><div class="empty"><h2>لا يوجد تقرير لهذا الأسبوع بعد</h2><p>إنشاء التقرير الأسبوعي متاح لمن حدده المشرف لتعبئة الملفات المشتركة.</p></div></div>`; return; }
     try { rec = await api.create({ kind: KIND, title: `التقرير الأسبوعي ${fmtDate(ws)}`, record_date: ws, academic_year: academicYearOf(ws), data: emptyMeeting(ws) }); }
-    catch (e) { const again = (await api.list({ kind: KIND })).find((r) => isMeeting(r) && r.data.month === keyOf(ws)); if (!again) throw e; rec = again; }
+    catch (e) { const again = (await api.list({ kind: KIND })).find((r) => isMeeting(r) && r.data.week_start === ws && r.owner_id === me()); if (!again) throw e; rec = again; }
     history.replaceState(null, "", `#/meeting/${rec.id}`);
   } else rec = await api.get(id);
   if (!rec) { main.innerHTML = `<div class="container"><div class="empty">السجل غير موجود</div></div>`; return; }
-  const names = await guideNames();
+  const cols = await colleagues();
   await recordPage(main, { rec, title: "التقرير الأسبوعي للتوجيه الفني (ملف مشترك)", merge: true, backHref: "#/meeting", render(body, ed) {
-    const d = ed.rec.data;
+    // أسماء الحضور والغياب: المقرر + الأعضاء الذين اختارهم + أسماء أُضيفت يدوياً لهذا التقرير
+    const names = [...new Set([ed.rec.data.reporter, ...(ed.rec.data.member_names || []), ...(ed.rec.data.extra_names || [])].map((x) => String(x || "").trim()).filter(Boolean))];
+    const d = ed.rec.data, canEdit = canEditMeeting(ed.rec), isOwner = ed.rec.owner_id === me() || state.profile?.role === "admin";
     const nameSel = (idAttr, value, label) => `<select ${idAttr} aria-label="${esc(label)}"><option value="">— اختاري —</option>${[...new Set([...names, ...(value ? [value] : [])])].map((n) => `<option ${n === value ? "selected" : ""}>${esc(n)}</option>`).join("")}<option value="__add">+ إضافة اسم للقائمة…</option></select>`;
     const chips = (arr, k) => (arr || []).map((n, i) => `<span class="pill" style="display:inline-flex;gap:6px;align-items:center;margin:3px">${esc(n)} <button type="button" class="btn small ghost" data-del-${k}="${i}" aria-label="حذف ${esc(n)}" style="padding:0 6px">×</button></span>`).join("");
     body.innerHTML = `
+      ${canEdit ? "" : `<div class="panel" style="border-color:#e0b54a;background:#fff8e1"><b>للاطلاع فقط.</b> يعدّل هذا التقرير مقرره (${esc(d.reporter || "")}) والأعضاء الذين يختارهم.</div>`}
+      ${isOwner ? `<section class="panel"><h2>أعضاء التقرير (يشاركون في الكتابة)</h2><p class="hint" style="margin-top:0">أنتِ المقرر: اختاري من يشارك في كتابة هذا التقرير. المختارون يظهرون في قائمتي الحضور والغياب، والباقون يطّلعون على التقرير ويطبعونه فقط.</p>
+        <div class="checks" id="mt-members">${cols.length ? cols.map((c) => `<label><input type="checkbox" value="${esc(c.id)}" ${(d.members || []).includes(c.id) ? "checked" : ""}> ${esc(c.full_name || "")}</label>`).join("") : '<span class="hint">لا يوجد موجهون آخرون مفعّلون بعد.</span>'}</div></section>` : ""}
       <section class="panel"><h2>بيانات التقرير</h2><div class="form">
         ${field({ label: "المادة (تظهر بالأحمر في العنوان)", key: "subject", value: d.subject })}
         ${field({ label: "الفترة: من", key: "period_from", type: "date", value: d.period_from })}
         ${field({ label: "إلى", key: "period_to", type: "date", value: d.period_to })}
         ${field({ label: "تاريخ الاجتماع", key: "meeting_date", type: "date", value: d.meeting_date, hint: "يُكتب اليوم تلقائياً (مثل: يوم الخميس الموافق …)" })}</div></section>
-      <section class="panel"><h2>الحضور</h2><div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">${nameSel('id="mt-att"', "", "إضافة حاضر")}<button class="btn small" type="button" id="mt-att-all">كل الموجهين</button></div>
+      <section class="panel"><h2>الحضور</h2><div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">${nameSel('id="mt-att"', "", "إضافة حاضر")}<button class="btn small" type="button" id="mt-att-all">كل الأعضاء</button></div>
         <div id="mt-att-list" style="margin-top:8px">${chips(d.attendees, "att") || '<span class="hint">لم يُضف أحد بعد.</span>'}</div></section>
       <section class="panel"><h2>الغياب</h2><div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">${nameSel('id="mt-abs"', "", "إضافة غائب")}
           <select id="mt-reason" aria-label="سبب الغياب">${ABSENCE_REASONS.map((r) => `<option>${esc(r)}</option>`).join("")}</select><button class="btn small" type="button" id="mt-abs-add">إضافة</button></div>
@@ -70,9 +74,12 @@ export default async function (main, { id, params }) {
           <button class="btn small" type="button" id="mt-draw">✍️ يوقّع باليد</button>
           <button class="btn small ghost" type="button" id="mt-mkdel">حذف التوقيع والختم</button></div>
         <p class="hint">يظهران تحت اسم المقرر في الحاشية. «استخدام توقيعي وختمي» يأخذ صورتيك من البيانات الرئيسية ويكتب اسمك مقرراً.</p></section>`;
+    $$("#mt-members input", body).forEach((c) => (c.onchange = () => { const ids = $$("#mt-members input:checked", body).map((x) => x.value);
+      ed.change((x) => { x.data.members = ids; x.data.member_names = cols.filter((c2) => ids.includes(c2.id)).map((c2) => c2.full_name); }); toast(ids.length ? `الأعضاء: ${ids.length}` : "لا أعضاء — أنتِ فقط تكتبين"); ed.redraw(); }));
+    if (!canEdit) { $$("input, select, textarea, button", body).forEach((x) => (x.disabled = true)); return; }
     bindFields(body, (k, v) => ed.change((x) => { x.data[k] = v; if (k === "period_from") { x.title = `التقرير الأسبوعي ${fmtDate(v)}`; } }));
     const addName = async () => { const v = await modal({ title: "إضافة اسم موجه", body: `<div class="f"><input id="mt-nn" type="text" aria-label="الاسم"></div>`, actions: [{ label: "إلغاء", value: null }, { label: "إضافة", kind: "primary", value: (b) => b.querySelector("#mt-nn").value.trim() }] });
-      if (!v) return null; try { const { addMyOption } = await import("../store.js"); await addMyOption?.("meeting_guides", v); } catch (_) {} if (!names.includes(v)) names.push(v); return v; };
+      if (!v) return null; if (!names.includes(v)) { names.push(v); ed.change((x) => { x.data.extra_names = [...new Set([...(x.data.extra_names || []), v])]; }); } return v; };
     const pick = async (sel) => { let v = sel.value; if (v === "__add") v = await addName(); sel.value = ""; return v || ""; };
     $("#mt-att", body).onchange = async (e) => { const v = await pick(e.target); if (!v) return; ed.change((x) => { x.data.attendees = [...new Set([...(x.data.attendees || []), v])]; }); ed.redraw(); };
     $("#mt-att-all", body).onclick = () => { const abs = new Set((ed.rec.data.absent || []).map((a) => a.name)); ed.change((x) => { x.data.attendees = [...new Set([...(x.data.attendees || []), ...names.filter((n) => !abs.has(n))])]; }); ed.redraw(); };
@@ -106,10 +113,10 @@ async function list(main) {
   const rows = (await api.list({ kind: KIND })).filter(isMeeting).sort((a, b) => (b.data.week_start || "").localeCompare(a.data.week_start || ""));
   const cur = weekStart(today());
   main.innerHTML = `<div class="container"><div class="page-head"><div><h1>التقرير الأسبوعي للتوجيه الفني</h1>
-      <div class="sub">ملف مشترك بين الموجهين: تقرير واحد لكل أسبوع، يعدّله أي موجه ويُطبع بنفس النموذج.</div></div>
+      <div class="sub">ملف مشترك: من ينشئ تقرير الأسبوع يصير مقرره ويختار أعضاءه الذين يشاركون في كتابته، والباقون يطّلعون ويطبعون.</div></div>
       <div class="row"><input type="date" id="mt-wk" value="${cur}" aria-label="الأسبوع"><a class="btn primary" id="mt-new" href="#/meeting/new?week=${cur}">+ تقرير الأسبوع</a></div></div>
-    ${rows.length ? `<div class="tbl-wrap"><table class="data"><thead><tr><th>الفترة</th><th>تاريخ الاجتماع</th><th>المقرر</th><th>البنود</th></tr></thead><tbody>
-      ${rows.map((r) => `<tr class="click" data-id="${r.id}" tabindex="0"><td>${esc(fmtDate(r.data.period_from))} — ${esc(fmtDate(r.data.period_to))}</td><td>${esc(fmtDate(r.data.meeting_date))}</td><td>${esc(r.data.reporter || "")}</td><td>${(r.data.items || []).length}</td></tr>`).join("")}</tbody></table></div>`
+    ${rows.length ? `<div class="tbl-wrap"><table class="data"><thead><tr><th>الفترة</th><th>المادة</th><th>تاريخ الاجتماع</th><th>المقرر</th><th>البنود</th><th></th></tr></thead><tbody>
+      ${rows.map((r) => `<tr class="click" data-id="${r.id}" tabindex="0"><td>${esc(fmtDate(r.data.period_from))} — ${esc(fmtDate(r.data.period_to))}</td><td>${esc(r.data.subject || "")}</td><td>${esc(fmtDate(r.data.meeting_date))}</td><td>${esc(r.data.reporter || "")}</td><td>${(r.data.items || []).length}</td><td>${r.owner_id === me() ? '<span class="pill ok">مقرره أنتِ</span>' : canEditMeeting(r) ? '<span class="pill">عضو</span>' : '<span class="pill">اطلاع</span>'}</td></tr>`).join("")}</tbody></table></div>`
       : `<div class="empty"><h2>لا توجد تقارير بعد</h2><p>اضغطي «+ تقرير الأسبوع» لإنشاء تقرير هذا الأسبوع.</p></div>`}</div>`;
   $("#mt-wk", main).onchange = (e) => { $("#mt-new", main).href = `#/meeting/new?week=${weekStart(e.target.value || today())}`; };
   $$("tr.click", main).forEach((tr) => { tr.onclick = () => go(`#/meeting/${tr.dataset.id}`); tr.onkeydown = (e) => e.key === "Enter" && tr.onclick(); });
