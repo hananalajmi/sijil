@@ -494,5 +494,5 @@
 .t-wm .wm-line { font-size: 12.5pt; margin: 0 0 3.5mm; line-height: 1.8; }
 .t-wm .wm-line b { font-weight: 800; }
 .t-wm .wm-item { font-size: 12.5pt; margin: 0 0 3mm; line-height: 1.9; padding-inline-start: 4mm; }
-.t-wm .wm-sigs { display: flex; justify-content: space-between; padding: 0 14mm; margin-top: 14mm; text-align: center; font-size: 12.5pt; font-weight: 800; }
+.t-wm .wm-sigs { display: flex; justify-content: space-between; padding: 0 14mm; margin-top: 4mm; padding-bottom: 6mm; text-align: center; font-size: 12.5pt; font-weight: 800; }
 .t-wm .wm-sigs > div { min-width: 60mm; } .t-wm .wm-sn { margin-top: 5mm; }

@@ -25,6 +25,6 @@ export async function weeklyMeeting(ctx) {
   ];
   const footer = `<div class="wm-sigs"><div><div class="wm-st">مقرر التقرير الأسبوعي</div><div class="wm-sn">${d.reporter ? "أ. " + esc(d.reporter) : ""}</div></div>
     <div><div class="wm-st">الموجه الفني الأول للعلوم</div><div class="wm-sn">${d.first_name ? "أ. " + esc(d.first_name) : ""}</div></div></div>`;
-  blocks.push({ html: footer }); // التوقيعان بعد البنود مباشرة كما في النموذج
-  return { orientation: "portrait", cls: "t-wm", header, identity: "", footer: "", blocks };
+  // التوقيعان حاشية سفلية ثابتة أسفل الصفحة
+  return { orientation: "portrait", cls: "t-wm", header, identity: "", footer, blocks };
 }
