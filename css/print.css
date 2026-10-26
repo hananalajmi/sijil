@@ -496,3 +496,6 @@
 .t-wm .wm-item { font-size: 12.5pt; margin: 0 0 3mm; line-height: 1.9; padding-inline-start: 4mm; }
 .t-wm .wm-sigs { display: flex; justify-content: space-between; padding: 0 14mm; margin-top: 4mm; padding-bottom: 6mm; text-align: center; font-size: 12.5pt; font-weight: 800; }
 .t-wm .wm-sigs > div { min-width: 60mm; } .t-wm .wm-sn { margin-top: 5mm; }
+.t-wm .wm-mk { display: flex; flex-direction: column; align-items: center; margin-top: 1mm; }
+.t-wm .wm-stamp { max-height: 16mm; max-width: 28mm; object-fit: contain; mix-blend-mode: multiply; }
+.t-wm .wm-sig { max-height: 11mm; max-width: 34mm; object-fit: contain; margin-top: -2mm; mix-blend-mode: multiply; }

@@ -58,7 +58,18 @@ export default async function (main, { id, params }) {
         <div class="f"><label for="mt-items">كل بند في سطر (تُرقّم تلقائياً)</label><textarea id="mt-items" rows="9">${esc((d.items || []).join("\n"))}</textarea></div></section>
       <section class="panel"><h2>التوقيع</h2><div class="form">
         <div class="f"><label for="mt-rep">مقرر التقرير الأسبوعي (الموجه المسؤول عن التسليم)</label>${nameSel('id="mt-rep"', d.reporter, "مقرر التقرير")}</div>
-        ${field({ label: "الموجه الفني الأول للعلوم", key: "first_name", value: d.first_name })}</div></section>`;
+        ${field({ label: "الموجه الفني الأول للعلوم", key: "first_name", value: d.first_name })}</div>
+        <h3 style="margin:14px 0 6px">توقيع المقرر وختمه</h3>
+        <div class="row" style="gap:12px;align-items:center;flex-wrap:wrap">
+          <div class="mt-mk">${d.rep_stamp ? `<img src="${d.rep_stamp}" alt="ختم المقرر" style="max-height:60px;max-width:110px">` : '<span class="hint">لا يوجد ختم</span>'}</div>
+          <div class="mt-mk">${d.rep_sig ? `<img src="${d.rep_sig}" alt="توقيع المقرر" style="max-height:50px;max-width:140px">` : '<span class="hint">لا يوجد توقيع</span>'}</div></div>
+        <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px">
+          <button class="btn small primary" type="button" id="mt-mine">استخدام توقيعي وختمي</button>
+          <label class="btn small">رفع ختم<input type="file" accept="image/*" data-mt-up="rep_stamp" hidden></label>
+          <label class="btn small">رفع توقيع<input type="file" accept="image/*" data-mt-up="rep_sig" hidden></label>
+          <button class="btn small" type="button" id="mt-draw">✍️ يوقّع باليد</button>
+          <button class="btn small ghost" type="button" id="mt-mkdel">حذف التوقيع والختم</button></div>
+        <p class="hint">يظهران تحت اسم المقرر في الحاشية. «استخدام توقيعي وختمي» يأخذ صورتيك من البيانات الرئيسية ويكتب اسمك مقرراً.</p></section>`;
     bindFields(body, (k, v) => ed.change((x) => { x.data[k] = v; if (k === "period_from") { x.title = `التقرير الأسبوعي ${fmtDate(v)}`; } }));
     const addName = async () => { const v = await modal({ title: "إضافة اسم موجه", body: `<div class="f"><input id="mt-nn" type="text" aria-label="الاسم"></div>`, actions: [{ label: "إلغاء", value: null }, { label: "إضافة", kind: "primary", value: (b) => b.querySelector("#mt-nn").value.trim() }] });
       if (!v) return null; try { const { addMyOption } = await import("../store.js"); await addMyOption?.("meeting_guides", v); } catch (_) {} if (!names.includes(v)) names.push(v); return v; };
@@ -71,6 +82,21 @@ export default async function (main, { id, params }) {
     $$("[data-del-att]", body).forEach((b) => (b.onclick = () => { const i = Number(b.dataset.delAtt); ed.change((x) => { x.data.attendees = (x.data.attendees || []).filter((_, j) => j !== i); }); ed.redraw(); }));
     $$("[data-del-abs]", body).forEach((b) => (b.onclick = () => { const i = Number(b.dataset.delAbs); ed.change((x) => { x.data.absent = (x.data.absent || []).filter((_, j) => j !== i); }); ed.redraw(); }));
     $("#mt-items", body).addEventListener("input", (e) => ed.change((x) => { x.data.items = e.target.value.split("\n").map((s) => s.replace(/^\s*\d+\s*[-–.)]\s*/, "").trim()).filter(Boolean); }));
+    // توقيع المقرر وختمه: يُحفظان داخل الملف المشترك (يراهما الجميع عند الطباعة)
+    const toData = (blob) => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => { const im = new Image(); im.onerror = rej;
+      im.onload = () => { const k = Math.min(1, 700 / Math.max(im.width, im.height)), cv = document.createElement("canvas"); cv.width = Math.round(im.width * k); cv.height = Math.round(im.height * k); cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height); res(cv.toDataURL("image/png")); };
+      im.src = fr.result; }; fr.onerror = rej; fr.readAsDataURL(blob); });
+    const setMk = (patch) => { ed.change((x) => Object.assign(x.data, patch)); ed.redraw(); };
+    $("#mt-mine", body).onclick = async () => { const g = G(); if (!g.signature && !g.stamp) return toast("ارفعي توقيعك وختمك أولاً من البيانات الرئيسية", "error");
+      try { const { fileUrl } = await import("../store.js"); const { trimImage } = await import("../report/builders.js");
+        const one = async (id) => { if (!id) return ""; const u = await fileUrl(id); if (!u) return ""; const t = await trimImage(u); return await toData(await (await fetch(t)).blob()); };
+        setMk({ rep_sig: await one(g.signature), rep_stamp: await one(g.stamp), reporter: myName() }); toast("أُضيف توقيعك وختمك"); }
+      catch (err) { toast("تعذّر إضافة التوقيع: " + (err.message || ""), "error"); } };
+    $$("[data-mt-up]", body).forEach((inp) => (inp.onchange = async () => { const k = inp.dataset.mtUp, f = inp.files[0]; inp.value = ""; if (!f) return;
+      try { const { inkEditor } = await import("../inkclean.js"); const fc = await inkEditor(f, { modal, toast, title: k === "rep_stamp" ? "تنقية صورة الختم" : "تنقية صورة التوقيع" }); if (!fc) return; setMk({ [k]: await toData(fc) }); }
+      catch (err) { toast(err.message || "تعذّر قراءة الصورة", "error"); } }));
+    $("#mt-draw", body).onclick = async () => { const { drawSignature } = await import("../sigpad.js"); const f = await drawSignature({ modal, toast, title: "توقيع مقرر التقرير" }); if (f) setMk({ rep_sig: await toData(f) }); };
+    $("#mt-mkdel", body).onclick = () => setMk({ rep_sig: "", rep_stamp: "" });
     $("#mt-rep", body).onchange = async (e) => { let v = e.target.value; if (v === "__add") { v = await addName(); if (v) { e.target.add(new Option(v, v), e.target.options[e.target.options.length - 1]); e.target.value = v; } else { e.target.value = ed.rec.data.reporter || ""; return; } }
       ed.change((x) => { x.data.reporter = v; }); };
   } });

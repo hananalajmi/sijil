@@ -23,7 +23,7 @@ export async function weeklyMeeting(ctx) {
     { html: `<p class="wm-line"><b>ونوقشت فيه البنود</b> :</p>` },
     ...items.map((t, i) => ({ html: `<p class="wm-item">${i + 1}– ${esc(t)}</p>` })),
   ];
-  const footer = `<div class="wm-sigs"><div><div class="wm-st">مقرر التقرير الأسبوعي</div><div class="wm-sn">${d.reporter ? "أ. " + esc(d.reporter) : ""}</div></div>
+  const footer = `<div class="wm-sigs"><div><div class="wm-st">مقرر التقرير الأسبوعي</div><div class="wm-sn">${d.reporter ? "أ. " + esc(d.reporter) : ""}</div>${d.rep_stamp || d.rep_sig ? `<div class="wm-mk">${d.rep_stamp ? `<img class="wm-stamp" src="${d.rep_stamp}" alt="">` : ""}${d.rep_sig ? `<img class="wm-sig" src="${d.rep_sig}" alt="">` : ""}</div>` : ""}</div>
     <div><div class="wm-st">الموجه الفني الأول للعلوم</div><div class="wm-sn">${d.first_name ? "أ. " + esc(d.first_name) : ""}</div></div></div>`;
   // التوقيعان حاشية سفلية ثابتة أسفل الصفحة
   return { orientation: "portrait", cls: "t-wm", header, identity: "", footer, blocks };
