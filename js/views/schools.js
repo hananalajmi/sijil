@@ -11,7 +11,8 @@ const FILE_KINDS = [["budget", "ميزانية المدرسة (PDF أو Word أ�
 const ACCEPT = ".pdf,.docx,.doc,.xlsx,.xls,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
 export default async function (main, { id }) {
-  if (!id) return listView(main, { kind: "school", title: "المدارس والمعلمات", sub: "اسم المدرسة وأسماء معلماتها؛ تظهر للاختيار في الزيارات والتقارير", newLabel: "+ مدرسة", byYear: false,
+  if (!id) return listView(main, { kind: "school", title: "المدارس والمعلمات", sub: "اسم المدرسة وأسماء معلماتها؛ تظهر للاختيار في الزيارات والتقارير", newLabel: "+ مدرسة",
+    extraHead: `<label class="btn">إنشاء من ملف الميزانية<input type="file" id="bud-new" accept="${ACCEPT}" hidden></label>`, onReady: () => { const inp = $("#bud-new", main); if (inp) inp.onchange = () => { const f = inp.files[0]; inp.value = ""; if (f) fromBudget(f); }; },byYear: false,
     emptyText: "أضيفي اسم المدرسة، ثم أسماء معلماتها أو ارفعي ملف الميزانية لاستخراجها.",
     columns: [{ label: "المدرسة", get: (r) => r.title }, { label: "المعلمات", get: (r) => state.teachers.filter((t) => t.school_id === r.id).length, cls: "num" }] });
 
@@ -126,4 +127,39 @@ export default async function (main, { id }) {
     paintFiles();
     }
   }, beforeApprove: () => [] });
+}
+
+/* ---------------- إنشاء مدرسة ومعلماتها من ملف الميزانية ----------------
+   يقرأ اسم المدرسة وأسماء المعلمات من الملف، فتراجعينها، ثم تُنشأ المدرسة (أو تُكمَّل إن كانت موجودة) ويُرفق ملف الميزانية بها */
+async function fromBudget(file) {
+  toast("جارٍ قراءة ملف الميزانية…");
+  const isPdf = /\.pdf$/i.test(file.name) || file.type === "application/pdf";
+  let names = [], school = "";
+  try {
+    if (isPdf) { const m = await import("../pdfnames.js"); [names, school] = await Promise.all([m.namesFromPdf(file).catch(() => []), m.textFromPdf(file).then(m.schoolNameFromText).catch(() => "")]); }
+    else { const [{ namesFromFile, textFromFile }, { schoolNameFromText }] = await Promise.all([import("../namesImport.js"), import("../pdfnames.js")]);
+      [names, school] = await Promise.all([namesFromFile(file).catch(() => []), textFromFile(file).then(schoolNameFromText).catch(() => "")]); }
+  } catch (e) { toast(e.message || "تعذّرت قراءة الملف", "error"); return; }
+  const bx = document.createElement("div");
+  bx.innerHTML = `<div class="f"><label for="bn-s">اسم المدرسة</label><input id="bn-s" type="text" value="${esc(school)}" placeholder="مثال: ثانوية …"></div>
+    <p class="hint">${school ? "قرأنا اسم المدرسة من الملف — صحّحيه إن احتاج." : "لم نجد اسم المدرسة في الملف، اكتبيه."}</p>
+    ${names.length ? `<label class="row" style="gap:8px;margin:10px 0 6px"><input type="checkbox" id="bn-all" checked> <b>كل المعلمات (${names.length})</b></label>
+      <div class="checks" style="grid-template-columns:1fr">${names.map((n, i) => `<label><input type="checkbox" checked value="${i}"> ${esc(n)}</label>`).join("")}</div>
+      <p class="hint">ألغي تحديد ما ليس اسم معلمة.</p>` : `<p class="hint">لم أجد أسماء مكتوبة في الملف (قد يكون صورة ممسوحة). تُنشأ المدرسة وتضيفين الأسماء يدوياً.</p>`}`;
+  const all = bx.querySelector("#bn-all"); const boxes = () => [...bx.querySelectorAll(".checks input")];
+  if (all) { all.onchange = () => boxes().forEach((c) => (c.checked = all.checked)); boxes().forEach((c) => (c.onchange = () => (all.checked = boxes().every((x) => x.checked)))); }
+  const v = await modal({ title: "إنشاء مدرسة من الميزانية", body: bx, wide: true, actions: [{ label: "إلغاء", value: null },
+    { label: "إنشاء المدرسة والمعلمات", kind: "primary", value: (b) => ({ school: b.querySelector("#bn-s").value.trim(), names: [...b.querySelectorAll(".checks input:checked")].map((c) => names[Number(c.value)]) }) }] });
+  if (!v) return;
+  if (!v.school) return toast("اكتبي اسم المدرسة", "error");
+  try {
+    let sc = state.schools.find((x) => x.title.trim() === v.school);
+    if (!sc) sc = await api.create({ kind: "school", title: v.school, data: {} });
+    await api.upload(file, { category: "attachment", subcategory: "budget", record_id: sc.id, title: file.name }).catch(() => {});
+    await refreshPeople();
+    const have = new Set(state.teachers.filter((t) => t.school_id === sc.id).map((t) => t.title.trim()));
+    let n = 0; for (const name of v.names) if (!have.has(name)) { await api.create({ kind: "teacher", title: name, school_id: sc.id, data: {} }); have.add(name); n++; }
+    await refreshPeople();
+    toast(`أُنشئت «${v.school}»${n ? ` وأُضيف ${n} اسم` : ""}`); location.hash = `#/schools/${sc.id}`;
+  } catch (e) { toast(e.message || "تعذّر الإنشاء", "error"); }
 }

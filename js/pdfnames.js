@@ -81,3 +81,28 @@ export async function namesFromPdf(file) {
   }
   return out;
 }
+
+// نص الملف كاملاً (سطراً سطراً) — لاستخراج اسم المدرسة من ملف الميزانية
+export async function textFromPdf(file) {
+  const { getDocument } = await pdfjs();
+  const doc = await getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false }).promise;
+  const out = [];
+  for (let p = 1; p <= Math.min(doc.numPages, 3); p++) {
+    const tc = await (await doc.getPage(p)).getTextContent(), lines = new Map();
+    for (const it of tc.items) { const s = (it.str || "").trim(); if (!s) continue; const y = Math.round(it.transform[5] / 3) * 3; if (!lines.has(y)) lines.set(y, []); lines.get(y).push([it.transform[4], s]); }
+    [...lines.entries()].sort((a, b) => b[0] - a[0]).forEach(([, its]) => out.push(its.sort((a, b) => b[0] - a[0]).map((x) => x[1]).join(" ")));
+  }
+  return out.join("\n");
+}
+// اسم المدرسة من نص الميزانية: أول «ثانوية/متوسطة/ابتدائية/مدرسة …» (ليس عنواناً عاماً)
+export function schoolNameFromText(text) {
+  const lines = String(text || "").split(/\n+/).map((l) => l.replace(/[ـ]/g, "").replace(/\s+/g, " ").trim()).filter(Boolean);
+  for (const l of lines) {
+    const m = l.match(/(?:^|[\s:(])((?:مدرسة|ثانوية|متوسطة|ابتدائية|روضة)\s+[^\d:،,()\/|«»"]{2,45})/);
+    if (!m) continue;
+    let n = m[1].replace(/\s+(العام|للعام|الدراسي|ميزانية|الميزانية|الفصل|منطقة|التابعة|بمنطقة).*$/, "").trim();
+    if (/ميزاني|الإدار|وزار|منطق/.test(n) || n.split(" ").length < 2) continue;
+    return n.split(" ").slice(0, 7).join(" ");
+  }
+  return "";
+}

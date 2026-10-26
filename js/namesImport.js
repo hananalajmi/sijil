@@ -82,3 +82,12 @@ export async function namesFromFile(file) {
   for (const t of texts) { const n = cleanName(t.replace(PREFIX, "").replace(TITLE, "")); if (looksLikeName(n) && !seen.has(n)) { seen.add(n); out.push(n); } }
   return out;
 }
+
+// نص ملف Word أو Excel (سطر لكل فقرة/خلية) — لاستخراج اسم المدرسة من الميزانية
+export async function textFromFile(file) {
+  const files = await unzip(await file.arrayBuffer());
+  const doc = files["word/document.xml"];
+  if (doc) return (doc.match(/<w:p[ >][\s\S]*?<\/w:p>/g) || []).map((p) => unxml((p.match(/<w:t[ >][^<]*<\/w:t>|<w:t>[^<]*<\/w:t>/g) || []).map((t) => t.replace(/<[^>]+>/g, "")).join(""))).join("\n");
+  const sst = files["xl/sharedStrings.xml"] || "";
+  return (sst.match(/<si>[\s\S]*?<\/si>/g) || []).map((si) => unxml((si.match(/<t[^>]*>([\s\S]*?)<\/t>/g) || []).map((t) => t.replace(/<[^>]+>/g, "")).join(""))).join("\n");
+}

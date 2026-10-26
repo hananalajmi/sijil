@@ -57,7 +57,7 @@ export const goldDefaults = () => ({ bg: "frame", titleArt: "art", titleColor: "
   nameFont: "plex", nameColor: "", textFont: "notosans", textColor: "#1d2333", sizeK: 100,
   gLogoR: "ministry", gLogoL: "directorate", gLogoR_img: "", gLogoL_img: "", firstSupName: "", signTitle: "الموجه الأول للعلوم",
   gSig: false, gStamp: false, gStamp2: false, gStamp2_img: "", gSig2_img: "",
-  sign2On: false, sign2Title: "الموجه الفني", sign2Name: "", signSide: "left", gShowDate: true, gDate: "" });
+  sign2On: false, sign2Title: "الموجه الفني", sign2Name: "", gSchoolOn: false, gSchool: "", signSide: "left", gShowDate: true, gDate: "" });
 
 // قياس النص بنفس الخط المستعمل في الرسم
 let mctx = null;
@@ -109,6 +109,9 @@ export async function goldResources(d, marks = {}) {
 }
 
 // يبني الشهادة لاسم واحد. portrait: تُدار داخل صفحة طولية (الآيباد والآيفون)
+// «في مدرسة …»: إن بدأ الاسم بنوع المدرسة (ثانوية/متوسطة/ابتدائية/مدرسة/روضة) يُكتب «في» قبله مباشرة
+export const schoolLine = (d) => { if (!d.gSchoolOn) return ""; const t = String(d.gSchool || "").trim(); if (!t) return "";
+  return /^في\s/.test(t) ? t : /^(مدرسة|ثانوية|متوسطة|ابتدائية|روضة|مركز)/.test(t) ? "في " + t : "في مدرسة " + t; };
 export function goldSVG(d, name, res, { portrait = false, blank = false, cls = "", me = "" } = {}) {
   const P = GOLD_BGS[d.bg] || GOLD_BGS.frame, dy = P.dy || 0, out = [];
   const B = { ...GOLD_BOX, logoR: P.logoR, logoL: P.logoL, sign: P.sign };
@@ -156,7 +159,10 @@ export function goldSVG(d, name, res, { portrait = false, blank = false, cls = "
     if (it.length) it[it.length - 1].gapB = 5;
     if (intro) balanced(intro, FN("intro"), SS.intro.size * f, wAt(top + 15, 20)).forEach((ln) => add(ln, "intro", "cg-intro", 0));
     if (it.length) it[it.length - 1].gapB = 6;
-    it.push({ name: true, h: SS.name.size * f * PT * 1.45, pt: SS.name.size * f, gapB: 9 });
+    const sch = blank ? "" : schoolLine(d);
+    it.push({ name: true, h: SS.name.size * f * PT * 1.45, pt: SS.name.size * f, gapB: sch ? 1 : 9, rule: !sch });
+    // سطر المدرسة تحت الاسم: «في مدرسة …» (اختياري)
+    if (sch) it.push({ school: true, text: sch, font: FN("intro"), pt: SS.intro.size * f * 0.92, col: SS.intro.color, h: SS.intro.size * f * 0.92 * PT * 1.55, gapB: 9 });
     if (bodySrc.length) bodySrc.forEach((x) => balanced(x, FN("body"), SS.body.size * f, wAt((top + bottom) / 2 + 20, 40)).forEach((ln) => add(ln, "body", "cg-body", 0)));
     else if (!closing) it.push({ dots: true, h: 22, gapB: 0 });
     if (closing) { if (it.length) it[it.length - 1].gapB = 1.5; balanced(closing, FN("closing"), SS.closing.size * f, wAt(bottom - 10, 12)).forEach((ln) => add(ln, "closing", "cg-closing", 0)); }
@@ -173,6 +179,9 @@ export function goldSVG(d, name, res, { portrait = false, blank = false, cls = "
       const t = (job ? job + " " : "") + nm, nmax = Math.min(250, room(cy, x.h));
       if (nm) out.push(T(CX, cy, t, FN("name"), fitPt(t, FN("name"), x.pt, nmax, 12), ncol, 'class="cg-name"'));
       else { if (job) out.push(T(CX + 50, cy, job, FN("name"), x.pt * .8, ncol)); out.push(`<path d="M${CX - 85} ${cy + 5}H${CX + 28}" stroke="#777" stroke-width=".3" stroke-dasharray="1 1.6"/>`); }
+      if (x.rule) { const oy = y + x.h + 2.5; out.push(`<path d="M${CX - 70} ${oy}H${CX - 3.5}M${CX + 3.5} ${oy}H${CX + 70}" stroke="url(#cgL)" stroke-width=".45"/>`, diamond(CX, oy, 1.5)); }
+    } else if (x.school) {
+      out.push(T(CX, cy, x.text, x.font, fitPt(x.text, x.font, x.pt, room(cy, x.h), 10), x.col, 'class="cg-school"'));
       const oy = y + x.h + 2.5; out.push(`<path d="M${CX - 70} ${oy}H${CX - 3.5}M${CX + 3.5} ${oy}H${CX + 70}" stroke="url(#cgL)" stroke-width=".45"/>`, diamond(CX, oy, 1.5));
     } else if (x.dots) { for (const [i, w] of [[0, 200], [1, 150]]) out.push(`<path d="M${CX - w / 2} ${y + 6 + i * 11}H${CX + w / 2}" stroke="#777" stroke-width=".3" stroke-dasharray="1 1.6"/>`); }
     else out.push(T(CX, cy, x.text, x.font, fitPt(x.text, x.font, x.pt, room(cy, x.h), 10), x.col, x.cls ? `class="${x.cls}"` : ""));

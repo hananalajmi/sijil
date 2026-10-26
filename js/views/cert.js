@@ -83,7 +83,10 @@ function goldenEditor(body, ed, designSel) {
     <section class="panel"><h2>المسمى والاسم</h2><div class="form">
       <div class="f"><label for="cg-gen">المكرَّم</label><select id="cg-gen"><option value="f">مؤنث (المعلمة — جهودها)</option><option value="m">مذكر (المعلم — جهوده)</option></select></div>
       ${field({ label: "المسمى الوظيفي (مذكر أو مؤنث)", key: "jobTitle", type: "select", options: opts("cert_g_titles"), value: d.jobTitle, remember: "cert_g_titles" })}
-      <div class="f"><label for="ct-sch">إضافة معلمات مدرسة (اختياري)</label><select id="ct-sch">${schoolOptions("")}</select></div></div>
+      <div class="f"><label for="ct-sch">المدرسة (اختياري)</label><select id="ct-sch">${schoolOptions(d.gSchoolId || "")}</select></div>
+      <div class="f"><label for="cg-school">سطر المدرسة تحت الاسم</label><input id="cg-school" type="text" value="${esc(d.gSchool || "")}" placeholder="اسم المدرسة"></div>
+      <label class="row" style="gap:8px;align-self:end"><input type="checkbox" id="cg-schon" ${d.gSchoolOn ? "checked" : ""}> <b>إظهار «في مدرسة …» تحت الاسم</b></label></div>
+      <div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap"><button class="btn" type="button" id="ct-pick">اختيار المكرَّمين من معلمات المدرسة…</button></div>
       <div class="f" style="margin-top:8px"><label for="ct-names">الاسم — اسم في كل سطر، وتُطبع شهادة لكل اسم (يظهر بجانب المسمى)</label><textarea id="ct-names" rows="4" placeholder="مثال:&#10;لطيفة عبدالهادي الجداوي">${esc(d.names || "")}</textarea></div>
       <p class="hint" id="ct-count"></p></section>
     <section class="panel"><h2>العبارة تحت الاسم (حسب الموضوع)</h2><div class="form" style="grid-template-columns:1fr">
@@ -161,9 +164,27 @@ function goldenEditor(body, ed, designSel) {
     catch (e) { toast(e.message || "تعذّر قراءة الصورة", "error"); } }));
   $$("[data-del]", body).forEach((b) => (b.onclick = () => { const s = b.dataset.del; ed.change((x) => { x.data["gLogo" + s] = ""; x.data["gLogo" + s + "_img"] = ""; }); $(`#cg-${s}`, body).value = ""; repaint(); }));
   $("#ct-names", body).addEventListener("input", (e) => { ed.change((x) => { x.data.names = e.target.value; }); paintCount(); repaint(); });
-  $("#ct-sch", body).onchange = (e) => { const sid = e.target.value; e.target.value = ""; if (!sid) return;
-    const have = new Set(certNames(ed.rec.data)); const add = state.teachers.filter((t) => t.school_id === sid).map((t) => t.title.trim()).filter((n) => n && !have.has(n));
-    if (!add.length) return; const v = [...certNames(ed.rec.data), ...add].join("\n"); ed.change((x) => { x.data.names = v; }); $("#ct-names", body).value = v; paintCount(); repaint(); };
+  // المدرسة: تظهر «في مدرسة …» تحت الاسم، ومنها يُختار المكرَّمون (الكل أو بعضهم)
+  const pickTeachers = async (sid) => {
+    const list = state.teachers.filter((t) => t.school_id === sid).map((t) => t.title.trim()).filter(Boolean);
+    if (!list.length) return toast("لا توجد أسماء معلمات لهذه المدرسة — أضيفيها من «المدارس والمعلمات»", "error");
+    const have = new Set(certNames(ed.rec.data)), bx = document.createElement("div");
+    bx.innerHTML = `<label class="row" style="gap:8px;margin-bottom:8px"><input type="checkbox" id="pk-all"> <b>اختيار الكل (${list.length})</b></label>
+      <div class="checks" style="grid-template-columns:1fr">${list.map((n, i) => `<label><input type="checkbox" value="${i}" ${have.has(n) ? "checked" : ""}> ${esc(n)}</label>`).join("")}</div>`;
+    const all = bx.querySelector("#pk-all"), boxes = () => [...bx.querySelectorAll(".checks input")];
+    all.checked = boxes().every((c) => c.checked); all.onchange = () => boxes().forEach((c) => (c.checked = all.checked));
+    boxes().forEach((c) => (c.onchange = () => (all.checked = boxes().every((x) => x.checked))));
+    const v = await modal({ title: "اختيار المكرَّمين", body: bx, actions: [{ label: "إلغاء", value: null }, { label: "تم", kind: "primary", value: (b) => [...b.querySelectorAll(".checks input:checked")].map((c) => list[Number(c.value)]) }] });
+    if (!v) return;
+    const keep = certNames(ed.rec.data).filter((n) => !list.includes(n)), names = [...keep, ...v].join("\n");
+    ed.change((x) => { x.data.names = names; }); $("#ct-names", body).value = names; paintCount(); repaint(); toast(`المكرَّمون: ${v.length}`);
+  };
+  $("#ct-sch", body).onchange = (e) => { const sid = e.target.value, sc = state.schools.find((x) => x.id === sid);
+    ed.change((x) => { x.data.gSchoolId = sid; if (sc) { x.data.gSchool = sc.title; x.data.gSchoolOn = true; } });
+    $("#cg-school", body).value = ed.rec.data.gSchool || ""; $("#cg-schon", body).checked = !!ed.rec.data.gSchoolOn; repaint(); if (sid) pickTeachers(sid); };
+  $("#ct-pick", body).onclick = () => { const sid = $("#ct-sch", body).value; if (!sid) return toast("اختاري المدرسة أولاً"); pickTeachers(sid); };
+  $("#cg-school", body).addEventListener("input", (e) => { ed.change((x) => { x.data.gSchool = e.target.value; }); repaint(); });
+  $("#cg-schon", body).onchange = (e) => { ed.change((x) => { x.data.gSchoolOn = e.target.checked; }); repaint(); };
   // الضمائر حسب المسمى: المعلم ← جهوده، المعلمة ← جهودها
   const gOf = (t) => (/ة(\s|$)/.test(String(t || "").split("/")[0].trim()) ? "f" : "m");
   const setBody = (v) => { $("#cg-body", body).value = v; ed.change((x) => { x.data.body = v; }); };
