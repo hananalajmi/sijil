@@ -483,3 +483,16 @@
 /* خامساً: الملاحظات — بعيدة عن الإيجابيات والسلبيات بنحو 3 أسطر، وبخط أوضح */
 .t-ach .ach-note { margin-top: 18mm; } .t-ach .ach-note .ln { font-size: 13pt; line-height: 1.7; }
 .t-ach .ach-note.squeezed { margin-top: 3mm; }
+
+/* ===== التقرير الأسبوعي للتوجيه الفني (اجتماع الموجهين) ===== */
+.t-wm .sheet-inner { padding: 12mm 16mm 14mm; }
+.t-wm .wm-logos .logo { height: 22mm; max-width: 60mm; object-fit: contain; }
+.t-wm .wm-title { width: 128mm; margin: 4mm auto 6mm; border: 1.2pt solid #2e74b5; padding: 3mm 4mm; text-align: center; font-weight: 800; }
+.t-wm .wm-t1 { font-size: 15pt; } .t-wm .wm-t2 { font-size: 13pt; margin-top: 2.5mm; }
+.t-wm .wm-red { color: #e00000; }
+.t-wm .wm-lead { font-size: 13pt; font-weight: 800; margin: 0 0 4mm; line-height: 1.8; }
+.t-wm .wm-line { font-size: 12.5pt; margin: 0 0 3.5mm; line-height: 1.8; }
+.t-wm .wm-line b { font-weight: 800; }
+.t-wm .wm-item { font-size: 12.5pt; margin: 0 0 3mm; line-height: 1.9; padding-inline-start: 4mm; }
+.t-wm .wm-sigs { display: flex; justify-content: space-between; padding: 0 14mm; margin-top: 14mm; text-align: center; font-size: 12.5pt; font-weight: 800; }
+.t-wm .wm-sigs > div { min-width: 60mm; } .t-wm .wm-sn { margin-top: 5mm; }

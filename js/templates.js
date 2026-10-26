@@ -293,6 +293,7 @@ export const HEAD_LOGOS = {
   monthly_achievements: { label: "الإنجازات الشهرية", r: "science_guidance", c: "ministry_color", l: "region" },
   shared_achievements: { label: "الإنجازات المشتركة", r: "ministry_hd", c: "", l: "directorate" },
   takleef: { label: "التكليف", r: "emblem", c: "", l: "" },
+  weekly_meeting: { label: "التقرير الأسبوعي للتوجيه الفني", r: "stats_r", c: "", l: "directorate" },
   criteria: { label: "بطاقة قياس المعايير", r: "emblem", c: "", l: "" },
 };
 // الشعارات المتاحة للاختيار في رأس النماذج

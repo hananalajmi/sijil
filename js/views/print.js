@@ -9,7 +9,7 @@ import { KIND_LABEL, KIND_ROUTE } from "../kit.js";
 import { HEAD_LOGOS, HEAD_LOGO_CHOICES, LOGOS, canonLogo } from "../templates.js";
 import { G, setHeadLogos } from "../store.js";
 // نوع النموذج لشعارات الرأس (تقرير الفعالية تُختار شعاراته من صفحة التقرير نفسها)
-const headKindOf = (ctx) => { const k = ctx.kind || ctx.rec?.kind; if (k === "stats_visits" || k === "stats_exams") return "stats"; if (k === "form") return ctx.rec?.data?.type; return k; };
+const headKindOf = (ctx) => { const k = ctx.kind || ctx.rec?.kind; if (k === "stats_visits" || k === "stats_exams") return "stats"; if (k === "form") return ctx.rec?.data?.type; if (k === "shared_achievements" && ctx.rec?.data?.doc === "weekly_meeting") return "weekly_meeting"; return k; };
 
 // الآيباد والآيفون (سفاري): لا يدعمان اتجاه الصفحة العرضي في الطباعة ولا الطباعة التلقائية
 const IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) || /[?&]ios=1\b/.test(location.search);

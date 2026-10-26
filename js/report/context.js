@@ -14,7 +14,7 @@ export const stageWord = (s) => ({ "ثانوي": "الثانوية", "متوسط
 export function guideCtx() {
   const g = G();
   return { full_name: g.full_name || state.profile?.full_name || "", stage: g.stage || "", subject: g.subject || opts("subjects")[0] || "", job_title: g.job_title || "",
-    first_supervisor: g.first_supervisor || FIRST_SUPERVISOR.name, region: g.region || "الأحمدي", directorate: g.directorate || "", signature: g.signature || null, stamp: g.stamp || null, head_logos: g.head_logos || {} };
+    first_supervisor: g.first_supervisor || FIRST_SUPERVISOR.name, region: g.region || "الأحمدي", directorate: g.directorate || "", signature: g.signature || null, stamp: g.stamp || null, head_logos: g.head_logos || {}, gender: g.gender || "" };
 }
 const pick = (r) => (r ? { id: r.id, title: r.title, data: r.data || {} } : null);
 const recPart = (r) => ({ id: r.id, kind: r.kind, title: r.title, academic_year: r.academic_year, term: r.term, record_date: r.record_date, data: r.data || {} });

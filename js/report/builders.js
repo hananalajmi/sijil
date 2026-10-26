@@ -242,7 +242,7 @@ export async function eventReport(ctx) {
     blocks.push({ html: `<div class="ev-box ev-photos ev-fill"><div class="ev-box-h">${imgs.length > 1 ? "صور معبرة" : "صورة معبرة"}</div><div class="ev-grid">${imgs.map((x) => `<div class="ev-ph">${x}</div>`).join("")}</div></div>`,
       fill: { min: 40, fit: fitPhotos } });
   }
-  const footer = await sigRow([{ ...mySig(ctx, "الموجهة الفنية:"), prefix: "أ." }], "ev-sigs one");
+  const footer = await sigRow([{ ...mySig(ctx, ctx.guide?.gender && !/ة/.test(ctx.guide.gender) ? "الموجه الفني:" : "الموجهة الفنية:"), prefix: "أ." }], "ev-sigs one");
   return { orientation: "portrait", cls: "t-ev", header, identity: "", footer, blocks };
 }
 
@@ -296,4 +296,4 @@ export async function departments(ctx) {
 import { weeklyReport, monthlyAchievements } from "./builders2.js";
 import { sharedAchievements } from "./builders3.js";
 export const BUILDERS = { form: (ctx) => import("./builders4.js").then((m) => (ctx.rec?.data?.type === "criteria" ? m.criteriaCard(ctx) : ctx.rec?.data?.type === "cert" ? m.certificate(ctx) : m.formTakleef(ctx))), teacher_visit: teacherVisit, school_visit: schoolVisit, stats_visits: statsVisits, stats_exams: statsExams,
-  monthly_plan: monthlyPlan, event_report: eventReport, department: departments, weekly_report: weeklyReport, monthly_achievements: monthlyAchievements, shared_achievements: sharedAchievements };
+  monthly_plan: monthlyPlan, event_report: eventReport, department: departments, weekly_report: weeklyReport, monthly_achievements: monthlyAchievements, shared_achievements: (ctx) => (ctx.rec?.data?.doc === "weekly_meeting" ? import("./builders5.js").then((m) => m.weeklyMeeting(ctx)) : sharedAchievements(ctx)) };

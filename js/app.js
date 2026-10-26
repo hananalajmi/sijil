@@ -6,6 +6,7 @@ import { applyUI, applyCachedUI } from "./theme.js";
 import { initPWA } from "./pwa.js";
 import { showIntro, rememberWho, getWho, forgetWho } from "./intro.js";
 import { icon } from "./icons.js";
+import { startGenderUI } from "./gender.js";
 import { SECTIONS, MORE, sectionOf, isExternal } from "./nav.js";
 applyCachedUI();
 initPWA();
@@ -24,7 +25,7 @@ const ROUTES = {
   groups: () => import("./views/groups.js"), "group-sheet": () => import("./views/groups.js"),
   bulletins: () => import("./views/files.js"), shared: () => import("./views/files.js"),
   search: () => import("./views/archive.js"), trash: () => import("./views/archive.js"), backup: () => import("./views/backup.js"),
-  admin: () => import("./views/admin.js"), print: () => import("./views/print.js"), hub: () => import("./views/hub.js"), tasks: () => import("./views/tasks.js"),
+  admin: () => import("./views/admin.js"), print: () => import("./views/print.js"), hub: () => import("./views/hub.js"), tasks: () => import("./views/tasks.js"), meeting: () => import("./views/meeting.js"),
 };
 
 const root = document.getElementById("root");
@@ -203,6 +204,7 @@ function saveWho() {
 }
 // فتح المنصة بعد تحميل البيانات
 function enterApp() {
+  startGenderUI(); // صياغة المذكر للموجّهين
   if (state.guide?.data?.ui) applyUI(state.guide.data.ui);
   saveWho();
   shell();

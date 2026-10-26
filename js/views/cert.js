@@ -81,6 +81,7 @@ function goldenEditor(body, ed, designSel) {
     <section class="panel"><h2>العبارة فوق الاسم</h2><div class="form" style="grid-template-columns:1fr">
       ${field({ label: "العبارة", key: "intro", type: "select", options: opts("cert_g_intros"), value: d.intro ?? "", remember: "cert_g_intros", hint: "لعبارة جديدة: «+ إضافة خيار جديد للقائمة» — وتُعدَّل القوائم من الحسابات والصلاحيات ← القوائم المنسدلة" })}</div></section>
     <section class="panel"><h2>المسمى والاسم</h2><div class="form">
+      <div class="f"><label for="cg-gen">المكرَّم</label><select id="cg-gen"><option value="f">مؤنث (المعلمة — جهودها)</option><option value="m">مذكر (المعلم — جهوده)</option></select></div>
       ${field({ label: "المسمى الوظيفي (مذكر أو مؤنث)", key: "jobTitle", type: "select", options: opts("cert_g_titles"), value: d.jobTitle, remember: "cert_g_titles" })}
       <div class="f"><label for="ct-sch">إضافة معلمات مدرسة (اختياري)</label><select id="ct-sch">${schoolOptions("")}</select></div></div>
       <div class="f" style="margin-top:8px"><label for="ct-names">الاسم — اسم في كل سطر، وتُطبع شهادة لكل اسم (يظهر بجانب المسمى)</label><textarea id="ct-names" rows="4" placeholder="مثال:&#10;لطيفة عبدالهادي الجداوي">${esc(d.names || "")}</textarea></div>
@@ -173,8 +174,25 @@ function goldenEditor(body, ed, designSel) {
     if (k === "sign2Title") { const g = G(), first = g.first_supervisor || FIRST_SUPERVISOR.name || "", me = g.full_name || state.profile?.full_name || "", cur = ed.rec.data.sign2Name || "";
       const auto = /الأول/.test(v) ? first : /الموجه|الموجهة/.test(v) ? me : ""; if (!cur || cur === first || cur === me) { ed.change((x) => { x.data.sign2Name = auto; }); const el = $("[data-key='sign2Name']", body); if (el) el.value = auto; } }
     if (k === "jobTitle") { const ph = ed.rec.data.phrase || "", cur = $("#cg-body", body).value; // تُعاد صياغة العبارة فقط إن لم تُعدَّل يدوياً
-      if (ph && [genderize(ph, "f"), genderize(ph, "m")].includes(cur)) setBody(genderize(ph, gOf(v))); }
+      if (ph && [genderize(ph, "f"), genderize(ph, "m")].includes(cur)) setBody(genderize(ph, gOf(v))); syncGender(); }
     repaint(); });
+  // المكرَّم مؤنث أو مذكر: يقلب المسمى (المعلمة ↔ المعلم …) والضمائر في العبارة، وتُعرض العبارات في القائمة بنفس الصيغة
+  const PAIRS = [["المعلمة", "المعلم"], ["رئيسة القسم", "رئيس القسم"], ["مديرة المدرسة", "مدير المدرسة"], ["المديرة المساعدة", "المدير المساعد"], ["الأستاذة", "الأستاذ"], ["الطالبة", "الطالب"], ["الموجهة الفنية", "الموجه الفني"], ["المحضرة", "المحضر"]];
+  const flipTitle = (t, g) => { const x = String(t || "").trim(); for (const [f, m] of PAIRS) { if (g === "m" && x === f) return m; if (g === "f" && x === m) return f; }
+    return g === "m" ? x.replace(/ة(?=\s|$)/, "") : x && !/ة(\s|$)/.test(x.split(" ")[0]) ? x.replace(/^(\S+)/, "$1ة") : x; };
+  const relabel = () => { const g = gOf(ed.rec.data.jobTitle);
+    $$("[data-key='phrase'] option, [data-key='closing'] option", body).forEach((o) => { if (!o.value || o.value === "__custom") return; if (!o.dataset.orig) { o.dataset.orig = o.value; o.value = o.value; } o.textContent = genderize(o.dataset.orig, g); }); };
+  const syncGender = () => { $("#cg-gen", body).value = gOf(ed.rec.data.jobTitle); relabel(); };
+  $("#cg-gen", body).onchange = (e) => { const g = e.target.value, jt = flipTitle(ed.rec.data.jobTitle || "المعلمة", g);
+    const sel = $("[data-key='jobTitle']", body);
+    if (sel && ![...sel.options].some((o) => o.value === jt)) sel.add(new Option(jt, jt), sel.options[sel.options.length - 1]);
+    if (sel) sel.value = jt;
+    const ph = ed.rec.data.phrase || "", cur = $("#cg-body", body).value;
+    ed.change((x) => { x.data.jobTitle = jt; });
+    if (ph && [genderize(ph, "f"), genderize(ph, "m")].includes(cur)) setBody(genderize(ph, g));
+    else if (cur) setBody(g === "m" ? genderize(cur, "m") : cur.replace(/([؀-ۿ]{2,})ه(?=[\s،.,:؛!؟]|$)/g, (m0, w) => (/(الله|وجه|فيه|عليه|منه|إليه|له|به)$/.test(m0) ? m0 : w + "ها")).replace(/حضر(?=\s|$)/g, "حضرت"));
+    relabel(); repaint(); };
+  syncGender();
   $("#cg-body", body).addEventListener("input", (e) => { ed.change((x) => { x.data.body = e.target.value; }); repaint(); });
   const setSt = (k, f, v) => ed.change((x) => { const cur = styleOf(x.data); x.data.st = { ...Object.fromEntries(Object.entries(cur).map(([a, b]) => [a, { ...b }])) }; x.data.st[k][f] = v; });
   $$("[data-sf]", body).forEach((el) => (el.onchange = async () => { setSt(el.dataset.sf, "font", el.value); await loadTextFont(el.value); repaint(); }));

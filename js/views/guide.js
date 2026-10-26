@@ -16,6 +16,8 @@ export default async function (main, { name }) {
     <div class="sub">تُدخل مرة واحدة وتظهر تلقائياً في كل التقارير والإحصائيات.</div></div></div>
     <section class="panel" id="basic"><h2>بيانات الموجّه</h2><div class="form">
       ${field({ label: "اسم الموجّه الفني", key: "full_name", value: d().full_name, required: true })}
+      <div class="f no-gender"><label for="g-gender">صياغة الموقع</label><select id="g-gender"><option value="موجّهة" ${/ة/.test(d().gender || "موجّهة") ? "selected" : ""}>موجّهة (اختاري، المعلمات…)</option><option value="موجّه" ${d().gender && !/ة/.test(d().gender) ? "selected" : ""}>موجّه (اختر، المعلمين…)</option></select>
+        <small class="hint">تتغير صياغة الواجهة كلها حسب اختيارك.</small></div>
       ${field({ label: "المسمى الوظيفي", key: "job_title", type: "select", options: opts("job_titles"), value: d().job_title })}
       ${field({ label: "المهمة الإضافية", key: "extra_task", type: "select", options: opts("extra_tasks"), value: d().extra_task })}
       ${field({ label: "المرحلة", key: "stage", type: "select", options: opts("stages"), value: d().stage, required: true })}
@@ -81,6 +83,8 @@ export default async function (main, { name }) {
     r.data.cover = c;
   }));
   $("#hide-dir", main).onchange = (e) => ed.change((r) => { r.data.cover = { ...(r.data.cover || {}), hideDirector: e.target.checked }; });
+  $("#g-gender", main).onchange = async (e) => { const v = e.target.value; ed.change((r) => { r.data.gender = v; }, { immediate: true }); try { await ed.save(); } catch (_) {}
+    toast(/ة/.test(v) ? "تم — الصياغة بالمؤنث" : "تم — الصياغة بالمذكر"); setTimeout(() => location.reload(), 700); };
   bindFields($("#basic", main), (k, v) => ed.change((r) => { r.data[k] = v; if (k === "full_name") r.title = "البيانات الرئيسية"; r.academic_year = r.academic_year || academicYearOf(); }));
 
   const imgSlot = async (box, key, category) => {
