@@ -1,6 +1,6 @@
 // تجهيز "سياق" التقرير من السجلات المترابطة. هذا السياق هو ما يُحفظ كنسخة ثابتة عند الاعتماد.
 import { api } from "../api.js";
-import { state, G, schoolById, teacherById, opts, officialDates } from "../store.js";
+import { state, G, schoolById, teacherById, opts, officialDates, sameTerm } from "../store.js";
 import { addDays, academicYearOf, parseDate } from "../ui.js";
 import { FIRST_SUPERVISOR } from "../templates.js";
 import { linkedRowsFor, mergeLinked } from "../svlink.js";
@@ -42,7 +42,7 @@ export async function recordContext(rec) {
 
 /* ---------------- إحصائية زيارات المعلمين: كل زيارة تُحسب مرة واحدة فقط (معرّفها) ---------------- */
 export async function visitStatsContext({ year, term, school = "", includeUnvisited = true }) {
-  const visits = (await api.list({ kind: "teacher_visit", year })).filter((v) => (!term || v.term === term) && (!school || v.school_id === school) && v.teacher_id);
+  const visits = (await api.list({ kind: "teacher_visit", year })).filter((v) => (!term || sameTerm(v.term, term)) && (!school || v.school_id === school) && v.teacher_id);
   const byTeacher = new Map();
   const seen = new Set();
   for (const v of visits.sort((a, b) => (a.record_date || "").localeCompare(b.record_date || ""))) {
@@ -54,7 +54,7 @@ export async function visitStatsContext({ year, term, school = "", includeUnvisi
   // سبب عدم الزيارة (إجازة دراسية، مجلس، وضع...) يُحفظ مع المعلم لكل عام وفترة
   const reasonOf = (t) => {
     const nv = t.data?.no_visit || {};
-    if (term) return nv[`${year}|${term}`] || "";
+    if (term) return nv[`${year}|${term}`] || nv[`${year}|${termWord(term, true)}`] || nv[`${year}|${termWord(term)}`] || "";
     return [...new Set(Object.entries(nv).filter(([k, v]) => k.startsWith(year + "|") && v).map(([, v]) => v))].join("، ");
   };
   const rows = teachers.map((t) => ({ teacher_id: t.id, teacher: t.title, school: schoolById(t.school_id)?.title || "", visits: byTeacher.get(t.id) || [], reason: reasonOf(t) }))
@@ -65,7 +65,7 @@ export async function visitStatsContext({ year, term, school = "", includeUnvisi
 
 /* ---------------- إحصائية متابعة الامتحان النظري / العملي ---------------- */
 export async function examStatsContext({ year, term, examType, version }) {
-  const list = (await api.list({ kind: "exam_followup", year })).filter((e) => e.data?.exam_type === examType && (!term || e.term === term));
+  const list = (await api.list({ kind: "exam_followup", year })).filter((e) => e.data?.exam_type === examType && (!term || sameTerm(e.term, term)));
   const bySchool = new Map();
   for (const e of list.sort((a, b) => (a.record_date || "").localeCompare(b.record_date || ""))) {
     const k = e.school_id || "none";

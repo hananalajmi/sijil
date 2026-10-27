@@ -234,3 +234,8 @@ export function officialDates() {
     if (subj && mine && !mine.includes(norm(subj)) && !norm(subj).includes(mine)) return null;
     return /^\d{4}-\d{2}-\d{2}$/.test(from) && title ? { id: "official-" + i, from, to: /^\d{4}-\d{2}-\d{2}$/.test(to) && to > from ? to : from, title, holiday: /عطلة/.test(h || ""), subject: subj || "", details: details || "" } : null; }).filter(Boolean);
 }
+
+// الفصل الدراسي بصيغة المذكر (الأول/الثاني)؛ السجلات القديمة المحفوظة «الأولى/الثانية» تُعامل كنفس الفصل
+export const termMasc = (t) => ({ "الأولى": "الأول", "الثانية": "الثاني" }[String(t || "").trim()] || String(t || "").trim());
+export const termOpts = () => [...new Set(opts("terms").map(termMasc).filter(Boolean))];
+export const sameTerm = (a, b) => termMasc(a) === termMasc(b);

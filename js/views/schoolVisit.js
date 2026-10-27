@@ -1,6 +1,6 @@
 // زيارة الموجه الفني للمدرسة (وتشمل الزيارة الاستطلاعية وزيارة المتابعة كنوع زيارة إلى أن يصل قالبها الخاص)
 import { api } from "../api.js";
-import { state, opts, schoolById, teacherById } from "../store.js";
+import { state, opts, schoolById, teacherById, termOpts, termMasc } from "../store.js";
 import { esc, $, $$, today, dayName, fmtDate, academicYearOf, toast } from "../ui.js";
 import { field, bindFields, recordPage, schoolOptions, teacherOptions, photoSlots, promptNewOption, addTeacherName } from "../kit.js";
 import { SCHOOL_VISIT } from "../templates.js";
@@ -14,7 +14,7 @@ export default async function (main, { id, params }) {
     columns: [{ label: "التاريخ", get: (r) => fmtDate(r.record_date) }, { label: "المدرسة", get: (r) => schoolById(r.school_id)?.title || "—" }, { label: "نوع الزيارة", get: (r) => r.data.visit_type },
       { label: "الهدف", get: (r) => (r.data.goals || []).join("، ") }] });
 
-  const rec = id === "new" ? { kind: "school_visit", title: "", record_date: today(), academic_year: state.year, term: opts("terms")[0] || "", school_id: params.school || null,
+  const rec = id === "new" ? { kind: "school_visit", title: "", record_date: today(), academic_year: state.year, term: termOpts()[0] || "", school_id: params.school || null,
     data: { visit_type: params.type || "", goals: [], records: [], teacher_rows: [{}], template: SCHOOL_VISIT.version } } : await api.get(id);
   if (!rec) { main.innerHTML = `<div class="container"><div class="empty">السجل غير موجود</div></div>`; return; }
   const wlink = schoolVisitLinker(rec); // تسجيل الزيارة تلقائياً في الإنجازات الأسبوعية
@@ -41,7 +41,7 @@ export default async function (main, { id, params }) {
         <div class="f"><label for="sch" class="req">المدرسة</label><select id="sch" data-key="school_id">${schoolOptions(r.school_id, { allowAdd: true })}</select></div>
         ${field({ label: "التاريخ", key: "record_date", type: "date", value: r.record_date, required: true })}
         <div class="f"><span class="lab">اليوم</span><input readonly id="day" value="${esc(dayName(r.record_date))}"></div>
-        ${field({ label: "الفترة الدراسية", key: "term", type: "select", options: opts("terms"), value: r.term })}
+        ${field({ label: "الفصل الدراسي", key: "term", type: "select", options: termOpts(), value: termMasc(r.term) })}
         ${field({ label: "نوع الزيارة", key: "visit_type", type: "select", options: opts("school_visit_types"), value: d.visit_type, required: true })}
         <div class="f"><span class="lab">الموجه الفني</span><input readonly value="${esc(state.guide?.data?.full_name || state.profile.full_name)}"></div>
         ${field({ label: "رئيس القسم (للتوقيع)", key: "head_name", value: d.head_name })}

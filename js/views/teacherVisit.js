@@ -1,6 +1,6 @@
 // زيارة المعلم / رئيس القسم — شاشة إدخال تفاعلية، وطباعة على هيئة النموذج الرسمي المختصر
 import { api } from "../api.js";
-import { state, opts, schoolById, teacherById, fileUrl, setMyOptions } from "../store.js";
+import { state, opts, schoolById, teacherById, fileUrl, setMyOptions, termOpts, termMasc, sameTerm } from "../store.js";
 import { esc, $, $$, today, dayName, fmtDate, academicYearOf, toast, modal } from "../ui.js";
 import { field, bindFields, recordPage, schoolOptions, teacherOptions, photoSlots, signaturePad, addTeacherName, promptNewOption } from "../kit.js";
 import { TEACHER_VISIT, tvOptionKey, TV_LEVELS } from "../templates.js";
@@ -24,7 +24,7 @@ export function bindPrintOptions(body, ed) {
 
 function visitNumber(rec, all) {
   if (!rec.teacher_id || !rec.record_date) return "";
-  const same = all.filter((v) => v.teacher_id === rec.teacher_id && v.academic_year === rec.academic_year && v.term === rec.term && v.id !== rec.id);
+  const same = all.filter((v) => v.teacher_id === rec.teacher_id && v.academic_year === rec.academic_year && sameTerm(v.term, rec.term) && v.id !== rec.id);
   return same.filter((v) => (v.record_date || "") < rec.record_date || ((v.record_date || "") === rec.record_date && v.created_at < (rec.created_at || "9"))).length + 1;
 }
 
@@ -34,7 +34,7 @@ export default async function (main, { id, params }) {
       { label: "الصف", get: (r) => [r.data.grade, r.data.section].filter(Boolean).join("/") }, { label: "الدرس", get: (r) => r.data.lesson }, { label: "الفترة", get: (r) => r.term }] });
 
   const t0 = teacherById(params.teacher);
-  const rec = id === "new" ? { kind: "teacher_visit", title: "", record_date: today(), academic_year: state.year, term: opts("terms")[0] || "",
+  const rec = id === "new" ? { kind: "teacher_visit", title: "", record_date: today(), academic_year: state.year, term: termOpts()[0] || "",
     teacher_id: t0?.id || null, school_id: t0?.school_id || null, data: { visitee: "teacher", subject: opts("subjects")[0] || "كيمياء", items: {}, photos: [], template: TEACHER_VISIT.version } } : await api.get(id);
   if (!rec) { main.innerHTML = `<div class="container"><div class="empty">السجل غير موجود</div></div>`; return; }
   const all = await api.list({ kind: "teacher_visit" });
@@ -55,7 +55,7 @@ export default async function (main, { id, params }) {
         ${field({ label: "الشعبة", key: "section", type: "select", options: opts("sections"), value: d.section, remember: "sections" })}
         ${field({ label: "تاريخ الزيارة", key: "record_date", type: "date", value: r.record_date, required: true })}
         <div class="f"><span class="lab">اليوم</span><input readonly id="day" value="${esc(dayName(r.record_date))}"></div>
-        ${field({ label: "الفصل الدراسي", key: "term", type: "select", options: opts("terms"), value: r.term, required: true })}
+        ${field({ label: "الفصل الدراسي", key: "term", type: "select", options: termOpts(), value: termMasc(r.term), required: true })}
         ${field({ label: "الحصة", key: "period", type: "select", options: opts("periods"), value: d.period, custom: false })}
         <div class="f"><span class="lab">رقم الزيارة</span><input readonly id="vno" value="${visitNumber(r, all)}"><div class="hint">يُحسب تلقائياً لهذا المعلم في الفصل نفسه</div></div>
         ${field({ label: "المكان", key: "place", type: "select", options: opts("places"), value: d.place, remember: "places" })}

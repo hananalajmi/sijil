@@ -2,7 +2,7 @@
 // كل دالة تستقبل "سياق" قابلاً للحفظ (يُحفظ كما هو كنسخة ثابتة عند الاعتماد) وتعيد تقريراً للمحرك.
 import { esc, fmtDate, dayName, yearLabel, WORK_DAYS, DAYS, MONTHS_EN, parseDate, addDays } from "../ui.js";
 import { TEACHER_VISIT, SCHOOL_VISIT, STATS, LOGOS, HEAD_LOGOS } from "../templates.js";
-import { fileUrl, logoSrc, G } from "../store.js";
+import { fileUrl, logoSrc, G, termMasc } from "../store.js";
 
 export const val = (v) => esc(v ?? "");
 export const nl = (s) => esc(s || "").split(/\n+/).map((x) => x.trim()).filter(Boolean);
@@ -74,7 +74,7 @@ export async function teacherVisit(ctx) {
     </div>`;
   const identity = `<div class="tv-meta">
       <div class="tv-school"><b>المدرسة:</b> <span class="fill">${val(ctx.school?.title)}</span></div>
-      <div class="tv-year"><div><b>العام الدراسي:</b> ${val(yearLabel(ctx.rec.academic_year)).replace(" -", "-")}</div><div><b>الفصل الدراسي:</b> ${val(ctx.rec.term)}</div></div>
+      <div class="tv-year"><div><b>العام الدراسي:</b> ${val(yearLabel(ctx.rec.academic_year)).replace(" -", "-")}</div><div><b>الفصل الدراسي:</b> ${val(termMasc(ctx.rec.term))}</div></div>
     </div>
     <table class="grid tv-id"><thead><tr><th>${isHead ? "اسم رئيس القسم" : "اسم المعلم"}</th><th>الصف</th><th>الحصة</th><th>المكان</th><th>اليوم</th><th>التاريخ</th><th>عنوان الدرس</th></tr></thead>
     <tbody><tr><td>${val(ctx.teacher?.title)}</td><td>${val(d.grade)}${d.section ? " / " + val(d.section) : ""}</td><td>${val(d.period)}</td><td>${val(d.place)}</td>
@@ -111,9 +111,9 @@ export async function schoolVisit(ctx) {
     <div class="sv-logos-l">${H.l}</div></div>`;
   const term = ctx.rec.term;
   const identity = `<table class="grid sv-id">
-      <thead><tr><th class="w-school">المدرسة</th><th>اليوم</th><th>التاريخ</th><th>الفترة الدراسية</th></tr></thead>
+      <thead><tr><th class="w-school">المدرسة</th><th>اليوم</th><th>التاريخ</th><th>الفصل الدراسي</th></tr></thead>
       <tbody><tr><td>${val(ctx.school?.title)}</td><td>${val(dayName(ctx.rec.record_date))}</td><td>${val(fmtDate(ctx.rec.record_date))}</td>
-      <td>${term ? val(term) : "الأولى / الثانية"}</td></tr></tbody></table>
+      <td>${term ? val(termMasc(term)) : "الأول / الثاني"}</td></tr></tbody></table>
     <table class="grid sv-id2"><tr><th>الموجه الفني</th><td>${val(ctx.guide?.full_name)}</td><th>نوع الزيارة</th><td>${val(d.visit_type)}</td></tr></table>`;
   const box = (title, list, chosen, other, text) => `<div class="sv-box"><div class="sv-box-h">${title}</div><div class="sv-checks">
       ${list.map((g) => `<div class="ck"><span class="cb">${chosen?.includes(g) ? "☑" : "☐"}</span>${esc(g)}</div>`).join("")}

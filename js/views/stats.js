@@ -1,6 +1,6 @@
 // الإحصائيات: تُحسب مباشرة من السجلات الفعلية، وكل رقم مربوط بمصدره
 import { api } from "../api.js";
-import { state, opts, schoolById } from "../store.js";
+import { state, opts, schoolById, termOpts, termMasc } from "../store.js";
 import { esc, $, $$, dayName, fmtDate, toast } from "../ui.js";
 import { go, schoolOptions } from "../kit.js";
 import { visitStatsContext, examStatsContext } from "../report/context.js";
@@ -8,9 +8,9 @@ import { STATS } from "../templates.js";
 
 export default async function view(main, { name, params }) {
   const stats = () => view(main, { name, params });
-  const termParam = params.term ?? (opts("terms")[0] || "");
+  const termParam = params.term != null ? (params.term === "all" ? "all" : termMasc(params.term)) : (termOpts()[0] || "");
   const term = termParam === "all" ? "" : termParam;
-  const termSel = `<select id="term" aria-label="الفترة">${[["all", "كل الفترات"], ...opts("terms").map((t) => [t, "الفترة " + t])].map(([v, l]) => `<option value="${esc(v)}" ${v === termParam ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
+  const termSel = `<select id="term" aria-label="الفصل الدراسي">${[["all", "كل الفصول"], ...termOpts().map((t) => [t, "الفصل " + t])].map(([v, l]) => `<option value="${esc(v)}" ${v === termParam ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
   const qs = (o) => new URLSearchParams(Object.entries(o).filter(([, v]) => v !== undefined && v !== "")).toString();
 
   if (name === "stats-visits") {

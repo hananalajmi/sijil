@@ -1,6 +1,6 @@
 // متابعة الامتحانات النظرية والعملية — كل متابعة تدخل تلقائياً في إحصائيتها
 import { api } from "../api.js";
-import { state, opts, schoolById } from "../store.js";
+import { state, opts, schoolById, termOpts, termMasc } from "../store.js";
 import { $, today, dayName, fmtDate, academicYearOf } from "../ui.js";
 import { field, bindFields, recordPage, schoolOptions } from "../kit.js";
 import { listView } from "./_list.js";
@@ -12,7 +12,7 @@ export default async function (main, { id, params }) {
     extraHead: `<a class="btn" href="#/stats-theory">إحصائية النظري</a><a class="btn" href="#/stats-practical">إحصائية العملي</a>`,
     columns: [{ label: "التاريخ", get: (r) => `${dayName(r.record_date)} ${fmtDate(r.record_date)}` }, { label: "المدرسة", get: (r) => schoolById(r.school_id)?.title || "—" },
       { label: "الامتحان", get: (r) => TYPES[r.data.exam_type] || "" }, { label: "امتحان الصف", get: (r) => r.data.grade }, { label: "الفترة", get: (r) => r.term }] });
-  const rec = id === "new" ? { kind: "exam_followup", title: "", record_date: today(), academic_year: state.year, term: opts("terms")[0] || "", school_id: params.school || null, data: { exam_type: params.type || "theory" } } : await api.get(id);
+  const rec = id === "new" ? { kind: "exam_followup", title: "", record_date: today(), academic_year: state.year, term: termOpts()[0] || "", school_id: params.school || null, data: { exam_type: params.type || "theory" } } : await api.get(id);
   if (!rec) { main.innerHTML = `<div class="container"><div class="empty">السجل غير موجود</div></div>`; return; }
   await recordPage(main, { rec, title: "متابعة امتحان", render(body, ed) {
     const r = ed.rec;
@@ -22,7 +22,7 @@ export default async function (main, { id, params }) {
       ${field({ label: "امتحان الصف", key: "grade", type: "select", options: opts("grades"), value: r.data.grade, required: true })}
       ${field({ label: "التاريخ", key: "record_date", type: "date", value: r.record_date, required: true })}
       <div class="f"><span class="lab">اليوم</span><input readonly id="day" value="${dayName(r.record_date)}"></div>
-      ${field({ label: "الفترة / الفصل الدراسي", key: "term", type: "select", options: opts("terms"), value: r.term })}
+      ${field({ label: "الفصل الدراسي", key: "term", type: "select", options: termOpts(), value: termMasc(r.term) })}
       ${field({ label: "ملاحظات", key: "notes", type: "textarea", value: r.data.notes, wide: true })}</div></section>`;
     bindFields(body, (k, v) => {
       ed.change((x) => {
