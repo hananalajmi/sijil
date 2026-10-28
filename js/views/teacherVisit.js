@@ -7,14 +7,14 @@ import { TEACHER_VISIT, tvOptionKey, TV_LEVELS } from "../templates.js";
 import { listView } from "./_list.js";
 import { teacherVisitLinker, schoolVisitFor } from "../svlink.js";
 
-export function printOptionsPanel(ed, { sigsEveryPage = false } = {}) {
+export function printOptionsPanel(ed, { sigsEveryPage = false, dateOn = false } = {}) {
   const p = ed.rec.data.print || {};
   const g = state.guide?.data || {};
   return `<section class="panel"><h2>خيارات الطباعة لهذا التقرير</h2><div class="print-opts">
     ${sigsEveryPage ? `<label><input type="checkbox" data-p="sigsEveryPage" ${p.sigsEveryPage !== false ? "checked" : ""}> تكرار التوقيعات في كل صفحة</label>` : ""}
     <label><input type="checkbox" data-p="showSignature" ${p.showSignature ? "checked" : ""} ${g.signature ? "" : "disabled"}> إظهار توقيعي</label>
     <label><input type="checkbox" data-p="showStamp" ${p.showStamp ? "checked" : ""} ${g.stamp ? "" : "disabled"}> إظهار ختمي</label>
-    <label><input type="checkbox" data-p="showDate" ${p.showDate ? "checked" : ""}> إظهار تاريخ التوقيع</label>
+    <label><input type="checkbox" data-p="showDate" ${p.showDate ?? dateOn ? "checked" : ""}> إظهار تاريخ التوقيع</label>
     <input type="date" data-p="date" value="${esc(p.date || today())}" aria-label="تاريخ التوقيع">
     ${g.signature && g.stamp ? "" : `<a href="#/settings">رفع التوقيع والختم من الإعدادات</a>`}</div></section>`;
 }

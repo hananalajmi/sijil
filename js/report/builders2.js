@@ -27,6 +27,8 @@ function running(ctx, title, period) {
 
 /* ============================== الإنجازات الأسبوعية ============================== */
 export async function weeklyReport(ctx) {
+  // الإنجازات الأسبوعية: تاريخ التوقيع ظاهر افتراضياً (يُخفى بإلغاء الخيار)
+  if (ctx.print?.showDate === undefined) ctx = { ...ctx, print: { ...(ctx.print || {}), showDate: true } };
   const d = ctx.rec.data || {};
   const ws = d.week_start, we = ws ? addDays(ws, 4) : "";
   const period = `الأسبوع ${d.week_label || ""} — ${monthName(d.month || ws)} (${fmtDateSlash(ws)} - ${fmtDateSlash(we)})`;

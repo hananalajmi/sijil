@@ -50,7 +50,7 @@ export default async function (main, { id, params }) {
     <section class="panel"><h2>رابعاً: الإيجابيات والسلبيات والمقترحات</h2><div class="form">
       ${field({ label: "الإيجابيات", key: "positives", type: "textarea", value: d.positives })}${field({ label: "السلبيات", key: "negatives", type: "textarea", value: d.negatives })}${field({ label: "المقترحات", key: "suggestions", type: "textarea", value: d.suggestions })}</div></section>
     <section class="panel"><h2>خامساً: الملاحظات</h2><div class="form">${field({ label: "الملاحظة (اختياري)", key: "note", type: "select", options: opts("weekly_notes"), value: d.note || "", remember: "weekly_notes", wide: true, hint: "تُطبع «خامساً: الملاحظات» فقط إذا اخترتِ ملاحظة — لملاحظة جديدة: «+ إضافة خيار جديد للقائمة»" })}</div></section>
-    ${printOptionsPanel(ed, { sigsEveryPage: true })}`;
+    ${printOptionsPanel(ed, { sigsEveryPage: true, dateOn: true })}`;
     const box = $("#rows", body);
     const paint = () => {
       const rows = ed.rec.data.rows || [];

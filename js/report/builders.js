@@ -59,7 +59,8 @@ export const mySig = (ctx, title, name) => ({
   title, name: name ?? ctx.guide?.full_name,
   sigFile: ctx.print?.showSignature ? ctx.guide?.signature : null,
   stampFile: ctx.print?.showStamp ? ctx.guide?.stamp : null,
-  date: ctx.print?.showDate ? fmtDate(ctx.print?.date) : "",
+  // التاريخ المختار، وإن لم يُغيَّر من الخانة: تاريخ التقرير أو اليوم (كان يُترك فارغاً فلا يظهر)
+  date: ctx.print?.showDate ? fmtDate(ctx.print?.date || ctx.rec?.record_date || new Date().toISOString().slice(0, 10)) : "",
 });
 
 /* ============================== زيارة المعلم ============================== */
