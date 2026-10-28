@@ -191,7 +191,7 @@ export default async function (main) {
       row.querySelector("[data-send]").onclick = async () => {
         try {
           const file = new File([await blob()], f.title, { type: "application/pdf" });
-          if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: f.title }); return; } catch (e) { if (e.name === "AbortError") return; } }
+          if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file] }); return; } catch (e) { if (e.name === "AbortError") return; } }
           const a = document.createElement("a"); a.href = URL.createObjectURL(file); a.download = f.title; document.body.appendChild(a); a.click(); a.remove(); toast("نُزّل الملف؛ أرسليه من البريد أو واتساب");
         } catch (e) { toast(e.message, "error"); }
       };

@@ -129,7 +129,7 @@ export default async function (main, { id, params }) {
       const blob = await sheetsToPdf($("#sheets", main));
       file = new File([blob], `${name.replace(/[\\/:*?"<>|]/g, "-")}.pdf`, { type: "application/pdf" });
     } catch (e) { console.warn(e); try { window.print(); } catch (_) {} return; } // إن تعذّر: الطباعة العادية
-    const share = async () => { if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: name }); return true; } catch (e) { if (e.name === "AbortError") return true; } } return false; };
+    const share = async () => { if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file] }); return true; } catch (e) { if (e.name === "AbortError") return true; } } return false; };
     // المشاركة تحتاج ضغطة مباشرة، فيُعرض زر بعد تجهيز الملف
     const v = await modal({ title: "الملف جاهز للطباعة", body: `<p>اضغطي «طباعة / مشاركة» ثم اختاري <b>طباعة</b> (أو «حفظ في الملفات»). يُطبع بدون رابط الموقع والتاريخ.</p>`,
       actions: [{ label: "إلغاء", value: null }, { label: "طباعة / مشاركة", kind: "primary", value: () => share() }] });
@@ -212,7 +212,7 @@ export default async function (main, { id, params }) {
         // الإرسال من الجهاز (واتساب، البريد، …)؛ وإن لم يدعم المتصفح ذلك يُنزَّل الملف لإرساله يدوياً
         const file = new File([blob], fname, { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          try { await navigator.share({ files: [file], title: name }); return; } catch (e) { if (e.name === "AbortError") return; }
+          try { await navigator.share({ files: [file] }); return; } catch (e) { if (e.name === "AbortError") return; }
         }
         download(blob, fname); toast("نُزّل الملف؛ أرسليه من البريد أو واتساب"); return;
       }
@@ -228,7 +228,7 @@ export default async function (main, { id, params }) {
     catch (e) { console.warn(e); toast("تعذّر إنشاء PDF في هذا المتصفح — استخدمي «طباعة / حفظ PDF»", "error"); return; }
     const canShare = !!(navigator.canShare && navigator.canShare({ files: [file] }));
     const v = await modal({ title: "ملف PDF جاهز", body: `<p>${canShare ? "اضغطي «إرسال» ثم اختاري واتساب أو البريد أو Drive." : "سيُنزَّل الملف لترسليه من جهازك."}</p>`,
-      actions: [{ label: "إلغاء", value: null }, { label: canShare ? "إرسال" : "تنزيل", kind: "primary", value: () => { if (canShare) navigator.share({ files: [file], title: name }).catch(() => {}); else download(file, file.name); return true; } }] });
+      actions: [{ label: "إلغاء", value: null }, { label: canShare ? "إرسال" : "تنزيل", kind: "primary", value: () => { if (canShare) navigator.share({ files: [file] }).catch(() => {}); else download(file, file.name); return true; } }] });
     return v;
   };
   const fr = $("#freeze", main);
