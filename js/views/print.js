@@ -70,10 +70,10 @@ export default async function (main, { id, params }) {
       ${HEAD_LOGOS[headKindOf(ctx)] && rec?.status !== "approved" ? `<button class="btn" id="hlogos" title="اختيار الشعارات في رأس هذا النموذج: يمين ووسط ويسار">الشعارات</button>` : ""}
       <button class="btn primary" id="print">طباعة / حفظ PDF</button>
       <button class="btn" id="word">تصدير Word</button>
-      <button class="btn" id="share" title="يرسل الملف (Word) عبر واتساب أو البريد من جهازك">إرسال</button>
+      <button class="btn" id="share" title="يرسل الملف PDF عبر واتساب أو البريد أو الدرايف من جهازك">إرسال PDF</button>
       ${!rec && id !== "compiled-ach" && !id.startsWith("blank-") ? `<button class="btn" id="freeze">حفظ نسخة معتمدة</button>` : ""}
     </div>
-    <p class="hint no-print" style="margin:10px 0 0">لحفظ PDF: اضغطي «طباعة / حفظ PDF» ثم اختاري «حفظ كـ PDF» (في الجوال: مشاركة ← حفظ في الملفات). الملف مطابق لهذه المعاينة. «إرسال» يرسل الملف بصيغة Word عبر واتساب أو البريد، ولإرساله PDF: احفظيه PDF ثم أرسليه من الملفات.</p>
+    <p class="hint no-print" style="margin:10px 0 0">لحفظ PDF: اضغطي «طباعة / حفظ PDF» ثم اختاري «حفظ كـ PDF» (في الجوال: مشاركة ← حفظ في الملفات). الملف مطابق لهذه المعاينة. «إرسال PDF» يرسل ملف PDF واحداً عبر واتساب أو البريد أو Drive، و«تصدير Word» لملف Word فقط.</p>
     <div class="preview-wrap"><div class="sheets" id="sheets"></div></div>
     <div class="flow" id="flow" aria-hidden="true"></div>`;
   const sheets = $("#sheets", main);
@@ -220,7 +220,17 @@ export default async function (main, { id, params }) {
     } catch (e) { console.error(e); toast("تعذر إنشاء ملف Word: " + e.message, "error"); }
   };
   $("#word", main).onclick = () => word();
-  $("#share", main).onclick = () => word("share");
+  // «إرسال PDF»: ملف PDF واحد مطابق للمعاينة يُرسل عبر المشاركة (واتساب، البريد، الدرايف…)؛ Word من زره فقط
+  $("#share", main).onclick = async () => {
+    let file;
+    try { toast("جارٍ تجهيز ملف PDF…"); const { sheetsToPdf } = await import("../report/pdf.js");
+      file = new File([await sheetsToPdf($("#sheets", main))], `${name.replace(/[\\/:*?"<>|]/g, "-")}.pdf`, { type: "application/pdf" }); }
+    catch (e) { console.warn(e); toast("تعذّر إنشاء PDF في هذا المتصفح — استخدمي «طباعة / حفظ PDF»", "error"); return; }
+    const canShare = !!(navigator.canShare && navigator.canShare({ files: [file] }));
+    const v = await modal({ title: "ملف PDF جاهز", body: `<p>${canShare ? "اضغطي «إرسال» ثم اختاري واتساب أو البريد أو Drive." : "سيُنزَّل الملف لترسليه من جهازك."}</p>`,
+      actions: [{ label: "إلغاء", value: null }, { label: canShare ? "إرسال" : "تنزيل", kind: "primary", value: () => { if (canShare) navigator.share({ files: [file], title: name }).catch(() => {}); else download(file, file.name); return true; } }] });
+    return v;
+  };
   const fr = $("#freeze", main);
   if (fr) fr.onclick = async () => {
     const ok = await modal({ title: "حفظ نسخة معتمدة", body: "<p>تُحفظ هذه الإحصائية كما هي الآن كنسخة ثابتة في «التقارير المعتمدة»، ولا تتغير لاحقاً بتعديل الزيارات.</p>", actions: [{ label: "إلغاء", value: false }, { label: "حفظ واعتماد", kind: "primary", value: true }] });
