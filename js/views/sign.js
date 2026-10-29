@@ -2,7 +2,7 @@
 // في المكان الذي تختاره، ثم يُحفظ ملف PDF موقّع في الأرشيف ويُرسل. كل شيء داخل المتصفح.
 import { api } from "../api.js";
 import { G, fileUrl } from "../store.js";
-import { esc, $, $$, toast, confirmBox, fmtDate, today } from "../ui.js";
+import { esc, $, $$, toast, confirmBox, fmtDate, today, modal } from "../ui.js";
 
 const CAT = "report_file", SUB = "signed";
 let pdfjsLib;
@@ -44,8 +44,9 @@ export default async function (main) {
   const g = G();
   const [sigUrl, stampUrl] = await Promise.all([g.signature ? fileUrl(g.signature) : null, g.stamp ? fileUrl(g.stamp) : null]);
   main.innerHTML = `<div class="container">
-    <div class="page-head"><div><h1>توقيع ملف</h1><div class="sub">ارفعي نموذجاً (PDF أو صورة)، وضعي عليه توقيعك وختمك والتاريخ حيث تريدين، ثم احفظيه PDF موقّعاً وأرسليه.</div></div></div>
-    <section class="panel" id="pick"><div class="toolbar"><label class="btn primary">اختيار الملف<input type="file" id="file" accept="application/pdf,.pdf,image/*,.doc,.docx" hidden></label>
+    <div class="page-head"><div><h1>توقيع ملف</h1><div class="sub">صوّري الورقة بالكاميرا (تُقص حدودها وتُقوَّم تلقائياً) أو ارفعي PDF أو صورة، وضعي عليه توقيعك وختمك والتاريخ حيث تريدين، ثم احفظيه PDF موقّعاً وأرسليه.</div></div></div>
+    <section class="panel" id="pick"><div class="toolbar"><label class="btn primary">📷 تصوير الورقة<input type="file" id="cam" accept="image/*" capture="environment" hidden></label><label class="btn">اختيار ملف<input type="file" id="file" accept="application/pdf,.pdf,image/*,.doc,.docx" hidden></label>
+      <label class="btn" id="addpg" hidden>+ صفحة أخرى بالكاميرا<input type="file" id="cam2" accept="image/*" capture="environment" hidden></label>
       <span class="hint" id="fname">PDF أو صورة. ملف Word: افتحيه في Word واحفظيه PDF أولاً.</span></div>
       ${!sigUrl || !stampUrl ? `<p class="hint">${!sigUrl && !stampUrl ? "لم ترفعي توقيعك وختمك بعد" : !sigUrl ? "لم ترفعي توقيعك بعد" : "لم ترفعي ختمك بعد"} — <a href="#/guide">ارفعيهما من «البيانات الرئيسية ← التوقيع والختم»</a>.</p>` : ""}</section>
     <div class="sign-tools" id="tools" hidden>
@@ -79,17 +80,27 @@ export default async function (main) {
         }
         doc = { name: f.name.replace(/\.pdf$/i, ""), pages };
       } else if (/^image\//.test(f.type)) {
-        const u = URL.createObjectURL(f), im = await loadImg(u);
-        const w = 595.28, h = (w * im.naturalHeight) / im.naturalWidth; // عرض A4 بالنقاط
-        doc = { name: f.name.replace(/\.[^.]+$/, ""), pages: [{ w, h, render: async (scale) => { const c = document.createElement("canvas"); c.width = Math.round(w * scale); c.height = Math.round(h * scale); const x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height); x.drawImage(im, 0, 0, c.width, c.height); return c; } }] };
+        // صورة (من الكاميرا أو الجهاز): تحديد حدود الورقة وتقويمها أولاً
+        const pg = await scannedPage(f); if (!pg) { $("#fname", main).textContent = ""; return; }
+        doc = { name: f.name && !/^image\.|^IMG_|^\d+$/i.test(f.name.replace(/\.[^.]+$/, "")) ? f.name.replace(/\.[^.]+$/, "") : `ورقة ${fmtDate(today())}`, pages: [pg] };
       } else throw new Error("نوع الملف غير مدعوم. اختاري PDF أو صورة.");
       marks = [];
       $("#fname", main).textContent = `${f.name} — ${doc.pages.length} صفحة`;
-      $("#tools", main).hidden = false; $("#howto", main).hidden = false;
+      $("#tools", main).hidden = false; $("#howto", main).hidden = false; $("#addpg", main).hidden = false;
       await paintPages();
     } catch (err) { $("#fname", main).textContent = ""; toast(err.message || "تعذّر فتح الملف", "error"); }
   };
 
+  // صفحة من صورة: قص وتقويم (ماسح الورق)، بعرض A4
+  async function scannedPage(f) {
+    const { scanDialog } = await import("../docscan.js");
+    const cv = await scanDialog(f, { modal, toast }); if (!cv) return null;
+    const w = 595.28, h = (w * cv.height) / cv.width;
+    return { w, h, render: async (scale) => { const c = document.createElement("canvas"); c.width = Math.round(w * scale); c.height = Math.round(h * scale); const x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height); x.drawImage(cv, 0, 0, c.width, c.height); return c; } };
+  }
+  $("#cam", main).onchange = (e) => $("#file", main).onchange(e);
+  $("#cam2", main).onchange = async (e) => { const f = e.target.files[0]; e.target.value = ""; if (!f || !doc) return;
+    const pg = await scannedPage(f); if (!pg) return; doc.pages.push(pg); $("#fname", main).textContent = `${doc.name} — ${doc.pages.length} صفحة`; await paintPages(); toast("أُضيفت الصفحة"); };
   async function paintPages() {
     pagesEl.innerHTML = "";
     const avail = Math.min(900, pagesEl.clientWidth || 360);
