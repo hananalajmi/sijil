@@ -6,6 +6,8 @@ import { state, G, opts } from "../store.js";
 import { esc, $, $$, today, fmtDate, academicYearOf, weekStart, addDays, toast, modal } from "../ui.js";
 import { field, bindFields, recordPage, go } from "../kit.js";
 import { FIRST_SUPERVISOR } from "../templates.js";
+// صور مخزنة داخل ملف مشترك يعدّله أكثر من شخص: تُقبل صور data:image فقط (حماية من حقن أكواد)
+const safeImg = (u) => (/^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/.test(String(u || "")) ? u : "");
 
 export const DOC = "weekly_meeting";
 const KIND = "shared_achievements";
@@ -65,8 +67,8 @@ export default async function (main, { id, params }) {
         ${field({ label: "الموجه الفني الأول للعلوم", key: "first_name", value: d.first_name })}</div>
         <h3 style="margin:14px 0 6px">توقيع المقرر وختمه</h3>
         <div class="row" style="gap:12px;align-items:center;flex-wrap:wrap">
-          <div class="mt-mk">${d.rep_stamp ? `<img src="${d.rep_stamp}" alt="ختم المقرر" style="max-height:60px;max-width:110px">` : '<span class="hint">لا يوجد ختم</span>'}</div>
-          <div class="mt-mk">${d.rep_sig ? `<img src="${d.rep_sig}" alt="توقيع المقرر" style="max-height:50px;max-width:140px">` : '<span class="hint">لا يوجد توقيع</span>'}</div></div>
+          <div class="mt-mk">${safeImg(d.rep_stamp) ? `<img src="${safeImg(d.rep_stamp)}" alt="ختم المقرر" style="max-height:60px;max-width:110px">` : '<span class="hint">لا يوجد ختم</span>'}</div>
+          <div class="mt-mk">${safeImg(d.rep_sig) ? `<img src="${safeImg(d.rep_sig)}" alt="توقيع المقرر" style="max-height:50px;max-width:140px">` : '<span class="hint">لا يوجد توقيع</span>'}</div></div>
         <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px">
           <button class="btn small primary" type="button" id="mt-mine">استخدام توقيعي وختمي</button>
           <label class="btn small">رفع ختم<input type="file" accept="image/*" data-mt-up="rep_stamp" hidden></label>

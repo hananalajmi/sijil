@@ -1,6 +1,8 @@
 // التقرير الأسبوعي للتوجيه الفني (اجتماع الموجهين الأسبوعي) — على هيئة النموذج المرفق
 import { esc, dayName, MONTHS_AR, parseDate } from "../ui.js";
 import { headLogos, logoRow } from "./builders.js";
+// صور مخزنة داخل ملف مشترك يعدّله أكثر من شخص: تُقبل صور data:image فقط (حماية من حقن أكواد)
+const safeImg = (u) => (/^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/.test(String(u || "")) ? u : "");
 
 const lam = (subj) => { const s = String(subj || "").trim(); return s.startsWith("ال") ? "لل" + s.slice(2) : s ? "لـ" + s : ""; };
 const dm = (iso) => { const d = parseDate(iso); return d ? `${d.getDate()}/${MONTHS_AR[d.getMonth()]}` : ""; };
@@ -23,7 +25,7 @@ export async function weeklyMeeting(ctx) {
     { html: `<p class="wm-line"><b>ونوقشت فيه البنود</b> :</p>` },
     ...items.map((t, i) => ({ html: `<p class="wm-item">${i + 1}– ${esc(t)}</p>` })),
   ];
-  const footer = `<div class="wm-sigs"><div><div class="wm-st">مقرر التقرير الأسبوعي</div><div class="wm-sn">${d.reporter ? "أ. " + esc(d.reporter) : ""}</div>${d.rep_stamp || d.rep_sig ? `<div class="wm-mk">${d.rep_stamp ? `<img class="wm-stamp" src="${d.rep_stamp}" alt="">` : ""}${d.rep_sig ? `<img class="wm-sig" src="${d.rep_sig}" alt="">` : ""}</div>` : ""}</div>
+  const footer = `<div class="wm-sigs"><div><div class="wm-st">مقرر التقرير الأسبوعي</div><div class="wm-sn">${d.reporter ? "أ. " + esc(d.reporter) : ""}</div>${safeImg(d.rep_stamp) || safeImg(d.rep_sig) ? `<div class="wm-mk">${safeImg(d.rep_stamp) ? `<img class="wm-stamp" src="${safeImg(d.rep_stamp)}" alt="">` : ""}${safeImg(d.rep_sig) ? `<img class="wm-sig" src="${safeImg(d.rep_sig)}" alt="">` : ""}</div>` : ""}</div>
     <div><div class="wm-st">الموجه الفني الأول للعلوم</div><div class="wm-sn">${d.first_name ? "أ. " + esc(d.first_name) : ""}</div></div></div>`;
   // التوقيعان حاشية سفلية ثابتة أسفل الصفحة
   return { orientation: "portrait", cls: "t-wm", header, identity: "", footer, blocks };
