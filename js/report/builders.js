@@ -243,7 +243,7 @@ export async function eventReport(ctx) {
     blocks.push({ html: `<div class="ev-box ev-photos ev-fill"><div class="ev-box-h">${imgs.length > 1 ? "صور معبرة" : "صورة معبرة"}</div><div class="ev-grid">${imgs.map((x) => `<div class="ev-ph">${x}</div>`).join("")}</div></div>`,
       fill: { min: 40, fit: fitPhotos } });
   }
-  const footer = await sigRow([{ ...mySig(ctx, ctx.guide?.gender && !/ة/.test(ctx.guide.gender) ? "الموجه الفني:" : "الموجهة الفنية:"), prefix: "أ." }], "ev-sigs one");
+  const footer = await sigRow([{ ...mySig(ctx, /ة/.test(ctx.guide?.gender || "") ? "الموجهة الفنية:" : "الموجه الفني:"), prefix: "أ." }], "ev-sigs one");
   return { orientation: "portrait", cls: "t-ev", header, identity: "", footer, blocks };
 }
 

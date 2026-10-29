@@ -16,8 +16,8 @@ export default async function (main, { name }) {
     <div class="sub">تُدخل مرة واحدة وتظهر تلقائياً في كل التقارير والإحصائيات.</div></div></div>
     <section class="panel" id="basic"><h2>بيانات الموجّه</h2><div class="form">
       ${field({ label: "اسم الموجّه الفني", key: "full_name", value: d().full_name, required: true })}
-      <div class="f no-gender"><label for="g-gender">صياغة الموقع</label><select id="g-gender"><option value="موجّهة" ${/ة/.test(d().gender || "موجّهة") ? "selected" : ""}>موجّهة (اختاري، المعلمات…)</option><option value="موجّه" ${d().gender && !/ة/.test(d().gender) ? "selected" : ""}>موجّه (اختر، المعلمين…)</option></select>
-        <small class="hint">تتغير صياغة الواجهة كلها حسب اختيارك.</small></div>
+      <div class="f no-gender"><label for="g-gender">صياغة الموقع</label><select id="g-gender"><option value="موجّه" ${!/ة/.test(d().gender || "") ? "selected" : ""}>مذكر — عام (اختر، أضف…) الافتراضي</option><option value="موجّهة" ${/ة/.test(d().gender || "") ? "selected" : ""}>مؤنث (اختاري، أضيفي…)</option></select>
+        <small class="hint">صياغة المخاطبة في الواجهة. أسماء المدارس والمعلمين والطلاب تبقى بصيغة عامة للجميع.</small></div>
       ${field({ label: "المسمى الوظيفي", key: "job_title", type: "select", options: opts("job_titles"), value: d().job_title })}
       ${field({ label: "المهمة الإضافية", key: "extra_task", type: "select", options: opts("extra_tasks"), value: d().extra_task })}
       ${field({ label: "المرحلة", key: "stage", type: "select", options: opts("stages"), value: d().stage, required: true })}
