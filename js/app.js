@@ -25,7 +25,7 @@ const ROUTES = {
   groups: () => import("./views/groups.js"), "group-sheet": () => import("./views/groups.js"),
   bulletins: () => import("./views/files.js"), shared: () => import("./views/files.js"),
   search: () => import("./views/archive.js"), trash: () => import("./views/archive.js"), backup: () => import("./views/backup.js"),
-  admin: () => import("./views/admin.js"), print: () => import("./views/print.js"), hub: () => import("./views/hub.js"), tasks: () => import("./views/tasks.js"), meeting: () => import("./views/meeting.js"),
+  admin: () => import("./views/admin.js"), print: () => import("./views/print.js"), hub: () => import("./views/hub.js"), tasks: () => import("./views/tasks.js"), meeting: () => import("./views/meeting.js"), wplan: () => import("./views/wplan.js"), "wplan-collect": () => import("./views/wplanCollect.js"),
 };
 
 const root = document.getElementById("root");

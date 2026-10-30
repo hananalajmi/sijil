@@ -29,7 +29,7 @@ async function users(out) {
       <td><select data-f="role"><option value="guide" ${u.role === "guide" ? "selected" : ""}>موجّه</option><option value="admin" ${u.role === "admin" ? "selected" : ""}>مشرف</option></select></td>
       <td><button class="btn small primary" data-save>حفظ</button></td></tr>`).join("")}</table></div>
     <p class="hint">لتصحيح بريد خاطئ: عدّلي خانة «البريد» ثم «حفظ». الدخول باسم المستخدم وكلمة المرور يبقى كما هو.</p>
-    <p class="hint">${auto ? "الحسابات الجديدة تُفعَّل تلقائياً." : "الحسابات الجديدة تنتظر التفعيل هنا."} المسؤول عن التجميع يرى فقط الخطط الأسبوعية التي يرسلها أصحابها إليه.</p>`;
+    <p class="hint">${auto ? "الحسابات الجديدة تُفعَّل تلقائياً." : "الحسابات الجديدة تنتظر التفعيل هنا."} المسؤول عن التجميع يرى الخطط الأسبوعية التي يرسلها موجهو <b>مرحلته</b> (مرحلته من بياناته الرئيسية) — عيّني مسؤولاً لكل مرحلة.</p>`;
   $("#auto-ap", out).onchange = async (e) => {
     const on = e.target.checked;
     try {

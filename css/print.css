@@ -499,3 +499,10 @@
 .t-wm .wm-mk { display: flex; flex-direction: column; align-items: center; margin-top: 1mm; }
 .t-wm .wm-stamp { max-height: 16mm; max-width: 28mm; object-fit: contain; mix-blend-mode: multiply; }
 .t-wm .wm-sig { max-height: 11mm; max-width: 34mm; object-fit: contain; margin-top: -2mm; mix-blend-mode: multiply; }
+
+/* تجميع الخطط الأسبوعية */
+.t-wp .wp-sum, .t-wp .wp-days { width: 100%; font-size: 10.5pt; margin-bottom: 4mm; }
+.t-wp .wp-sum th, .t-wp .wp-days th { background: #dbe5f1; }
+.t-wp .wp-days td { vertical-align: top; line-height: 1.5; }
+.t-wp .wp-days td:first-child { width: 16mm; font-weight: 700; text-align: center; }
+.t-wp .wp-gh { font-weight: 800; font-size: 12pt; margin: 2mm 0 1.5mm; color: #1f3a6e; }

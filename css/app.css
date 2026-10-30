@@ -607,3 +607,10 @@ input.cid-ok { border-color: var(--good) !important; background: var(--good-soft
 .task.done .tk-text { text-decoration: line-through; text-decoration-thickness: 2px; }
 .task.done .tk-ink::after { content: ""; position: absolute; inset-inline: -4px; top: 50%; border-top: 2.5px solid #333; transform: rotate(-2deg); }
 .tk-del { flex: none; }
+
+/* الخطة الأسبوعية */
+.wp-day { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; margin: 8px 0; }
+.wp-dh { margin-bottom: 6px; }
+.wp-it { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr) auto; gap: 6px; margin-bottom: 6px; }
+@media (max-width: 600px) { .wp-it { grid-template-columns: 1fr 1fr; } .wp-it input { grid-column: 1 / 2; } }
+.wp-match { background: var(--sunk, #f4f1ea); border-radius: 8px; padding: 8px 10px; margin: 6px 0 10px; line-height: 1.8; }
