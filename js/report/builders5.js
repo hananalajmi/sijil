@@ -62,7 +62,8 @@ export async function wpPreReport(ctx) {
   const days = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"], sw = STAGE_WORD[ctx.stage] || ctx.stage;
   const header = await wpHead(ctx, `الخطة القبلية للتوجيه الفني للعلوم للمرحلة ${sw}`, ctx.next);
   const rows = [];
-  for (const r of ctx.rows) rows.push(`<tr><th class="wp-n">${esc(r.name)}</th><td class="wp-t">القبلية</td>${(await Promise.all(days.map((_, k) => cellTxt(r.next?.data.pre?.[k])))).map((t) => `<td>${t}</td>`).join("")}</tr>`);
+  for (const r of ctx.rows) rows.push(r.next ? `<tr><th class="wp-n">${esc(r.name)}</th><td class="wp-t">القبلية</td>${(await Promise.all(days.map((_, k) => cellTxt(r.next?.data.pre?.[k])))).map((t) => `<td>${t}</td>`).join("")}</tr>`
+    : `<tr><th class="wp-n">${esc(r.name)}</th><td class="wp-t">القبلية</td><td colspan="5" class="red">لا توجد خطة (لم تُسلَّم)</td></tr>`);
   return { orientation: "landscape", cls: "t-wp2", header, identity: "", footer: wpFoot(ctx), blocks: [{ table: { cls: "grid wp-tbl", thead: `<tr><th class="wp-n">اسم الموجه الفني</th><th class="wp-t">نوع الخطة</th>${days.map((d) => `<th>${d}</th>`).join("")}</tr>`, rows } }] };
 }
 // (ب) الخطة القبلية والبعدية لهذا الأسبوع مع نسبة الالتزام: صفان لكل موجه؛ «تم» إذا نُفّذ ما خُطط له في اليوم
@@ -73,6 +74,7 @@ export async function wpPrePostReport(ctx) {
   const same = (a, b) => { const A = (a || []).map(placeName).filter(Boolean).sort().join("|"), B = (b || []).map(placeName).filter(Boolean).sort().join("|"); return !!A && A === B; };
   const rows = [];
   for (const r of ctx.rows) {
+    if (!r.cur) { rows.push(`<tr class="wp-pre"><th class="wp-n" rowspan="2">${esc(r.name)}</th><td class="wp-t">القبلية</td><td colspan="5" rowspan="2" class="red">لا توجد خطة (لم تُسلَّم)</td><td class="wp-pct" rowspan="2"></td></tr><tr class="wp-post"><td class="wp-t red">البعدية</td></tr>`); continue; }
     const pre = r.cur?.data.pre || {}, post = r.cur?.data.post || {};
     const preT = await Promise.all(days.map((_, k) => cellTxt(pre[k]))), postT = await Promise.all(days.map(async (_, k) => (same(pre[k], post[k]) ? "تم" : await cellTxt(post[k]))));
     rows.push(`<tr class="wp-pre"><th class="wp-n" rowspan="2">${esc(r.name)}</th><td class="wp-t">القبلية</td>${preT.map((t) => `<td>${t}</td>`).join("")}<td class="wp-pct" rowspan="2">${r.match?.pct == null ? "" : r.match.pct + "%"}</td></tr>
