@@ -69,7 +69,9 @@ export default async function (main, { params }) {
   const [rCur, rNext, auto] = await Promise.all([recFor(cur, true), recFor(next, true), visitsOf(cur)]);
   // تعبئة البعدية من الزيارات للأيام الفارغة
   rCur.data.post ||= emptyDays(); rNext.data.pre ||= emptyDays(); rCur.data.pre ||= emptyDays();
-  let filled = 0; if (!locked) for (let i = 0; i < 5; i++) if (!(rCur.data.post[i] || []).length && auto[i].length) { rCur.data.post[i] = auto[i]; filled++; }
+  // البعدية تبدأ نسخةً من القبلية لنفس الأسبوع (يعدّل منها ما تغيّر)، وإن لم توجد قبلية لليوم فمن الزيارات المسجلة
+  const copy = (arr) => (arr || []).map((x) => ({ ...x, auto: true }));
+  let filled = 0; if (!locked && !rCur.data.post_started) { for (let i = 0; i < 5; i++) if (!(rCur.data.post[i] || []).length) { const src = (rCur.data.pre[i] || []).length ? copy(rCur.data.pre[i]) : auto[i]; if (src.length) { rCur.data.post[i] = src; filled++; } } rCur.data.post_started = true; }
   const recs = { cur: rCur, next: rNext };
   const saveNow = async (k) => { const r = recs[k]; const stamp = { stage: G().stage || "", guide_name: myName(), subject: G().subject || "" };
     try { recs[k] = await api.update(r.id, { data: { ...r.data, ...stamp } }, r.version); } catch (e) { toast("تعذّر الحفظ: " + e.message, "error"); } };
@@ -91,14 +93,15 @@ export default async function (main, { params }) {
     $("#wp-body", main).innerHTML = `
       <div class="panel" style="${locked ? "border-color:#e0b54a;background:#fff8e1" : ""}">${locked ? `🔒 <b>الخطة مقفلة</b> — انتهى موعد التعديل (الأربعاء ${fmtDate(addDays(cur, 3))} الساعة 8 مساءً).${recs.cur.data.submitted ? "" : " يمكنك إرسالها متأخرة فقط دون تعديل."}` : `⏰ آخر موعد للتعديل والإرسال: الأربعاء ${fmtDate(addDays(cur, 3))} الساعة 8 مساءً، وبعدها تُقفل الخطة.`}</div>
       <section class="panel"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h2 style="margin:0">البعدية — هذا الأسبوع (${fmtDate(cur)} – ${fmtDate(addDays(cur, 4))})</h2>${sent(recs.cur)}</div>
-        <p class="hint">تُعبأ تلقائياً من زياراتك المسجلة، وعدّل أو أضف ما نُفّذ فعلاً. <button class="btn small ghost" id="wp-refill">تحديث من الزيارات</button></p>
+        <p class="hint">تبدأ نسخةً من قبليتك لهذا الأسبوع: اترك ما نُفّذ كما هو، واحذف أو غيّر الخيار فيما تغيّر. <button class="btn small ghost" id="wp-copy">نسخ القبلية من جديد</button> <button class="btn small ghost" id="wp-refill">تحديث من الزيارات</button></p>
         <div class="wp-match">${m.pct === null ? "لا توجد خطة قبلية لهذا الأسبوع للمقارنة." : `<b>نسبة التطابق مع القبلية: ${m.pct}%</b> (${m.done} من ${m.planned})${m.missed.length ? `<br><span class="hint">لم يُنفّذ: ${m.missed.map(([i, p]) => `${WORK_DAYS[i]}: ${esc(p)}`).join("، ")}</span>` : ""}${m.extra.length ? `<br><span class="hint">إضافي غير مخطط: ${m.extra.map(([i, p]) => `${WORK_DAYS[i]}: ${esc(p)}`).join("، ")}</span>` : ""}`}</div>
+        <details class="wp-prev"><summary>🔒 قبليتك لهذا الأسبوع (مقفلة للاطلاع)</summary><div class="wp-ro">${days(cur).map((dt, i) => `<div><b>${WORK_DAYS[i]}</b>: ${(recs.cur.data.pre[i] || []).filter((x) => placeName(x)).map((x) => esc(itemText(x))).join(" + ") || '<span class="hint">—</span>'}</div>`).join("")}</div></details>
         ${dayRows("cur", "post", cur)}</section>
       <section class="panel"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h2 style="margin:0">القبلية — الأسبوع القادم (${fmtDate(next)} – ${fmtDate(addDays(next, 4))})</h2>${sent(recs.next)}</div>
         ${dayRows("next", "pre", next)}</section>
       <div class="row" style="gap:8px;margin:12px 0"><button class="btn primary" id="wp-send">إرسال للمسؤول (البعدية والقبلية)</button><span class="hint">يمكنك التعديل وإعادة الإرسال حتى الأربعاء 8 مساءً.</span></div>`;
     bind();
-    if (locked) { $$(".wp-day select, .wp-day input, .wp-day button, #wp-refill", main).forEach((x) => (x.disabled = true)); const sb = $("#wp-send", main); if (recs.cur.data.submitted && recs.next.data.submitted) sb.disabled = true; else sb.textContent = "إرسال (متأخر)"; }
+    if (locked) { $$(".wp-day select, .wp-day input, .wp-day button, #wp-refill, #wp-copy", main).forEach((x) => (x.disabled = true)); const sb = $("#wp-send", main); if (recs.cur.data.submitted && recs.next.data.submitted) sb.disabled = true; else sb.textContent = "إرسال (متأخر)"; }
   };
   const bind = () => {
     $$(".wp-day", main).forEach((dEl) => {
@@ -113,6 +116,7 @@ export default async function (main, { params }) {
           delete it.auto; save[k]();
           if (inp.tagName !== "INPUT") paint(); })); });
     });
+    $("#wp-copy", main).onclick = async () => { for (let i = 0; i < 5; i++) recs.cur.data.post[i] = copy(recs.cur.data.pre[i]); await saveNow("cur"); paint(); toast("نُسخت القبلية إلى البعدية"); };
     $("#wp-refill", main).onclick = async () => { const a = await visitsOf(cur); for (let i = 0; i < 5; i++) for (const it of a[i]) if (!(recs.cur.data.post[i] ||= []).some((x) => x.place === it.place)) recs.cur.data.post[i].push(it); await saveNow("cur"); paint(); toast("أُضيفت الزيارات"); };
     $("#wp-send", main).onclick = async () => {
       if (!G().stage) return toast("حدّد مرحلتك في البيانات الرئيسية أولاً (ليصل للمسؤول عن مرحلتك)", "error");
