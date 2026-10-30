@@ -44,3 +44,39 @@ export async function weeklyPlansCompiled(ctx) {
     <table class="grid wp-days"><tr><th>اليوم</th><th>المخطط (القبلية)</th><th>المنفذ (البعدية)</th><th>القبلية للأسبوع القادم</th></tr>${WD.map((d, k) => `<tr><td>${d}</td><td>${items(r.cur?.data.pre?.[k])}</td><td>${items(r.cur?.data.post?.[k])}</td><td>${items(r.next?.data.pre?.[k])}</td></tr>`).join("")}</table></div>` });
   return { orientation: "portrait", cls: "t-wm t-wp", header, identity: "", footer: "", blocks };
 }
+
+// ===== النموذجان الرسميان لتجميع الخطط (عرضي) — يُطبعان ويُصدَّران Word للتعديل =====
+const STAGE_WORD = { "ثانوي": "الثانوية", "متوسط": "المتوسطة", "ابتدائي": "الابتدائية" };
+async function wpHead(ctx, title, ws) {
+  const { addDays } = await import("../ui.js");
+  const d = (x) => { const [y, m, dd] = x.split("-"); return `${Number(dd)}-${Number(m)}-${Number(y)}`; };
+  const H = await headLogos(ctx, "weekly_meeting");
+  return `${logoRow({ ...H, c: `<div class="wp-title">${esc(title)}</div>` }, "wm-logos wp-logos")}
+    <div class="wp-period">(من الأحد ${d(ws)} إلى الخميس ${d(addDays(ws, 4))})</div>`;
+}
+const wpFoot = (ctx) => `<div class="wp-foot"><span>الموجه الأول : أ / ${esc(ctx.first || "")}</span></div>`;
+const cellTxt = async (arr) => { const { placeName, itemText } = await import("../views/wplan.js"); return (arr || []).filter((x) => placeName(x)).map((x) => esc(itemText(x))).join(" + "); };
+
+// (أ) الخطة القبلية للأسبوع القادم: صف لكل موجه
+export async function wpPreReport(ctx) {
+  const days = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"], sw = STAGE_WORD[ctx.stage] || ctx.stage;
+  const header = await wpHead(ctx, `الخطة القبلية للتوجيه الفني للعلوم للمرحلة ${sw}`, ctx.next);
+  const rows = [];
+  for (const r of ctx.rows) rows.push(`<tr><th class="wp-n">${esc(r.name)}</th><td class="wp-t">القبلية</td>${(await Promise.all(days.map((_, k) => cellTxt(r.next?.data.pre?.[k])))).map((t) => `<td>${t}</td>`).join("")}</tr>`);
+  return { orientation: "landscape", cls: "t-wp2", header, identity: "", footer: wpFoot(ctx), blocks: [{ table: { cls: "grid wp-tbl", thead: `<tr><th class="wp-n">اسم الموجه الفني</th><th class="wp-t">نوع الخطة</th>${days.map((d) => `<th>${d}</th>`).join("")}</tr>`, rows } }] };
+}
+// (ب) الخطة القبلية والبعدية لهذا الأسبوع مع نسبة الالتزام: صفان لكل موجه؛ «تم» إذا نُفّذ ما خُطط له في اليوم
+export async function wpPrePostReport(ctx) {
+  const { placeName } = await import("../views/wplan.js");
+  const days = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"], sw = STAGE_WORD[ctx.stage] || ctx.stage;
+  const header = await wpHead(ctx, `الخطة القبلية والبعدية للمرحلة ${sw} (${ctx.year || ""})`, ctx.week);
+  const same = (a, b) => { const A = (a || []).map(placeName).filter(Boolean).sort().join("|"), B = (b || []).map(placeName).filter(Boolean).sort().join("|"); return !!A && A === B; };
+  const rows = [];
+  for (const r of ctx.rows) {
+    const pre = r.cur?.data.pre || {}, post = r.cur?.data.post || {};
+    const preT = await Promise.all(days.map((_, k) => cellTxt(pre[k]))), postT = await Promise.all(days.map(async (_, k) => (same(pre[k], post[k]) ? "تم" : await cellTxt(post[k]))));
+    rows.push(`<tr class="wp-pre"><th class="wp-n" rowspan="2">${esc(r.name)}</th><td class="wp-t">القبلية</td>${preT.map((t) => `<td>${t}</td>`).join("")}<td class="wp-pct" rowspan="2">${r.match?.pct == null ? "" : r.match.pct + "%"}</td></tr>
+      <tr class="wp-post"><td class="wp-t red">البعدية</td>${postT.map((t) => `<td class="red">${t}</td>`).join("")}</tr>`);
+  }
+  return { orientation: "landscape", cls: "t-wp2", header, identity: "", footer: wpFoot(ctx), blocks: [{ table: { cls: "grid wp-tbl", thead: `<tr><th class="wp-n">اسم الموجه الفني</th><th class="wp-t">نوع الخطة</th>${days.map((d) => `<th>${d}</th>`).join("")}<th class="wp-pct">نسبة الالتزام</th></tr>`, rows } }] };
+}

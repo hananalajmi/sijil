@@ -14,7 +14,7 @@ export const placeName = (it) => it?.place_name || schoolById(it?.place)?.title 
 // نص البند كما يُقرأ: «زيارة توجيهية لثانوية الواحة» (النشاط + المدرسة)، أو المكان وحده (مكتب، اجتماع…)
 export const itemText = (it) => { if (String(it?.text || "").trim()) return String(it.text).trim(); return autoText(it); };
 const autoText = (it) => { const p = placeName(it), a = String(it?.act || "").trim(), isSchool = !!schoolById(it?.place) || /^(مدرسة|ثانوية|متوسطة|ابتدائية|روضة)/.test(p);
-  if (!p) return a; if (!a) return p; return isSchool ? `${a} ل${p}` : `${p} — ${a}`; };
+  if (!p) return a; if (!a) return p; return isSchool ? `${a} ل${p}` : `${p} (${a})`; };
 // (التكليف يُكتب «تكليف: المهمة» من الملاحظة)
 const emptyDays = () => ({ 0: [], 1: [], 2: [], 3: [], 4: [] });
 

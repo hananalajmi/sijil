@@ -2,7 +2,7 @@
 // البعدية لهذا الأسبوع ونسبة تطابقها مع القبلية، والقبلية للأسبوع القادم، ومن سلّم ومن لم يسلّم.
 import { api } from "../api.js";
 import { state, G, opts } from "../store.js";
-import { esc, $, $$, today, fmtDate, weekStart, addDays, WORK_DAYS } from "../ui.js";
+import { esc, $, $$, today, fmtDate, weekStart, addDays, WORK_DAYS, academicYearOf } from "../ui.js";
 import { KIND, matchOf, placeName, itemText } from "./wplan.js";
 
 const fmtItems = (arr) => (arr || []).filter((x) => placeName(x)).map((x) => esc(itemText(x)) + (x.note ? ` <span class="hint">(${esc(x.note)})</span>` : "")).join("<br>") || '<span class="hint">—</span>';
@@ -21,7 +21,7 @@ export async function collectCtx(week, stage) {
   const rows = [...people.values()].map((p) => { const c = A.find((r) => r.owner_id === p.id), n = B.find((r) => r.owner_id === p.id);
     return { ...p, name: c?.data?.guide_name || n?.data?.guide_name || p.name, cur: c || null, next: n || null, match: c ? matchOf(c.data.pre, c.data.post) : null }; })
     .sort((x, y) => x.name.localeCompare(y.name, "ar"));
-  return { kind: "wp_collect", week: cur, next, stage, rows, guide: { full_name: G().full_name || "" } };
+  return { kind: "wp_collect", week: cur, next, stage, rows, year: academicYearOf(cur).replace("-", "-"), first: G().first_supervisor || "", guide: { full_name: G().full_name || "" } };
 }
 
 export default async function (main, { params }) {
@@ -33,7 +33,9 @@ export default async function (main, { params }) {
   main.innerHTML = `<div class="container"><div class="page-head"><div><a class="hub-back" href="#/wplan">خطتي الأسبوعية</a><h1>تجميع الخطط الأسبوعية — ${esc(stage)}</h1>
       <div class="sub">البعدية لأسبوع ${fmtDate(ctx.week)} ونسبة تطابقها، والقبلية لأسبوع ${fmtDate(ctx.next)}. سلّم ${sentN} من ${ctx.rows.length}.</div></div>
       <div class="row" style="gap:8px;flex-wrap:wrap">${isAdmin() ? `<select id="wc-st" aria-label="المرحلة">${opts("stages").map((s) => `<option ${s === stage ? "selected" : ""}>${esc(s)}</option>`).join("")}</select>` : ""}
-        <input type="date" id="wc-wk" value="${ctx.week}" aria-label="الأسبوع"><a class="btn primary" href="#/print/wp-collect?week=${ctx.week}&stage=${encodeURIComponent(stage)}">طباعة / PDF</a></div></div>
+        <input type="date" id="wc-wk" value="${ctx.week}" aria-label="الأسبوع"><a class="btn primary" href="#/print/wp-collect?view=prepost&week=${ctx.week}&stage=${encodeURIComponent(stage)}">القبلية والبعدية (هذا الأسبوع)</a>
+        <a class="btn primary" href="#/print/wp-collect?view=pre&week=${ctx.week}&stage=${encodeURIComponent(stage)}">القبلية (الأسبوع القادم)</a>
+        <a class="btn" href="#/print/wp-collect?week=${ctx.week}&stage=${encodeURIComponent(stage)}">التفاصيل</a></div></div>
     ${ctx.rows.length ? `<div class="tbl-wrap"><table class="data"><thead><tr><th>الموجه</th><th>البعدية (هذا الأسبوع)</th><th>نسبة التطابق</th><th>القبلية (القادم)</th><th></th></tr></thead><tbody>
       ${ctx.rows.map((r, i) => `<tr><td>${esc(r.name)}</td><td>${r.cur ? `<span class="pill ok">سُلّمت${r.cur.data.late ? " متأخرة" : ""}</span>` : '<span class="pill bad">لم تُسلّم</span>'}</td>
         <td>${r.match?.pct == null ? "—" : `<b>${r.match.pct}%</b>`}</td><td>${r.next ? `<span class="pill ok">سُلّمت${r.next.data.late ? " متأخرة" : ""}</span>` : '<span class="pill bad">لم تُسلّم</span>'}</td>

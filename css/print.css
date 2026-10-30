@@ -506,3 +506,21 @@
 .t-wp .wp-days td { vertical-align: top; line-height: 1.5; }
 .t-wp .wp-days td:first-child { width: 16mm; font-weight: 700; text-align: center; }
 .t-wp .wp-gh { font-weight: 800; font-size: 12pt; margin: 2mm 0 1.5mm; color: #1f3a6e; }
+
+/* النموذجان الرسميان لتجميع الخطط (عرضي) */
+.t-wp2 .sheet-inner { padding: 8mm 10mm 10mm; }
+.t-wp2 .wp-logos .logo { height: 17mm; max-width: 55mm; object-fit: contain; }
+.t-wp2 .wp-title { width: fit-content; white-space: nowrap; margin: 0 auto; border: 1.2pt solid #000; padding: 1.5mm 8mm; color: #e00000; font-size: 15pt; font-weight: 800; text-align: center; }
+.t-wp2 .wp-period { width: fit-content; margin: 0 auto 4mm; border: 1.6pt solid #000; padding: 1.5mm 10mm; font-size: 13pt; font-weight: 800; text-align: center; }
+.t-wp2 .wp-tbl { width: 100%; font-size: 9.5pt; table-layout: fixed; }
+.t-wp2 .wp-tbl th { background: #c6d9f0; font-weight: 800; }
+.t-wp2 .wp-tbl td, .t-wp2 .wp-tbl th { text-align: center; vertical-align: middle; line-height: 1.35; padding: 1.2mm 1mm; }
+.t-wp2 .wp-tbl .wp-n { width: 30mm; background: #fff; }
+.t-wp2 .wp-tbl thead .wp-n { background: #c6d9f0; }
+.t-wp2 .wp-tbl .wp-t { width: 15mm; font-weight: 800; }
+.t-wp2 .wp-tbl .wp-pct { width: 16mm; font-weight: 800; }
+.t-wp2 .wp-tbl tr.wp-post td { background: #dbe5f1; }
+.t-wp2 .wp-tbl .red { color: #e00000; font-weight: 700; }
+.t-wp2 .wp-foot { display: flex; justify-content: center; margin-top: 3mm; }
+.t-wp2 .wp-foot span { border: 1.2pt solid #000; background: #d9d9d9; padding: 1.5mm 8mm; font-weight: 800; font-size: 12pt; }
+.t-wp2 .wp-logos.hl-row { grid-template-columns: 1fr auto 1fr; }
