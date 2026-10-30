@@ -2,7 +2,7 @@
 // يُحفظ كسجل مشترك (نفس صلاحيات ملف الإنجازات المشترك) ويُميَّز بـ data.doc = "weekly_meeting".
 // النص الثابت في النموذج (العنوان، «الفترة»، «تم اجتماع موجهي وموجهات…»، «الحضور»، «الغياب»، «ونوقشت فيه البنود») لا يُعدَّل؛ الباقي يُعبّأ.
 import { api } from "../api.js";
-import { state, G, opts } from "../store.js";
+import { state, G, opts, subjectAl } from "../store.js";
 import { esc, $, $$, today, fmtDate, academicYearOf, weekStart, addDays, toast, modal } from "../ui.js";
 import { field, bindFields, recordPage, go } from "../kit.js";
 import { FIRST_SUPERVISOR } from "../templates.js";
@@ -20,7 +20,7 @@ export const ABSENCE_REASONS = ["للتكليف", "إجازة", "مهمة رسم
 const myName = () => G().full_name || state.profile?.full_name || "";
 
 export function emptyMeeting(ws) {
-  return { doc: DOC, month: keyOf(ws), week_start: ws, subject: G().subject || "الكيمياء", period_from: ws, period_to: addDays(ws, 4), meeting_date: addDays(ws, 4),
+  return { doc: DOC, month: keyOf(ws), week_start: ws, subject: subjectAl(G().subject) || "الكيمياء", period_from: ws, period_to: addDays(ws, 4), meeting_date: addDays(ws, 4),
     attendees: [], absent: [], items: [], reporter: myName(), members: [], first_name: G().first_supervisor || FIRST_SUPERVISOR.name || "" };
 }
 

@@ -239,3 +239,6 @@ export function officialDates() {
 export const termMasc = (t) => ({ "الأولى": "الأول", "الثانية": "الثاني" }[String(t || "").trim()] || String(t || "").trim());
 export const termOpts = () => [...new Set(opts("terms").map(termMasc).filter(Boolean))];
 export const sameTerm = (a, b) => termMasc(a) === termMasc(b);
+
+// اسم المادة للعرض والطباعة بـ«ال» (كيمياء ← الكيمياء)، كما كان يُكتب سابقاً
+export const subjectAl = (x) => { const t = String(x || "").trim(); return !t || t.startsWith("ال") ? t : "ال" + t; };

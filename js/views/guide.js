@@ -21,7 +21,7 @@ export default async function (main, { name }) {
       ${field({ label: "المسمى الوظيفي", key: "job_title", type: "select", options: opts("job_titles"), value: d().job_title })}
       ${field({ label: "المهمة الإضافية", key: "extra_task", type: "select", options: opts("extra_tasks"), value: d().extra_task })}
       ${field({ label: "المرحلة", key: "stage", type: "select", options: opts("stages"), value: d().stage, required: true })}
-      ${field({ label: "التخصص / المادة", key: "subject", value: d().subject, placeholder: "مثال: الكيمياء", required: true })}
+      ${field({ label: "التخصص / المادة", key: "subject", type: "select", options: opts("subjects"), value: d().subject, required: true, hint: "تظهر لك تواريخ مادتك في التقويم" })}
       ${field({ label: "التوجيه الفني", key: "guidance", value: d().guidance })}
       ${field({ label: "المنطقة التعليمية", key: "directorate", value: d().directorate })}
       ${field({ label: "اسم المنطقة كما يظهر في عناوين التقارير", key: "region", value: d().region, hint: "مثال: الأحمدي" })}

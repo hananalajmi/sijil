@@ -7,6 +7,8 @@ import { TEACHER_VISIT, tvOptionKey, TV_LEVELS } from "../templates.js";
 import { listView } from "./_list.js";
 import { teacherVisitLinker, schoolVisitFor } from "../svlink.js";
 
+// مادة الزيارة الافتراضية: مادة الموجّه من البيانات الرئيسية (كما في القائمة) وإلا أول مادة
+const mySubject = () => { const m = String(state.guide?.data?.subject || "").replace(/^ال/, "").trim(), L = opts("subjects"); return L.find((x) => x.replace(/^ال/, "") === m) || m || L[0] || "كيمياء"; };
 export function printOptionsPanel(ed, { sigsEveryPage = false, dateOn = false } = {}) {
   const p = ed.rec.data.print || {};
   const g = state.guide?.data || {};
@@ -35,7 +37,7 @@ export default async function (main, { id, params }) {
 
   const t0 = teacherById(params.teacher);
   const rec = id === "new" ? { kind: "teacher_visit", title: "", record_date: today(), academic_year: state.year, term: termOpts()[0] || "",
-    teacher_id: t0?.id || null, school_id: t0?.school_id || null, data: { visitee: "teacher", subject: opts("subjects")[0] || "كيمياء", items: {}, photos: [], template: TEACHER_VISIT.version } } : await api.get(id);
+    teacher_id: t0?.id || null, school_id: t0?.school_id || null, data: { visitee: "teacher", subject: mySubject(), items: {}, photos: [], template: TEACHER_VISIT.version } } : await api.get(id);
   if (!rec) { main.innerHTML = `<div class="container"><div class="empty">السجل غير موجود</div></div>`; return; }
   const all = await api.list({ kind: "teacher_visit" });
   const link = teacherVisitLinker(rec); // تسجيل الزيارة تلقائياً في زيارة الموجه للمدرسة

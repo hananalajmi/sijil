@@ -1,6 +1,6 @@
 // نقطة البداية: الدخول، الهيكل العام، والتنقل بين الأقسام
 import { api, DEMO } from "./api.js";
-import { state, loadBase, setYear, pendingDrafts, opts, addMyOption, logoSrc } from "./store.js";
+import { state, loadBase, setYear, pendingDrafts, opts, addMyOption, logoSrc, subjectAl } from "./store.js";
 import { esc, $, $$, toast, modal, academicYearOf } from "./ui.js";
 import { applyUI, applyCachedUI } from "./theme.js";
 import { initPWA } from "./pwa.js";
@@ -67,7 +67,7 @@ function shell() {
 // يميّز القسم الحالي ويفتح مجموعته
 function markNav(name) {
   const su = document.querySelector(".su-t"), g = state.guide?.data || {}, p = state.profile || {};
-  if (su) su.innerHTML = `<b>${esc(g.full_name || p.full_name || p.username || "")}</b><small>${esc(g.job_title || "موجه فني")}${g.subject ? " — " + esc(g.subject) : ""}</small>`;
+  if (su) su.innerHTML = `<b>${esc(g.full_name || p.full_name || p.username || "")}</b><small>${esc(g.job_title || "موجه فني")}${g.subject ? " — " + esc(subjectAl(g.subject)) : ""}</small>`;
   // للصفحات المقسمة بـ ?sec= (التكاليف/المعايير/الشهادات): يُطابَق القسم كذلك
   const sp = new URLSearchParams((location.hash.split("?")[1] || "")).get("sec"), full = sp ? `${name}?sec=${sp}` : name;
   const isCur = (r) => r === full || (r === name && !$$(".nav[data-r]").some((x) => x.dataset.r === full));
@@ -200,7 +200,7 @@ function pendingScreen() {
 // يحفظ اسم الموجّه ومسمّاه ليظهرا في الواجهة الافتتاحية في المرة القادمة
 function saveWho() {
   const g = state.guide?.data || {}, p = state.profile || {};
-  rememberWho({ u: p.username || "", n: g.full_name || p.full_name || p.username || "", t: [g.job_title || "موجه فني", g.subject].filter(Boolean).join(" — ") });
+  rememberWho({ u: p.username || "", n: g.full_name || p.full_name || p.username || "", t: [g.job_title || "موجه فني", subjectAl(g.subject)].filter(Boolean).join(" — ") });
 }
 // فتح المنصة بعد تحميل البيانات
 function enterApp() {

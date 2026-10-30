@@ -1,6 +1,6 @@
 // تجهيز "سياق" التقرير من السجلات المترابطة. هذا السياق هو ما يُحفظ كنسخة ثابتة عند الاعتماد.
 import { api } from "../api.js";
-import { state, G, schoolById, teacherById, opts, officialDates, sameTerm } from "../store.js";
+import { state, G, schoolById, teacherById, opts, officialDates, sameTerm, subjectAl } from "../store.js";
 import { addDays, academicYearOf, parseDate } from "../ui.js";
 import { FIRST_SUPERVISOR } from "../templates.js";
 import { linkedRowsFor, mergeLinked } from "../svlink.js";
@@ -13,7 +13,7 @@ export const stageWord = (s) => ({ "ثانوي": "الثانوية", "متوسط
 
 export function guideCtx() {
   const g = G();
-  return { full_name: g.full_name || state.profile?.full_name || "", stage: g.stage || "", subject: g.subject || opts("subjects")[0] || "", job_title: g.job_title || "",
+  return { full_name: g.full_name || state.profile?.full_name || "", stage: g.stage || "", subject: subjectAl(g.subject || opts("subjects")[0] || ""), job_title: g.job_title || "",
     first_supervisor: g.first_supervisor || FIRST_SUPERVISOR.name, region: g.region || "الأحمدي", directorate: g.directorate || "", signature: g.signature || null, stamp: g.stamp || null, head_logos: g.head_logos || {}, gender: g.gender || "" };
 }
 const pick = (r) => (r ? { id: r.id, title: r.title, data: r.data || {} } : null);
