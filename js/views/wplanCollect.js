@@ -3,9 +3,9 @@
 import { api } from "../api.js";
 import { state, G, opts } from "../store.js";
 import { esc, $, $$, today, fmtDate, weekStart, addDays, WORK_DAYS } from "../ui.js";
-import { KIND, matchOf, placeName } from "./wplan.js";
+import { KIND, matchOf, placeName, itemText } from "./wplan.js";
 
-const fmtItems = (arr) => (arr || []).filter((x) => placeName(x)).map((x) => [placeName(x), x.act, x.note].filter(Boolean).join(" — ")).join("<br>") || '<span class="hint">—</span>';
+const fmtItems = (arr) => (arr || []).filter((x) => placeName(x)).map((x) => esc(itemText(x)) + (x.note ? ` <span class="hint">(${esc(x.note)})</span>` : "")).join("<br>") || '<span class="hint">—</span>';
 const isAdmin = () => state.profile?.role === "admin";
 
 // يجمع بيانات أسبوع ومرحلة (للصفحة وللطباعة)

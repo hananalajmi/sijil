@@ -11,6 +11,9 @@ export const ACTS = () => [...new Set([...opts("school_visit_types"), "زيار�
 const myName = () => G().full_name || state.profile?.full_name || "";
 const days = (ws) => [0, 1, 2, 3, 4].map((i) => addDays(ws, i));
 export const placeName = (it) => it?.place_name || schoolById(it?.place)?.title || it?.place || "";
+// نص البند كما يُقرأ: «زيارة توجيهية لثانوية الواحة» (النشاط + المدرسة)، أو المكان وحده (مكتب، اجتماع…)
+export const itemText = (it) => { const p = placeName(it), a = String(it?.act || "").trim(), isSchool = !!schoolById(it?.place) || /^(مدرسة|ثانوية|متوسطة|ابتدائية|روضة)/.test(p);
+  if (!p) return a; if (!a) return p; return isSchool ? `${a} ل${p}` : `${p} — ${a}`; };
 const emptyDays = () => ({ 0: [], 1: [], 2: [], 3: [], 4: [] });
 
 // نسبة التطابق: لكل يوم، ما خُطط له (بالمكان) هل نُفّذ في اليوم نفسه
@@ -72,7 +75,8 @@ export default async function (main, { params }) {
       <div class="wp-dh"><b>${WORK_DAYS[i]}</b> <span class="hint">${fmtDate(dt)}</span></div>
       <div class="wp-items">${(recs[k].data[part][i] || []).map((it, j) => `<div class="wp-it" data-j="${j}">
           <select data-f="place" aria-label="المكان">${placeOpts(it.place)}</select><select data-f="act" aria-label="النشاط">${actOpts(it.act)}</select>
-          <input data-f="note" value="${esc(it.note || "")}" placeholder="ملاحظة" aria-label="ملاحظة"><button class="btn small ghost" data-del aria-label="حذف">✕</button></div>`).join("")}</div>
+          <input data-f="note" value="${esc(it.note || "")}" placeholder="ملاحظة" aria-label="ملاحظة"><button class="btn small ghost" data-del aria-label="حذف">✕</button>
+          ${itemText(it) ? `<div class="wp-txt">${esc(itemText(it))}${it.note ? ` <span class="hint">(${esc(it.note)})</span>` : ""}</div>` : ""}</div>`).join("")}</div>
       <button class="btn small" data-add>+ إضافة</button></div>`).join("");
   const paint = () => {
     const m = matchOf(recs.cur.data.pre, recs.cur.data.post), sent = (r) => (r.data.submitted ? `<span class="pill ok">أُرسلت ${r.data.sent_at ? fmtDate(r.data.sent_at.slice(0, 10)) : ""}</span>` : '<span class="pill">لم تُرسل</span>');
@@ -96,7 +100,7 @@ export default async function (main, { params }) {
         row.querySelector("[data-del]").onclick = () => { list().splice(j, 1); save[k](); paint(); };
         $$("[data-f]", row).forEach((inp) => (inp[inp.tagName === "INPUT" ? "oninput" : "onchange"] = () => {
           const it = list()[j]; it[inp.dataset.f] = inp.value; if (inp.dataset.f === "place") it.place_name = schoolById(inp.value)?.title || inp.value; delete it.auto; save[k]();
-          if (inp.dataset.f === "place" && k === "cur") paint(); })); });
+          if (inp.tagName !== "INPUT") paint(); })); });
     });
     $("#wp-refill", main).onclick = async () => { const a = await visitsOf(cur); for (let i = 0; i < 5; i++) for (const it of a[i]) if (!(recs.cur.data.post[i] ||= []).some((x) => x.place === it.place)) recs.cur.data.post[i].push(it); await saveNow("cur"); paint(); toast("أُضيفت الزيارات"); };
     $("#wp-send", main).onclick = async () => {

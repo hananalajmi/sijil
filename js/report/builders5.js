@@ -34,8 +34,8 @@ export async function weeklyMeeting(ctx) {
 // تجميع الخطط الأسبوعية لمرحلة (للطباعة)
 export async function weeklyPlansCompiled(ctx) {
   const { WORK_DAYS: WD, fmtDate } = await import("../ui.js");
-  const { placeName } = await import("../views/wplan.js");
-  const items = (arr) => (arr || []).filter((x) => placeName(x)).map((x) => esc([placeName(x), x.act].filter(Boolean).join(" — "))).join("<br>");
+  const { placeName, itemText } = await import("../views/wplan.js");
+  const items = (arr) => (arr || []).filter((x) => placeName(x)).map((x) => esc(itemText(x)) + (x.note ? ` (${esc(x.note)})` : "")).join("<br>");
   const header = `${logoRow(await headLogos(ctx, "weekly_meeting"), "wm-logos")}<div class="wm-title"><div class="wm-t1">تجميع الخطط الأسبوعية — المرحلة ${esc(ctx.stage)}</div>
     <div class="wm-t2">البعدية: ${fmtDate(ctx.week)} – ${fmtDate(new Date(new Date(ctx.week).getTime() + 4 * 864e5).toISOString().slice(0, 10))} · القبلية: من ${fmtDate(ctx.next)}</div></div>`;
   const sum = `<table class="grid wp-sum"><tr><th>الموجه</th><th>البعدية</th><th>نسبة التطابق</th><th>القبلية</th></tr>${ctx.rows.map((r) => `<tr><td>${esc(r.name)}</td><td>${r.cur ? "سُلّمت" + (r.cur.data.late ? " متأخرة" : "") : "لم تُسلّم"}</td><td>${r.match?.pct == null ? "—" : r.match.pct + "%"}</td><td>${r.next ? "سُلّمت" + (r.next.data.late ? " متأخرة" : "") : "لم تُسلّم"}</td></tr>`).join("")}</table>`;

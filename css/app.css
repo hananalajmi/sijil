@@ -614,3 +614,4 @@ input.cid-ok { border-color: var(--good) !important; background: var(--good-soft
 .wp-it { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr) auto; gap: 6px; margin-bottom: 6px; }
 @media (max-width: 600px) { .wp-it { grid-template-columns: 1fr 1fr; } .wp-it input { grid-column: 1 / 2; } }
 .wp-match { background: var(--sunk, #f4f1ea); border-radius: 8px; padding: 8px 10px; margin: 6px 0 10px; line-height: 1.8; }
+.wp-txt { grid-column: 1 / -1; font-size: .95em; color: var(--accent, #1f3a6e); font-weight: 600; }
