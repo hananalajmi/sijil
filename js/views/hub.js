@@ -3,7 +3,7 @@ import { esc, $, $$, download, toast } from "../ui.js";
 import { G, setGuideData } from "../store.js";
 import { editLinkList } from "../links.js";
 import { icon } from "../icons.js";
-import { SECTIONS, MORE, isExternal } from "../nav.js";
+import { SECTIONS, MORE, isExternal, itemsOf } from "../nav.js";
 
 const NEWABLE = new Set(["school-visits", "teacher-visits", "exams", "events", "weekly", "monthly", "schools"]);
 
@@ -28,7 +28,7 @@ export default async function (main, { id }) {
   main.innerHTML = `<div class="container hub">
     <div class="hub-head">${s.card ? `<img class="hub-img" src="assets/ui/card-${s.card}.jpg" alt="">` : ""}<div class="hub-badge">${icon(s.icon)}</div>
       <div><a class="hub-back" href="#/">${icon("back")} الرئيسية</a><h1>${esc(s.label)}</h1><div class="sub">${esc(s.desc || "")}</div></div></div>
-    <div class="hub-grid">${s.items.map(([r, l, i, d]) => `<div class="hub-card">
+    <div class="hub-grid">${itemsOf(s).map(([r, l, i, d]) => `<div class="hub-card">
       <a class="hub-main" ${isExternal(r) ? `href="${esc(r)}" target="_blank" rel="noopener noreferrer"` : `href="#/${r}"`}><span class="hub-ic">${icon(i)}</span><span class="hub-t"><b>${esc(l)}${isExternal(r) ? ' <span aria-hidden="true">↗</span>' : ""}</b>${d ? `<small>${esc(d)}</small>` : ""}</span></a>
       ${NEWABLE.has(r) ? `<a class="btn small hub-new" href="#/${r}/new">${icon("plus")} جديد</a>` : ""}</div>`).join("")}<span id="hub-mine" style="display:contents"></span></div>
   </div>`;

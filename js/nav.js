@@ -1,5 +1,7 @@
 // خريطة الأقسام: تُستخدم في القائمة الجانبية (يمين) وبطاقات الرئيسية وصفحات الأقسام — مصدر واحد
 // card: صورة البطاقة في الرئيسية؛ items: صفحات القسم
+// روابط الخطط الأسبوعية (نماذج خارجية) تُدار من «القوائم المنسدلة ← روابط الخطط» وتظهر حسب مرحلة الموجّه (itemsOf)
+import { opts, G } from "./store.js";
 export const SECTIONS = [
   { id: "data", label: "البيانات الرئيسية", icon: "user", card: "data", desc: "معلومات الموجه الفني والمدارس والمعلمات",
     items: [["guide", "بيانات الموجّه الفني", "user", "الاسم والمسمى والتخصص والتوقيع والختم"], ["schools", "المدارس والمعلمات", "school", "أسماء المدارس ومعلماتها والميزانية"]] },
@@ -7,7 +9,7 @@ export const SECTIONS = [
   { id: "curr", label: "المناهج التابعة للتوجيه الفني", short: "المناهج", icon: "book", card: "curr", desc: "مكتبة الطالب ومكتبة المعلم في وزارة التربية",
     items: [["https://elibrary.moe.edu.kw/StudentsLibrary", "مكتبة الطالب", "book", "كتب الطالب من مكتبة وزارة التربية الإلكترونية"], ["https://elibrary.moe.edu.kw/TeachersLibrary", "مكتبة المعلم", "book", "كتب المعلم وأدلته من مكتبة وزارة التربية الإلكترونية"]] },
   { id: "plans", label: "الخطط", icon: "calendar", card: "plans", desc: "الخطة الشهرية والتقويم الدراسي والتواريخ الهامة",
-    items: [["dates", "التقويم والتواريخ الهامة", "clock", "التقويم الدراسي الثابت وفعالياتك"], ["monthly", "الخطة الشهرية", "calendar", "تُعبأ تلقائياً من التواريخ والزيارات"], ["https://forms.cloud.microsoft/r/N46DUrLyFn", "الخطة الأسبوعية القبلية", "doc", "نموذج Microsoft Forms"], ["https://forms.cloud.microsoft/r/6DQKABdVES", "الخطة الأسبوعية البعدية", "doc", "نموذج Microsoft Forms"], ["https://docs.google.com/document/d/1hUyBprWrP1Y3wea1ve-zES7RiCf28HQz/edit", "الخطة القبلية word", "doc", "آخر موعد: الأربعاء 8 مساءً"], ["https://docs.google.com/document/d/1B6JoCbHqCp4kt6cTayHq8Y7pv8lWJPX2/edit", "الخطة البعدية word", "doc", "آخر موعد: الأربعاء 8 مساءً"], ["tasks", "قائمة المهام", "check", "مهامك بالكيبورد أو بالقلم، وتُشطب عند الإنجاز"]] },
+    items: [["dates", "التقويم والتواريخ الهامة", "clock", "التقويم الدراسي الثابت وفعالياتك"], ["monthly", "الخطة الشهرية", "calendar", "تُعبأ تلقائياً من التواريخ والزيارات"], ["tasks", "قائمة المهام", "check", "مهامك بالكيبورد أو بالقلم، وتُشطب عند الإنجاز"]] },
   { id: "visits", label: "الزيارات الميدانية", icon: "pin", card: "visits", desc: "تسجيل ومتابعة الزيارات المدرسية",
     items: [["school-visits", "زيارة الموجه للمدرسة", "school", "تُسجَّل فيها زيارات المعلمين تلقائياً"], ["teacher-visits", "زيارة المعلم / رئيس القسم", "user", "بنود الزيارة بالمستويات الثلاثة"], ["exams", "متابعة الامتحانات", "check", "النظري والعملي"]] },
   { id: "reports", label: "التقارير", icon: "doc", card: "reports", desc: "إعداد التقارير واعتمادها وطباعتها",
@@ -21,3 +23,16 @@ export const MORE = { id: "more", label: "الملفات والأرشيف", icon
   items: [["groups", "المجموعات", "user", "ملفات وجداول مشتركة لكل مجموعة"], ["shared", "الملفات المشتركة", "share", ""], ["search", "البحث والأرشيف", "search", ""], ["trash", "سلة المحذوفات", "trash", ""], ["backup", "النسخ الاحتياطي", "download", ""]] };
 export const isExternal = (r) => /^https?:\/\//.test(r);
 export const sectionOf = (route) => [...SECTIONS, MORE].find((s) => s.route === route || (s.items || []).some(([r]) => r === route || r.split("?")[0] === route));
+
+// روابط الخطط: كل سطر «المرحلة|الاسم|الرابط»؛ المرحلة: ثانوي / متوسط / ابتدائي / الكل
+export function planLinks() {
+  const st = String(G().stage || "").trim();
+  return opts("plan_links").map((l) => String(l).split("|").map((x) => x.trim())).filter(([s, t, u]) => t && /^https?:\/\//.test(u || "") && (!st || !s || s === "الكل" || s === st))
+    .map(([s, t, u]) => [u, t, "doc", s && s !== "الكل" ? `للمرحلة: ${s}` : "لكل المراحل"]);
+}
+// صفحات القسم مع روابط الخطط (قبل «قائمة المهام» في قسم الخطط)
+export function itemsOf(s) {
+  if (s.id !== "plans") return s.items || [];
+  const it = [...s.items], i = it.findIndex(([r]) => r === "tasks");
+  it.splice(i < 0 ? it.length : i, 0, ...planLinks()); return it;
+}

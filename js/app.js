@@ -7,7 +7,7 @@ import { initPWA } from "./pwa.js";
 import { showIntro, rememberWho, getWho, forgetWho } from "./intro.js";
 import { icon } from "./icons.js";
 import { startGenderUI } from "./gender.js";
-import { SECTIONS, MORE, sectionOf, isExternal } from "./nav.js";
+import { SECTIONS, MORE, sectionOf, isExternal, itemsOf } from "./nav.js";
 applyCachedUI();
 initPWA();
 
@@ -42,7 +42,7 @@ function navHtml(p) {
     : `<a class="nav ${sub ? "sub" : ""}" href="#/${r}" data-r="${r}">${sub ? '<span class="dot" aria-hidden="true"></span>' : icon(i)}<span class="t">${esc(l)}</span></a>`;
   const group = (s) => s.route ? link(s.route, s.label, s.icon)
     : `<div class="nav-grp" data-g="${s.id}"><button type="button" class="nav nav-h" aria-expanded="false">${icon(s.icon)}<span class="t">${esc(s.label)}</span>${icon("chevron", "chev")}</button>
-       <div class="nav-items">${s.items.map(([r, l]) => link(r, l, "", true)).join("")}</div></div>`;
+       <div class="nav-items">${itemsOf(s).map(([r, l]) => link(r, l, "", true)).join("")}</div></div>`;
   const who = state.guide?.data || {};
   return `<div class="side-user"><div class="su-av" aria-hidden="true">${icon("user")}</div><div class="su-t"><b>${esc(who.full_name || p.full_name || p.username)}</b><small>${esc(who.job_title || "موجه فني")}${who.subject ? " — " + esc(who.subject) : ""}</small></div></div>
     <div class="side-nav">${link("", "الرئيسية", "home")}${SECTIONS.map(group).join("")}<div class="nav-sep"></div>${group(MORE)}
