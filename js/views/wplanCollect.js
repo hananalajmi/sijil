@@ -6,7 +6,7 @@ import { esc, $, $$, today, fmtDate, weekStart, addDays, WORK_DAYS, academicYear
 import { KIND, matchOf, placeName, itemText } from "./wplan.js";
 
 const fmtItems = (arr) => (arr || []).filter((x) => placeName(x)).map((x) => esc(itemText(x)) + (x.note ? ` <span class="hint">(${esc(x.note)})</span>` : "")).join("<br>") || '<span class="hint">—</span>';
-const isAdmin = () => state.profile?.role === "admin";
+const isAdmin = () => false; // المشرف لا يرى خطط الموجهين؛ التجميع للمسؤول عن كل مرحلة فقط
 
 // يجمع بيانات أسبوع ومرحلة (للصفحة وللطباعة)
 export async function collectCtx(week, stage) {
@@ -25,7 +25,7 @@ export async function collectCtx(week, stage) {
 }
 
 export default async function (main, { params }) {
-  if (!(state.profile?.is_collector || isAdmin())) { main.innerHTML = `<div class="container"><div class="empty"><h2>هذه الصفحة للمسؤول عن تجميع الخطط</h2><p>يعيّنه المشرف من «الحسابات والصلاحيات».</p></div></div>`; return; }
+  if (!state.profile?.is_collector) { main.innerHTML = `<div class="container"><div class="empty"><h2>هذه الصفحة للمسؤول عن تجميع الخطط</h2><p>يعيّنه المشرف من «الحسابات والصلاحيات».</p></div></div>`; return; }
   const stage = isAdmin() ? params.stage || G().stage || opts("stages")[0] : G().stage || "";
   if (!stage) { main.innerHTML = `<div class="container"><div class="empty"><h2>حدّد مرحلتك أولاً</h2><p>من البيانات الرئيسية ← المرحلة؛ تظهر لك خطط موجهي مرحلتك.</p></div></div>`; return; }
   const ctx = await collectCtx(params.week, stage);

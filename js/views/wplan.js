@@ -63,7 +63,7 @@ export default async function (main, { params }) {
   const cur = weekStart(params.week || today()), next = addDays(cur, 7);
   main.innerHTML = `<div class="container"><div class="page-head"><div><a class="hub-back" href="#/hub/plans">الخطط</a><h1>خطتي الأسبوعية</h1>
       <div class="sub">كل أربعاء: البعدية لهذا الأسبوع (ما نُفّذ) والقبلية للأسبوع القادم، ثم «إرسال للمسؤول».</div></div>
-      <div class="row"><label class="row" style="gap:6px">الأسبوع <input type="date" id="wp-wk" value="${cur}"></label>${state.profile?.is_collector || state.profile?.role === "admin" ? `<a class="btn" href="#/wplan-collect">تجميع خطط المرحلة</a>` : ""}</div></div>
+      <div class="row"><label class="row" style="gap:6px">الأسبوع <input type="date" id="wp-wk" value="${cur}"></label>${state.profile?.is_collector ? `<a class="btn" href="#/wplan-collect">تجميع خطط المرحلة</a>` : ""}</div></div>
     <div id="wp-body"><p class="hint">جارٍ التحميل…</p></div></div>`;
   $("#wp-wk", main).onchange = (e) => { location.hash = `#/wplan?week=${weekStart(e.target.value || today())}`; };
   // القفل: الأربعاء 8 مساءً (بتوقيت الكويت) لهذا الأسبوع — تُقفل البعدية الحالية والقبلية للأسبوع القادم معاً
