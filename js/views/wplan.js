@@ -6,14 +6,16 @@ import { state, G, opts, schoolById } from "../store.js";
 import { esc, $, $$, today, fmtDate, weekStart, addDays, academicYearOf, toast, debounce, WORK_DAYS } from "../ui.js";
 
 export const KIND = "weekly_plan";
-export const PLACES = ["مكتب التوجيه", "اجتماع", "ورشة / إنماء مهني", "دورة تدريبية", "إجازة", "أخرى"];
+export const PLACES = ["مكتب التوجيه", "تكليف", "اجتماع", "ورشة / إنماء مهني", "دورة تدريبية", "إجازة", "أخرى"];
 export const ACTS = () => [...new Set([...opts("school_visit_types"), "زيارة معلم", "متابعة السجلات", "متابعة امتحانات", "حضور اجتماع", "حضور ورشة", "عمل مكتبي"])];
 const myName = () => G().full_name || state.profile?.full_name || "";
 const days = (ws) => [0, 1, 2, 3, 4].map((i) => addDays(ws, i));
 export const placeName = (it) => it?.place_name || schoolById(it?.place)?.title || it?.place || "";
 // نص البند كما يُقرأ: «زيارة توجيهية لثانوية الواحة» (النشاط + المدرسة)، أو المكان وحده (مكتب، اجتماع…)
-export const itemText = (it) => { const p = placeName(it), a = String(it?.act || "").trim(), isSchool = !!schoolById(it?.place) || /^(مدرسة|ثانوية|متوسطة|ابتدائية|روضة)/.test(p);
+export const itemText = (it) => { if (String(it?.text || "").trim()) return String(it.text).trim(); return autoText(it); };
+const autoText = (it) => { const p = placeName(it), a = String(it?.act || "").trim(), isSchool = !!schoolById(it?.place) || /^(مدرسة|ثانوية|متوسطة|ابتدائية|روضة)/.test(p);
   if (!p) return a; if (!a) return p; return isSchool ? `${a} ل${p}` : `${p} — ${a}`; };
+// (التكليف يُكتب «تكليف: المهمة» من الملاحظة)
 const emptyDays = () => ({ 0: [], 1: [], 2: [], 3: [], 4: [] });
 
 // نسبة التطابق: لكل يوم، ما خُطط له (بالمكان) هل نُفّذ في اليوم نفسه
@@ -45,6 +47,12 @@ async function visitsOf(ws) {
     const act = v.kind === "school_visit" ? v.data?.visit_type || "زيارة مدرسة" : "زيارة معلم";
     if (!out[i].some((x) => x.place === v.school_id)) out[i].push({ place: v.school_id, act, note: "", auto: true });
   }
+  // التكليفات (نموذج تكليف بمهمة) في أيام الأسبوع: «تكليف — المهمة»
+  const tk = (await api.list({ kind: "form" }).catch(() => [])).filter((f) => f.data?.type === "takleef" && !f.data?.blank);
+  for (const f of tk) { const a = f.data.from || f.data.date || f.record_date, b = f.data.to || a; if (!a) continue;
+    for (let i = 0; i < 5; i++) { const dt = addDays(ws, i); if (dt < a || dt > b) continue;
+      const task = String(f.data.task || "").replace(/\s+/g, " ").trim();
+      if (!out[i].some((x) => x.place === "تكليف" && x.note === task)) out[i].push({ place: "تكليف", place_name: "تكليف", act: "", note: task, auto: true }); } }
   return out;
 }
 
@@ -76,7 +84,7 @@ export default async function (main, { params }) {
       <div class="wp-items">${(recs[k].data[part][i] || []).map((it, j) => `<div class="wp-it" data-j="${j}">
           <select data-f="place" aria-label="المكان">${placeOpts(it.place)}</select><select data-f="act" aria-label="النشاط">${actOpts(it.act)}</select>
           <input data-f="note" value="${esc(it.note || "")}" placeholder="ملاحظة" aria-label="ملاحظة"><button class="btn small ghost" data-del aria-label="حذف">✕</button>
-          ${itemText(it) ? `<div class="wp-txt">${esc(itemText(it))}${it.note ? ` <span class="hint">(${esc(it.note)})</span>` : ""}</div>` : ""}</div>`).join("")}</div>
+          ${placeName(it) || it.act ? `<input class="wp-txt" data-f="text" value="${esc(itemText(it))}" aria-label="نص البند كما يظهر (يمكن تعديله)" title="نص البند كما يظهر — يمكنك تعديله">` : ""}</div>`).join("")}</div>
       <button class="btn small" data-add>+ إضافة</button></div>`).join("");
   const paint = () => {
     const m = matchOf(recs.cur.data.pre, recs.cur.data.post), sent = (r) => (r.data.submitted ? `<span class="pill ok">أُرسلت ${r.data.sent_at ? fmtDate(r.data.sent_at.slice(0, 10)) : ""}</span>` : '<span class="pill">لم تُرسل</span>');
@@ -99,7 +107,10 @@ export default async function (main, { params }) {
       $$(".wp-it", dEl).forEach((row) => { const j = Number(row.dataset.j);
         row.querySelector("[data-del]").onclick = () => { list().splice(j, 1); save[k](); paint(); };
         $$("[data-f]", row).forEach((inp) => (inp[inp.tagName === "INPUT" ? "oninput" : "onchange"] = () => {
-          const it = list()[j]; it[inp.dataset.f] = inp.value; if (inp.dataset.f === "place") it.place_name = schoolById(inp.value)?.title || inp.value; delete it.auto; save[k]();
+          const it = list()[j], f = inp.dataset.f;
+          if (f === "text") { const v = inp.value.trim(); if (!v || v === autoText(it)) delete it.text; else it.text = v; }
+          else { it[f] = inp.value; if (f === "place") it.place_name = schoolById(inp.value)?.title || inp.value; if (f !== "note") delete it.text; } // تغيير المكان أو النشاط يعيد النص التلقائي
+          delete it.auto; save[k]();
           if (inp.tagName !== "INPUT") paint(); })); });
     });
     $("#wp-refill", main).onclick = async () => { const a = await visitsOf(cur); for (let i = 0; i < 5; i++) for (const it of a[i]) if (!(recs.cur.data.post[i] ||= []).some((x) => x.place === it.place)) recs.cur.data.post[i].push(it); await saveNow("cur"); paint(); toast("أُضيفت الزيارات"); };
