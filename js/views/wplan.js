@@ -19,15 +19,17 @@ const autoText = (it) => { const p = placeName(it), a = String(it?.act || "").tr
 const emptyDays = () => ({ 0: [], 1: [], 2: [], 3: [], 4: [] });
 
 // نسبة التطابق: لكل يوم، ما خُطط له (بالمكان) هل نُفّذ في اليوم نفسه
+// نسبة الالتزام بالأيام: 5 أيام (الأحد–الخميس) كل يوم 20%؛ اليوم ملتزم إذا نُفّذ كل ما خُطط له فيه (يوم بلا تخطيط يُحسب ملتزماً)
 export function matchOf(pre, post) {
-  let planned = 0, done = 0; const missed = [], extra = [];
+  let planned = 0, okDays = 0; const missed = [], extra = [];
   for (let i = 0; i < 5; i++) {
     const P = (pre?.[i] || []).map(placeName).filter(Boolean), D = (post?.[i] || []).map(placeName).filter(Boolean);
     planned += P.length;
-    P.forEach((p) => (D.includes(p) ? done++ : missed.push([i, p])));
+    const miss = P.filter((p) => !D.includes(p)); miss.forEach((p) => missed.push([i, p]));
+    if (!miss.length) okDays++;
     D.forEach((d) => { if (!P.includes(d)) extra.push([i, d]); });
   }
-  return { planned, done, pct: planned ? Math.round((done / planned) * 100) : null, missed, extra };
+  return { planned, done: okDays, days: 5, pct: planned ? okDays * 20 : null, missed, extra };
 }
 
 async function recFor(ws, create) {
@@ -94,7 +96,7 @@ export default async function (main, { params }) {
       <div class="panel" style="${locked ? "border-color:#e0b54a;background:#fff8e1" : ""}">${locked ? `🔒 <b>الخطة مقفلة</b> — انتهى موعد التعديل (الأربعاء ${fmtDate(addDays(cur, 3))} الساعة 8 مساءً).${recs.cur.data.submitted ? "" : " يمكنك إرسالها متأخرة فقط دون تعديل."}` : `⏰ آخر موعد للتعديل والإرسال: الأربعاء ${fmtDate(addDays(cur, 3))} الساعة 8 مساءً، وبعدها تُقفل الخطة.`}</div>
       <section class="panel"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h2 style="margin:0">البعدية — هذا الأسبوع (${fmtDate(cur)} – ${fmtDate(addDays(cur, 4))})</h2>${sent(recs.cur)}</div>
         <p class="hint">تبدأ نسخةً من قبليتك لهذا الأسبوع: اترك ما نُفّذ كما هو، واحذف أو غيّر الخيار فيما تغيّر. <button class="btn small ghost" id="wp-copy">نسخ القبلية من جديد</button> <button class="btn small ghost" id="wp-refill">تحديث من الزيارات</button></p>
-        <div class="wp-match">${m.pct === null ? "لا توجد خطة قبلية لهذا الأسبوع للمقارنة." : `<b>نسبة التطابق مع القبلية: ${m.pct}%</b> (${m.done} من ${m.planned})${m.missed.length ? `<br><span class="hint">لم يُنفّذ: ${m.missed.map(([i, p]) => `${WORK_DAYS[i]}: ${esc(p)}`).join("، ")}</span>` : ""}${m.extra.length ? `<br><span class="hint">إضافي غير مخطط: ${m.extra.map(([i, p]) => `${WORK_DAYS[i]}: ${esc(p)}`).join("، ")}</span>` : ""}`}</div>
+        <div class="wp-match">${m.pct === null ? "لا توجد خطة قبلية لهذا الأسبوع للمقارنة." : `<b>نسبة التطابق مع القبلية: ${m.pct}%</b> (${m.done} من 5 أيام)${m.missed.length ? `<br><span class="hint">لم يُنفّذ: ${m.missed.map(([i, p]) => `${WORK_DAYS[i]}: ${esc(p)}`).join("، ")}</span>` : ""}${m.extra.length ? `<br><span class="hint">إضافي غير مخطط: ${m.extra.map(([i, p]) => `${WORK_DAYS[i]}: ${esc(p)}`).join("، ")}</span>` : ""}`}</div>
         <details class="wp-prev"><summary>🔒 قبليتك لهذا الأسبوع (مقفلة للاطلاع)</summary><div class="wp-ro">${days(cur).map((dt, i) => `<div><b>${WORK_DAYS[i]}</b>: ${(recs.cur.data.pre[i] || []).filter((x) => placeName(x)).map((x) => esc(itemText(x))).join(" + ") || '<span class="hint">—</span>'}</div>`).join("")}</div></details>
         ${dayRows("cur", "post", cur)}</section>
       <section class="panel"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h2 style="margin:0">القبلية — الأسبوع القادم (${fmtDate(next)} – ${fmtDate(addDays(next, 4))})</h2>${sent(recs.next)}</div>
