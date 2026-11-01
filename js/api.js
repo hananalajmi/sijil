@@ -153,7 +153,7 @@ function supabaseAdapter() {
       if (onlyDeleted) q += `&deleted_at=not.is.null`;
       else if (!includeDeleted) q += `&deleted_at=is.null`;
       // الملف المشترك يظهر للجميع؛ وما عداه سجلاتي فقط
-      const sharedOnly = ["shared_achievements", "group_sheet"].includes(kind) || (kinds && kinds.every((k) => ["shared_achievements", "group_sheet"].includes(k)));
+      const SH = ["shared_achievements", "group_sheet", "attend_list"], sharedOnly = SH.includes(kind) || (kinds && kinds.every((k) => SH.includes(k)));
       if (session?.user?.id && !extra.includes("owner_id") && !sharedOnly) q += `&owner_id=eq.${session.user.id}`;
       return rest(q + extra);
     },

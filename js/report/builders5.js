@@ -82,3 +82,29 @@ export async function wpPrePostReport(ctx) {
   }
   return { orientation: "landscape", cls: "t-wp2", header, identity: "", footer: wpFoot(ctx), blocks: [{ table: { cls: "grid wp-tbl", thead: `<tr><th class="wp-n">اسم الموجه الفني</th><th class="wp-t">نوع الخطة</th>${days.map((d) => `<th>${d}</th>`).join("")}<th class="wp-pct">نسبة الالتزام</th></tr>`, rows } }] };
 }
+
+// كشف المكلفين بالحضور: كتاب للإدارة ثم كشف الأسماء (من كل الموجهين) — على هيئة النموذج المرفق
+export async function attendList(ctx) {
+  const d = ctx.rec.data || {}, rows = ctx.rows || [];
+  const { dayName: dn, parseDate: pd } = await import("../ui.js");
+  const dt = pd(d.date); const dnum = dt ? `${dt.getDate()}/ ${dt.getMonth() + 1}/ ${dt.getFullYear()}` : "";
+  const region = String(d.region || "الأحمدي").replace(/^منطقة\s*/, "").replace(/\s*التعليمية$/, "");
+  const header = logoRow(await headLogos(ctx, "attend_list"), "at-logos");
+  const topic = [d.topic, d.topic_extra].map((x) => String(x || "").trim()).filter(Boolean).join(" ");
+  const blocks = [
+    { html: `<p class="at-to">${esc(d.to || "")}</p><p class="at-greet">تحية طيبة وبعد ،،،</p>` },
+    { html: `<p class="at-topic">الموضوع : ${esc(topic)}</p>` },
+    { html: `<p class="at-p">${esc(d.body ?? `بالإشارة للموضوع أعلاه ، وبناء على مصلحة العمل يسر التوجيه الفني للعلوم بمنطقة ${region} التعليمية ${String(d.topic || "").trim()}`)}</p>
+      <p class="at-p">وذلك في يوم ${esc(dn(d.date) || "")} الموافق ${esc(dnum)} في ${esc(d.place || "")} .</p>
+      ${String(d.request ?? "يرجى الايعاز لجهة الاختصاص لتسهيل اعفاء المكلفين بالحضور .").trim() ? `<p class="at-p">${esc(d.request ?? "يرجى الايعاز لجهة الاختصاص لتسهيل اعفاء المكلفين بالحضور .")}</p>` : ""}
+      <ul class="at-att"><li>مرفق كشف بأسماء المكلفين بالحضور</li></ul>
+      <p class="at-close">وتفضلوا بقبول فائق الاحترام والتقدير ،،،</p>` },
+    { html: `<p class="at-ttl">كشف بأسماء المكلفين بالحضور</p>` },
+    { table: { cls: "at-tbl", colgroup: `<colgroup><col style="width:7%"><col style="width:27%"><col style="width:18%"><col style="width:13%"><col style="width:22%"><col style="width:13%"></colgroup>`,
+      thead: `<tr><th>م</th><th>الاسم</th><th>الرقم المدني</th><th>المسمى الوظيفي</th><th>جهة العمل</th><th>ملاحظات</th></tr>`,
+      rows: rows.length ? rows.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.name || "")}</td><td class="at-civ">${esc(r.civil || "")}</td><td>${esc(r.job || "")}</td><td>${esc(r.school || "")}</td><td>${esc(r.note || "")}</td></tr>`)
+        : [`<tr><td colspan="6">لا توجد أسماء بعد</td></tr>`] } },
+  ];
+  const footer = `<div class="at-sig"><div>الموجه الفني الأول للعلوم</div><div>${d.first_name ? "أ. " + esc(d.first_name) : ""}</div></div>`;
+  return { orientation: "portrait", cls: "t-at", header, identity: "", footer, blocks };
+}

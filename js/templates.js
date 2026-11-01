@@ -151,6 +151,9 @@ export const STATS = {
 export const DEFAULT_OPTIONS = {
   stages: { label: "المراحل الدراسية", items: ["ثانوي", "متوسط", "ابتدائي"] },
   // روابط الخطط الأسبوعية في قسم الخطط: «المرحلة|الاسم|الرابط» — تظهر لموجهي المرحلة فقط (أو «الكل» للجميع)
+  attend_recipients: { label: "كشف المكلفين بالحضور: المرسل إليه", items: ["السيد / مدير إدارة التوجيه الفني للعلوم المحترم"] },
+  attend_topics: { label: "كشف المكلفين بالحضور: الموضوع", items: ["إقامة اجتماع ضمن خطة التدريب الميداني للهيئة التعليمية لمناهج العلوم الجديدة"] },
+  attend_subjects: { label: "كشف المكلفين بالحضور: التخصصات التي يظهر لها", items: ["كيمياء"] },
   plan_links: { label: "روابط الخطط (المرحلة|الاسم|الرابط) — المرحلة: ثانوي أو متوسط أو ابتدائي أو الكل", items: [
     "ثانوي|الخطة الأسبوعية القبلية|https://forms.cloud.microsoft/r/N46DUrLyFn",
     "ثانوي|الخطة الأسبوعية البعدية|https://forms.cloud.microsoft/r/6DQKABdVES",
@@ -301,6 +304,7 @@ export const HEAD_LOGOS = {
   takleef: { label: "التكليف", r: "emblem", c: "", l: "" },
   weekly_meeting: { label: "التقرير الأسبوعي للتوجيه الفني", r: "stats_r", c: "", l: "directorate" },
   criteria: { label: "بطاقة قياس المعايير", r: "emblem", c: "", l: "" },
+  attend_list: { label: "كشف المكلفين بالحضور", r: "attend_r", c: "", l: "attend_l" },
 };
 // الشعارات المتاحة للاختيار في رأس النماذج
 export const HEAD_LOGO_CHOICES = ["ministry_hd", "ministry", "ministry_event", "emblem", "seal_gold", "directorate", "stats_r", "ministry_color", "general_science", "new_kuwait", "stats_c"];
@@ -327,6 +331,8 @@ export const LOGOS = {
   directorate_event: { alias: "directorate", src: "assets/logos/ahmadi-science-event.jpg" },
   stats_l: { alias: "directorate", src: "assets/logos/stats-logo-left.png" },
   dep_l: { alias: "directorate", src: "assets/logos/dep-logo-left.png" },
+  attend_r: { alias: "ministry_hd", src: "assets/logos/attend-right.jpg" },
+  attend_l: { alias: "directorate", src: "assets/logos/attend-left.png" },
 };
 for (const v of Object.values(LOGOS)) if (v.alias) v.label = LOGOS[v.alias].label;
 export const canonLogo = (k) => LOGOS[k]?.alias || k;

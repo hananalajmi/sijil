@@ -37,6 +37,8 @@ export function toast(msg, kind = "") {
 }
 
 // نافذة حوار داخل الصفحة (بدون alert/confirm)
+// زر يُرجع KEEP يُبقي النافذة مفتوحة (مثلاً عند خطأ في الإدخال)
+export const KEEP = Symbol("keep");
 export function modal({ title, body = "", actions = [{ label: "إغلاق", value: null }], wide = false }) {
   return new Promise((resolve) => {
     const wrap = document.createElement("div");
@@ -51,7 +53,7 @@ export function modal({ title, body = "", actions = [{ label: "إغلاق", valu
       const btn = document.createElement("button");
       btn.className = "btn " + (a.kind || "");
       btn.textContent = a.label;
-      btn.onclick = () => done(typeof a.value === "function" ? a.value(b) : a.value);
+      btn.onclick = () => { const v = typeof a.value === "function" ? a.value(b) : a.value; if (v !== KEEP) done(v); };
       act.appendChild(btn);
     });
     const onKey = (e) => { if (e.key === "Escape") done(null); };

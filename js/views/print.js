@@ -45,10 +45,11 @@ export async function resolveReport(id, params) {
   }
   const rec = await api.get(id);
   if (!rec) throw new Error("السجل غير موجود");
-  const back = state.profile && rec.owner_id && rec.owner_id !== state.profile.id && rec.kind !== "shared_achievements" ? `#/compile?month=${rec.data?.month || ""}` : `#/${KIND_ROUTE[rec.kind]}/${rec.id}`;
+  const back = state.profile && rec.owner_id && rec.owner_id !== state.profile.id && !["shared_achievements", "attend_list"].includes(rec.kind) ? `#/compile?month=${rec.data?.month || ""}` : `#/${KIND_ROUTE[rec.kind]}/${rec.id}`;
   const name = rec.title || KIND_LABEL[rec.kind];
   if (rec.status === "approved" && rec.snapshot) return [rec.snapshot, name, back, rec]; // النسخة الثابتة المعتمدة
   if (rec.kind === "monthly_plan") return [await monthlyContext(rec), name, back, rec];
+  if (rec.kind === "attend_list") { const { attendRows } = await import("./attend.js"); const c = await recordContext(rec); c.rows = await attendRows(rec.id); return [c, `كشف المكلفين بالحضور ${rec.data?.date || ""}`.trim(), back, rec]; }
   return [await recordContext(rec), name, back, rec];
 }
 export const contextFor = resolveReport;
