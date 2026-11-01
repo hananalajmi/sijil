@@ -13,7 +13,7 @@ export const SECTIONS = [
   { id: "visits", label: "الزيارات الميدانية", icon: "pin", card: "visits", desc: "تسجيل ومتابعة الزيارات المدرسية",
     items: [["school-visits", "زيارة الموجه للمدرسة", "school", "تُسجَّل فيها زيارات المعلمين تلقائياً"], ["teacher-visits", "زيارة المعلم / رئيس القسم", "user", "بنود الزيارة بالمستويات الثلاثة"], ["exams", "متابعة الامتحانات", "check", "النظري والعملي"]] },
   { id: "reports", label: "التقارير", icon: "doc", card: "reports", desc: "إعداد التقارير واعتمادها وطباعتها",
-    items: [["events", "تقرير الفعالية / التنمية المهنية", "star", "مع صور الفعالية"], ["meeting", "التقرير الأسبوعي للتوجيه الفني", "doc", "اجتماع الموجهين الأسبوعي — ملف مشترك"], ["attend", "كشف المكلفين بالحضور", "user", "اختيار المعلمين من مدارسك — ملف مشترك لموجهي التخصص"], ["approved", "التقارير المعتمدة", "approved", "النسخ الثابتة المعتمدة"], ["forms?sec=takleef", "التكاليف", "approved", "تكليف بمهمة: تعبئة وتوقيع وحفظ وإرسال"], ["forms?sec=criteria", "بطاقة قياس المعايير", "check", "الدرجات قوائم والمجموع تلقائي"], ["forms?sec=cert", "الشهادات", "star", "شكر وتقدير، تميّز، مشاركة، حضور"], ["sign", "توقيع ملف", "check", "ضعي توقيعك وختمك على أي نموذج PDF أو صورة"]] },
+    items: [["events", "تقرير الفعالية / التنمية المهنية", "star", "مع صور الفعالية"], ["meeting", "التقرير الأسبوعي للتوجيه الفني", "doc", "اجتماع الموجهين الأسبوعي — ملف مشترك"], ["approved", "التقارير المعتمدة", "approved", "النسخ الثابتة المعتمدة"], ["forms?sec=takleef", "التكاليف", "approved", "تكليف بمهمة: تعبئة وتوقيع وحفظ وإرسال"], ["forms?sec=criteria", "بطاقة قياس المعايير", "check", "الدرجات قوائم والمجموع تلقائي"], ["forms?sec=cert", "الشهادات", "star", "شكر وتقدير، تميّز، مشاركة، حضور"], ["sign", "توقيع ملف", "check", "ضعي توقيعك وختمك على أي نموذج PDF أو صورة"]] },
   { id: "ach", label: "الإنجازات", icon: "trophy", card: "ach", desc: "توثيق ومتابعة الإنجازات",
     items: [["weekly", "الإنجازات الأسبوعية", "layers", "تقرير زيارات التوجيه الفني للعلوم"], ["monthly-ach", "الإنجازات الشهرية", "trophy", "ملف مشترك بين كل الموجهين"]] },
   { id: "stats", label: "الإحصائيات", icon: "chart", card: "stats", desc: "إحصائيات الزيارات ومتابعة الامتحانات",
@@ -31,10 +31,7 @@ export function planLinks() {
     .map(([s, t, u]) => [u, s && s !== "الكل" && !t.includes(s) ? `${t} (${s})` : t, "doc", s && s !== "الكل" ? `للمرحلة: ${s}` : "لكل المراحل"]);
 }
 // صفحات القسم مع روابط الخطط (قبل «قائمة المهام» في قسم الخطط)
-// كشف المكلفين بالحضور يظهر لتخصصات محددة فقط (القوائم المنسدلة ← التخصصات التي يظهر لها)
-export const attendAllowed = () => { const sub = String(G().subject || "").trim(); return !!sub && opts("attend_subjects").map((x) => String(x).trim()).includes(sub); };
-export function itemsOf(s, { all = false } = {}) {
-  if (s.id === "reports" && !all) return (s.items || []).filter(([r]) => r !== "attend" || attendAllowed());
+export function itemsOf(s) {
   if (s.id !== "plans") return s.items || [];
   const it = [...s.items], i = it.findIndex(([r]) => r === "tasks");
   it.splice(i < 0 ? it.length : i, 0, ...planLinks()); return it;

@@ -8,11 +8,11 @@ export const KIND_LABEL = {
   guide_data: "البيانات الأساسية", school: "مدرسة", teacher: "معلم", department: "بيانات القسم العلمي",
   teacher_visit: "زيارة معلم / رئيس قسم", school_visit: "زيارة الموجه للمدرسة", exam_followup: "متابعة امتحان",
   weekly_report: "الإنجازات الأسبوعية", monthly_achievements: "الإنجازات الشهرية (النموذج السابق)", shared_achievements: "الإنجازات الشهرية (مشترك)", group_sheet: "جدول مجموعة", form: "نموذج", weekly_plan: "خطة أسبوعية (قديم)", monthly_plan: "خطة شهرية", important_date: "تاريخ هام", event_report: "تقرير فعالية / تنمية مهنية",
-  achievement: "إنجازات (قديم)", note: "تقرير معتمد", attend_list: "كشف المكلفين بالحضور",
+  achievement: "إنجازات (قديم)", note: "تقرير معتمد",
 };
 export const KIND_ROUTE = {
   school: "schools", teacher: "schools", department: "schools", teacher_visit: "teacher-visits", school_visit: "school-visits",
-  exam_followup: "exams", weekly_report: "weekly", monthly_achievements: "monthly-ach-old", shared_achievements: "monthly-ach", group_sheet: "group-sheet", form: "forms", monthly_plan: "monthly", important_date: "dates", event_report: "events", note: "print", guide_data: "guide", attend_list: "attend",
+  exam_followup: "exams", weekly_report: "weekly", monthly_achievements: "monthly-ach-old", shared_achievements: "monthly-ach", group_sheet: "group-sheet", form: "forms", monthly_plan: "monthly", important_date: "dates", event_report: "events", note: "print", guide_data: "guide",
 };
 export const PRINTABLE = new Set(["teacher_visit", "school_visit", "event_report", "weekly_report", "monthly_achievements", "monthly_plan", "shared_achievements", "form"]);
 

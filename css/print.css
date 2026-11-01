@@ -524,18 +524,3 @@
 .t-wp2 .wp-foot { display: flex; justify-content: center; margin-top: 3mm; }
 .t-wp2 .wp-foot span { border: 1.2pt solid #000; background: #d9d9d9; padding: 1.5mm 8mm; font-weight: 800; font-size: 12pt; }
 .t-wp2 .wp-logos.hl-row { grid-template-columns: 1fr auto 1fr; }
-/* كشف المكلفين بالحضور */
-.t-at .sheet-inner { padding: 10mm 16mm 12mm; }
-.t-at .at-logos .logo { height: 21mm; max-width: 62mm; object-fit: contain; }
-.t-at .at-to { font-size: 14pt; font-weight: 800; margin: 6mm 0 3mm; }
-.t-at .at-greet { font-size: 13pt; margin: 0 6mm 4mm; }
-.t-at .at-topic { font-size: 13.5pt; font-weight: 800; text-decoration: underline; text-align: center; line-height: 1.7; margin: 0 0 4mm; }
-.t-at .at-p { font-size: 13pt; line-height: 1.8; margin: 0 0 1.5mm; text-align: justify; }
-.t-at .at-att { font-size: 13pt; margin: 3mm 8mm; }
-.t-at .at-close { font-size: 13pt; text-align: center; margin: 6mm 0 8mm; }
-.t-at .at-ttl { font-size: 14pt; font-weight: 800; text-decoration: underline; text-align: center; margin: 2mm 0 2mm; }
-.t-at table.at-tbl { width: 100%; border-collapse: collapse; font-size: 11.5pt; }
-.t-at table.at-tbl th, .t-at table.at-tbl td { border: .8pt solid #000; padding: 1.2mm 1.5mm; text-align: center; font-weight: 700; }
-.t-at table.at-tbl th { background: #f2f2f2; }
-.t-at .at-civ { direction: ltr; unicode-bidi: plaintext; }
-.t-at .at-sig { width: 62mm; margin-inline-start: auto; text-align: center; font-size: 13pt; font-weight: 800; line-height: 1.7; padding-top: 3mm; }
