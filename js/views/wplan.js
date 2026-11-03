@@ -29,7 +29,9 @@ export function fullNameOf(name, stage = "") {
 // ما يراه المسؤول: نسخة لحظة الإرسال (البعدية لا تظهر إلا بعد إرسالها؛ القبلية المستوردة تظهر كما هي)
 export function withPost(rec) {
   if (!rec) return rec; const d = rec.data || {};
-  return { ...rec, data: { ...d, live_pre: d.pre, live_post: d.post, pre: d.sent_pre || d.pre || {}, post: d.sent_post || {}, post_sent: !!d.sent_post } };
+  // خطط أُرسلت قبل هذا التحديث (بلا نسخة إرسال): بعديتها المكتوبة تُعدّ مرسلة
+  const legacy = !d.sent_post && d.submitted && String(rec.updated_at || "") < "2026-11-03T11:30" && Object.values(d.post || {}).some((a) => (a || []).length);
+  return { ...rec, data: { ...d, live_pre: d.pre, live_post: d.post, pre: d.sent_pre || d.pre || {}, post: d.sent_post || (legacy ? d.post : {}), post_sent: !!d.sent_post || legacy } };
 }
 // ترتيب الموجهين في نماذج التجميع: الابتدائي، المتوسط، ثم الثانوي حسب المادة (كيمياء، فيزياء، أحياء، جيولوجيا)
 export const SUBJECT_ORDER = ["كيمياء", "فيزياء", "أحياء", "جيولوجيا"];

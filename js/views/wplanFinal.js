@@ -52,8 +52,8 @@ export default async function (main, { params }) {
       <p class="hint" style="margin:6px 0 0">${ctx.weekNoCur ? "" : "حدّد «بداية الأسبوع الأول» من القوائم المنسدلة ليظهر رقم الأسبوع. "}النموذجان يُطبعان PDF أو يُصدَّران Word للتعديل.</p></section>
     ${ctx.rows.length ? STAGE_ORDER.concat([""]).map((s) => { const rs = ctx.rows.filter((r) => (STAGE_ORDER.includes(r.stage) ? r.stage : "") === s); if (!rs.length) return "";
       return `<h2 style="margin:16px 0 8px">${esc(s || "بدون مرحلة")} <span class="hint">(سلّم ${rs.filter((r) => r.cur && r.next).length} من ${rs.length})</span></h2>
-        <div class="tbl-wrap"><table class="data"><thead><tr><th>الموجه</th><th>البعدية (هذا الأسبوع)</th><th>القبلية (القادم)</th><th></th></tr></thead><tbody>
-        ${rs.map((r) => `<tr><td>${esc(r.name)}</td><td>${st(r.cur?.data.post_sent ? r.cur : null)}</td><td>${st(r.next)}</td><td>${r.cur || r.next ? `<button class="btn small" data-ed="${ctx.rows.indexOf(r)}">تعديل</button>` : ""}</td></tr>`).join("")}</tbody></table></div>`; }).join("")
+        <div class="tbl-wrap"><table class="data"><thead><tr><th>الموجه</th><th>البعدية (هذا الأسبوع)</th><th>نسبة الالتزام</th><th>القبلية (القادم)</th><th></th></tr></thead><tbody>
+        ${rs.map((r) => `<tr><td>${esc(r.name)}</td><td>${st(r.cur?.data.post_sent ? r.cur : null)}</td><td>${r.match?.pct == null ? "—" : `<b>${r.match.pct}%</b>`}</td><td>${st(r.next)}</td><td>${r.cur || r.next ? `<button class="btn small" data-ed="${ctx.rows.indexOf(r)}">تعديل</button>` : ""}</td></tr>`).join("")}</tbody></table></div>`; }).join("")
       : `<div class="empty"><h2>لا يوجد موجهون حددوا مرحلتهم بعد</h2></div>`}</div>`;
   $$("[data-ed]", main).forEach((b) => (b.onclick = async () => { const { editPlan } = await import("./wplanCollect.js"); if (await editPlan(ctx.rows[Number(b.dataset.ed)])) location.reload(); }));
   $("#wf-wk", main).onchange = (e) => { location.hash = `#/wplan-final?week=${weekStart(e.target.value || today())}`; };
