@@ -2,17 +2,31 @@
 // ويحسب الموقع نسبة التطابق بين ما خُطط وما نُفّذ. تُرسل للمسؤول عن التجميع في المرحلة، وله صفحة تجمع موجهي مرحلته.
 // كل خطة سجل weekly_plan لأسبوع واحد: data.pre (القبلية لذلك الأسبوع) و data.post (البعدية لنفس الأسبوع).
 import { api } from "../api.js";
-import { state, G, opts, schoolById } from "../store.js";
-import { esc, $, $$, today, fmtDate, weekStart, addDays, academicYearOf, toast, debounce, WORK_DAYS } from "../ui.js";
+import { state, G, opts, schoolById, addMyOption, setGuideData } from "../store.js";
+import { esc, $, $$, today, fmtDate, weekStart, addDays, academicYearOf, toast, debounce, WORK_DAYS, modal } from "../ui.js";
 
 export const KIND = "weekly_plan";
 // المسؤول عن التجميع النهائي (كل المراحل): يعيّنه المشرف من «الحسابات والصلاحيات»
 export const isFinalCollector = () => (state.options?.wp_final_collectors?.items || []).includes(state.profile?.id);
 // البند مدرسة (لا مكتب/تكليف/اجتماع…)
-export const isSchoolItem = (it) => !!it && (it.school || !!schoolById(it.place) || (!!placeName(it) && !PLACES.includes(it.place) && !PLACES.includes(it.place_name)));
-export const PLACES = ["مكتب التوجيه", "تكليف", "اجتماع", "ورشة / إنماء مهني", "دورة تدريبية", "إجازة", "أخرى"];
+export const isSchoolItem = (it) => !!it && !it.other && (it.school || !!schoolById(it.place) || (!!placeName(it) && !PLACES.includes(it.place) && !PLACES.includes(it.place_name)));
+// الاسم في نموذجي الزيارات: يختاره الموجه (الافتراضي: الاسم الأول والعائلة)
+export const NAME_STYLES = ["الاسم الأول والعائلة", "الاسم الأول والثاني", "الاسم كاملاً"];
+export function styledName(full, style) { const w = String(full || "").trim().split(/\s+/).filter(Boolean); if (w.length <= 2 || style === NAME_STYLES[2]) return w.join(" ");
+  return style === NAME_STYLES[1] ? `${w[0]} ${w[1]}` : `${w[0]} ${w[w.length - 1]}`; }
+export const PLACES = ["مكتب التوجيه", "تكليف", "اجتماع", "ورشة / إنماء مهني", "دورة تدريبية", "إجازة", "أعمال أخرى", "أخرى"];
 export const ACTS = () => [...new Set([...opts("school_visit_types"), "زيارة معلم", "متابعة السجلات", "متابعة امتحانات", "حضور اجتماع", "حضور ورشة", "عمل مكتبي"])];
-const myName = () => G().full_name || state.profile?.full_name || "";
+// الاسم الكامل الرسمي للموجه في الخطط: من «أسماء الموجهين حسب التخصص» إذا طابق اسمه (الاسم الأول + أي جزء آخر)
+const nrm = (t) => String(t || "").replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي").replace(/ـ/g, "").replace(/\s+/g, " ").trim();
+export function fullNameOf(name, stage = "") {
+  const w = nrm(name).split(" ").filter(Boolean); if (!w.length) return name || "";
+  const list = opts("guide_names").map((l) => String(l).split("|").map((x) => x.trim())).filter(([, n]) => n);
+  const hit = list.filter(([, n]) => { const c = nrm(n).split(" "); return c[0] === w[0] && w.every((x) => c.includes(x)); });
+  const st = { "ابتدائي": "ابتدائ", "متوسط": "متوسط", "ثانوي": "ثانوي" }[stage];
+  const best = hit.length > 1 && st ? hit.filter(([s]) => nrm(s).includes(st)) : hit;
+  return best.length === 1 ? best[0][1] : name || "";
+}
+const myName = () => fullNameOf(G().full_name || state.profile?.full_name || "", G().stage);
 const days = (ws) => [0, 1, 2, 3, 4].map((i) => addDays(ws, i));
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
 export const placeName = (it) => it?.place_name || schoolById(it?.place)?.title || (UUID.test(it?.place || "") ? "مدرسة" : it?.place || "");
@@ -68,8 +82,10 @@ export default async function (main, { params }) {
   const cur = weekStart(params.week || today()), next = addDays(cur, 7);
   main.innerHTML = `<div class="container"><div class="page-head"><div><a class="hub-back" href="#/hub/plans">الخطط</a><h1>خطتي الأسبوعية</h1>
       <div class="sub">كل أربعاء: البعدية لهذا الأسبوع (ما نُفّذ) والقبلية للأسبوع القادم، ثم «إرسال للمسؤول».</div></div>
-      <div class="row"><label class="row" style="gap:6px">الأسبوع <input type="date" id="wp-wk" value="${cur}"></label>${state.profile?.is_collector ? `<a class="btn" href="#/wplan-collect">تجميع خطط المرحلة</a>` : ""}${isFinalCollector() ? `<a class="btn" href="#/wplan-final">التجميع النهائي (كل المراحل)</a>` : ""}</div></div>
+      <div class="row"><label class="row" style="gap:6px">اسمي في نموذجي الزيارات <select id="wp-ns">${NAME_STYLES.map((s) => `<option ${s === (G().wp_name_style || NAME_STYLES[0]) ? "selected" : ""}>${s}</option>`).join("")}</select></label><label class="row" style="gap:6px">الأسبوع <input type="date" id="wp-wk" value="${cur}"></label>${state.profile?.is_collector ? `<a class="btn" href="#/wplan-collect">تجميع خطط المرحلة</a>` : ""}${isFinalCollector() ? `<a class="btn" href="#/wplan-final">التجميع النهائي (كل المراحل)</a>` : ""}</div></div>
     <div id="wp-body"><p class="hint">جارٍ التحميل…</p></div></div>`;
+  let recsReady = null;
+  $("#wp-ns", main).onchange = async (e) => { await setGuideData("wp_name_style", e.target.value); if (recsReady) for (const k of ["cur", "next"]) await recsReady(k); toast(`سيظهر: ${styledName(myName(), e.target.value)}`); };
   $("#wp-wk", main).onchange = (e) => { location.hash = `#/wplan?week=${weekStart(e.target.value || today())}`; };
   // القفل: الأربعاء 8 مساءً (بتوقيت الكويت) لهذا الأسبوع — تُقفل البعدية الحالية والقبلية للأسبوع القادم معاً
   const lockAt = new Date(`${addDays(cur, 3)}T20:00:00+03:00`), locked = Date.now() > lockAt.getTime();
@@ -82,18 +98,24 @@ export default async function (main, { params }) {
   const recs = { cur: rCur, next: rNext };
   // اسم المدرسة يُحفظ مع البند (المسؤول عن التجميع لا يرى مدارس غيره)
   const named = (dd) => Object.fromEntries(Object.entries(dd || {}).map(([i, arr]) => [i, (arr || []).map((it) => { const s = schoolById(it?.place); return s ? { ...it, place_name: s.title, school: true } : it; })]));
-  const saveNow = async (k) => { const r = recs[k]; const stamp = { stage: G().stage || "", guide_name: myName(), subject: G().subject || "" };
+  const saveNow = async (k) => { const r = recs[k]; const stamp = { stage: G().stage || "", guide_name: myName(), visit_name: styledName(myName(), G().wp_name_style), subject: G().subject || "" };
     try { recs[k] = await api.update(r.id, { data: { ...r.data, ...(locked ? {} : { pre: named(r.data.pre), post: named(r.data.post) }), ...stamp } }, r.version); } catch (e) { toast("تعذّر الحفظ: " + e.message, "error"); } };
+  recsReady = saveNow;
   const save = { cur: debounce(() => saveNow("cur"), 700), next: debounce(() => saveNow("next"), 700) };
   if (filled) saveNow("cur");
 
-  const placeOpts = (v) => `<option value="">— المكان —</option><optgroup label="المدارس">${state.schools.map((s) => `<option value="${s.id}" ${s.id === v ? "selected" : ""}>${esc(s.title)}</option>`).join("")}</optgroup>
-    <optgroup label="أخرى">${PLACES.map((p) => `<option ${p === v ? "selected" : ""}>${esc(p)}</option>`).join("")}</optgroup>`;
-  const actOpts = (v) => `<option value="">— النشاط —</option>${[...new Set([...ACTS(), ...(v ? [v] : [])])].map((a) => `<option ${a === v ? "selected" : ""}>${esc(a)}</option>`).join("")}`;
+  // القوائم المنسدلة: المدارس + أماكن أخرى (مع ما أضافه الموجه)، والأنشطة؛ و«+ إضافة» لكل منهما
+  const others = () => [...new Set([...PLACES, ...opts("wp_places")])];
+  const placeOpts = (v, it) => { const known = !v || state.schools.some((s) => s.id === v) || others().includes(v);
+    return `<option value="">— المكان —</option><optgroup label="المدارس">${state.schools.map((s) => `<option value="${s.id}" ${s.id === v ? "selected" : ""}>${esc(s.title)}</option>`).join("")}</optgroup>
+    <optgroup label="أخرى">${others().map((p) => `<option ${p === v ? "selected" : ""}>${esc(p)}</option>`).join("")}${known ? "" : `<option value="${esc(v)}" selected>${esc(it?.place_name || v)}</option>`}</optgroup><option value="__addplace">+ إضافة مكان للقائمة…</option>`; };
+  const actOpts = (v) => `<option value="">— النشاط —</option>${[...new Set([...ACTS(), ...opts("wp_acts"), ...(v ? [v] : [])])].map((a) => `<option ${a === v ? "selected" : ""}>${esc(a)}</option>`).join("")}<option value="__addact">+ إضافة نشاط للقائمة…</option>`;
+  const askNew = (title) => modal({ title, body: `<div class="f"><input id="wp-nv" type="text" aria-label="${esc(title)}"></div><p class="hint">يُحفظ في قائمتك ويظهر في المرات القادمة.</p>`,
+    actions: [{ label: "إلغاء", value: null }, { label: "إضافة", kind: "primary", value: (b) => b.querySelector("#wp-nv").value.trim() }] });
   const dayRows = (k, part, ws) => days(ws).map((dt, i) => `<div class="wp-day" data-k="${k}" data-part="${part}" data-i="${i}">
       <div class="wp-dh"><b>${WORK_DAYS[i]}</b> <span class="hint">${fmtDate(dt)}</span></div>
       <div class="wp-items">${(recs[k].data[part][i] || []).map((it, j) => `<div class="wp-it" data-j="${j}">
-          <select data-f="place" aria-label="المكان">${placeOpts(it.place)}</select><select data-f="act" aria-label="النشاط">${actOpts(it.act)}</select>
+          <select data-f="place" aria-label="المكان">${placeOpts(it.place, it)}</select><select data-f="act" aria-label="النشاط">${actOpts(it.act)}</select>
           <input data-f="note" value="${esc(it.note || "")}" placeholder="ملاحظة" aria-label="ملاحظة"><button class="btn small ghost" data-del aria-label="حذف">✕</button>
           ${placeName(it) || it.act ? `<input class="wp-txt" data-f="text" value="${esc(itemText(it))}" aria-label="نص البند كما يظهر (يمكن تعديله)" title="نص البند كما يظهر — يمكنك تعديله">` : ""}</div>`).join("")}</div>
       <button class="btn small" data-add>+ إضافة</button></div>`).join("");
@@ -118,8 +140,11 @@ export default async function (main, { params }) {
       dEl.querySelector("[data-add]").onclick = () => { list().push({ place: "", act: "", note: "" }); save[k](); paint(); };
       $$(".wp-it", dEl).forEach((row) => { const j = Number(row.dataset.j);
         row.querySelector("[data-del]").onclick = () => { list().splice(j, 1); save[k](); paint(); };
-        $$("[data-f]", row).forEach((inp) => (inp[inp.tagName === "INPUT" ? "oninput" : "onchange"] = () => {
+        $$("[data-f]", row).forEach((inp) => (inp[inp.tagName === "INPUT" ? "oninput" : "onchange"] = async () => {
           const it = list()[j], f = inp.dataset.f;
+          if (inp.value === "__addplace" || inp.value === "__addact") { const isP = inp.value === "__addplace", v = await askNew(isP ? "إضافة مكان" : "إضافة نشاط");
+            if (!v) { paint(); return; } await addMyOption(isP ? "wp_places" : "wp_acts", v); inp.add(new Option(v, v, true, true)); inp.value = v; }
+          if (f === "place") { it.other = !schoolById(inp.value) && !!inp.value; if (it.other) delete it.school; }
           if (f === "text") { const v = inp.value.trim(); if (!v || v === autoText(it)) delete it.text; else it.text = v; }
           else { it[f] = inp.value; if (f === "place") it.place_name = schoolById(inp.value)?.title || inp.value; if (f !== "note") delete it.text; } // تغيير المكان أو النشاط يعيد النص التلقائي
           delete it.auto; save[k]();

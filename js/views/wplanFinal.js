@@ -3,7 +3,7 @@
 import { api } from "../api.js";
 import { state, G, opts, setGuideData } from "../store.js";
 import { esc, $, $$, today, fmtDate, weekStart, addDays, toast } from "../ui.js";
-import { KIND, isFinalCollector, matchOf } from "./wplan.js";
+import { KIND, isFinalCollector, matchOf, fullNameOf } from "./wplan.js";
 import { academicYearOf } from "../ui.js";
 
 export const STAGE_ORDER = ["ابتدائي", "متوسط", "ثانوي"];
@@ -31,7 +31,7 @@ export async function finalCtx(week) {
   for (const r of [...(a || []), ...(b || [])]) if (!people.has(r.owner_id)) people.set(r.owner_id, { id: r.owner_id, name: r.data?.guide_name || "—", stage: r.data?.stage || "" });
   const so = (s) => { const i = STAGE_ORDER.indexOf(s); return i < 0 ? 9 : i; };
   const rows = [...people.values()].map((p) => { const c = (a || []).find((r) => r.owner_id === p.id), n = (b || []).find((r) => r.owner_id === p.id);
-    return { ...p, name: c?.data?.guide_name || n?.data?.guide_name || p.name, stage: p.stage || c?.data?.stage || n?.data?.stage || "", cur: c || null, next: n || null, match: c ? matchOf(c.data.pre, c.data.post) : null }; })
+    return { ...p, name: fullNameOf(c?.data?.guide_name || n?.data?.guide_name || p.name, p.stage || c?.data?.stage || n?.data?.stage || ""), stage: p.stage || c?.data?.stage || n?.data?.stage || "", cur: c || null, next: n || null, match: c ? matchOf(c.data.pre, c.data.post) : null }; })
     .sort((x, y) => so(x.stage) - so(y.stage) || x.name.localeCompare(y.name, "ar"));
   const region = String(G().region || "الأحمدي").replace(/^منطقة\s*/, "").replace(/\s*التعليمية$/, "");
   return { kind: "wp_final", week: cur, next, rows, region, observer: G().wp_observer || "", allStages: true, year: academicYearOf(cur), first: G().first_supervisor || "", weekNoCur: weekNo(cur), weekNoNext: weekNo(next) };

@@ -91,12 +91,16 @@ async function wfParts() {
   const { ordinal } = await import("../views/wplanFinal.js");
   const { addDays } = await import("../ui.js");
   const txt = (x) => esc(itemText(x)) + (x.note && !String(itemText(x)).includes(x.note) ? ` (${esc(x.note)})` : "");
-  const school = (arr) => (arr || []).filter((x) => placeName(x) && isSchoolItem(x)).map(txt).join("<br>");
+  // كل البنود في مربع يومها (زيارات، تكليف، مكتب…)، وعمود «أعمال أخرى» لما يختاره الموجه «أعمال أخرى» فقط
+  const isOther = (x) => x?.place === "أعمال أخرى";
+  const school = (arr) => (arr || []).filter((x) => placeName(x) && !isOther(x)).map(txt).join("<br>");
   const DAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"];
-  const other = (dd) => DAYS.map((d, k) => { const o = (dd?.[k] || []).filter((x) => placeName(x) && !isSchoolItem(x)).map(txt); return o.length ? `<div><b>${d}:</b> ${o.join(" + ")}</div>` : ""; }).join("");
+  const other = (dd) => DAYS.map((d, k) => { const o = (dd?.[k] || []).filter((x) => placeName(x) && isOther(x)).map(txt); return o.length ? `<div><b>${d}:</b> ${o.join(" + ")}</div>` : ""; }).join("");
   return { school, other, DAYS, ordinal, addDays };
 }
-const wfName = (r) => `${esc(r.name)}<div class="wf-st">${esc(STAGE_WORD[r.stage] || r.stage || "")}</div>`;
+// نموذجا الزيارات: الاسم الأول واسم العائلة فقط (الخطة القبلية والبعدية: الاسم كاملاً)
+const firstLast = (n) => { const w = String(n || "").trim().split(/\s+/).filter(Boolean); return w.length > 2 ? `${w[0]} ${w[w.length - 1]}` : w.join(" "); };
+const wfName = (r) => `${esc(r.cur?.data?.visit_name || r.next?.data?.visit_name || firstLast(r.name))}<div class="wf-st">${esc(STAGE_WORD[r.stage] || r.stage || "")}</div>`;
 
 export async function wpFinalPre(ctx) {
   const { school, other, DAYS, ordinal, addDays } = await wfParts();
