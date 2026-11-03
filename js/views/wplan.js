@@ -50,15 +50,17 @@ const autoText = (it) => { const p = placeName(it), a = String(it?.act || "").tr
 const emptyDays = () => ({ 0: [], 1: [], 2: [], 3: [], 4: [] });
 
 // نسبة التطابق: لكل يوم، ما خُطط له (بالمكان) هل نُفّذ في اليوم نفسه
-// نسبة الالتزام بالأيام: 5 أيام (الأحد–الخميس) كل يوم 20%؛ اليوم ملتزم إذا نُفّذ كل ما خُطط له فيه (يوم بلا تخطيط يُحسب ملتزماً)
+// نسبة الالتزام بالأيام: 5 أيام (الأحد–الخميس) كل يوم 20%؛ اليوم ملتزم إذا كانت البعدية مطابقة للقبلية (يوم بلا تخطيط ولا تنفيذ يُحسب ملتزماً)
 export function matchOf(pre, post) {
   let planned = 0, okDays = 0; const missed = [], extra = [];
   for (let i = 0; i < 5; i++) {
-    const P = (pre?.[i] || []).map(placeName).filter(Boolean), D = (post?.[i] || []).map(placeName).filter(Boolean);
+    // يُقارن النص المكتوب نفسه: اليوم ملتزم فقط إذا تطابقت البعدية مع القبلية تماماً (أي إضافة أو تغيير يُحتسب اختلافاً)
+    const T = (arr) => (arr || []).filter((x) => placeName(x) || x?.text).map((x) => nrm(itemText(x)).replace(/[()\-–+،,.]/g, " ").replace(/\s+/g, " ").trim()).filter(Boolean);
+    const P = T(pre?.[i]), D = T(post?.[i]);
     planned += P.length;
-    const miss = P.filter((p) => !D.includes(p)); miss.forEach((p) => missed.push([i, p]));
-    if (!miss.length) okDays++;
-    D.forEach((d) => { if (!P.includes(d)) extra.push([i, d]); });
+    const miss = P.filter((p) => !D.includes(p)), add = D.filter((d) => !P.includes(d));
+    miss.forEach((p) => missed.push([i, p])); add.forEach((d) => extra.push([i, d]));
+    if (!miss.length && !add.length) okDays++;
   }
   return { planned, done: okDays, days: 5, pct: planned ? okDays * 20 : null, missed, extra };
 }
