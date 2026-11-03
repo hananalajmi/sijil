@@ -76,7 +76,7 @@ export async function wpPrePostReport(ctx) {
   for (const r of ctx.rows) {
     if (!r.cur) { rows.push(`<tr class="wp-pre"><th class="wp-n" rowspan="2">${esc(r.name)}</th><td class="wp-t">القبلية</td><td colspan="5" rowspan="2" class="red">لا توجد خطة (لم تُسلَّم)</td><td class="wp-pct" rowspan="2"></td></tr><tr class="wp-post"><td class="wp-t red">البعدية</td></tr>`); continue; }
     const pre = r.cur?.data.pre || {}, post = r.cur?.data.post || {};
-    const preT = await Promise.all(days.map((_, k) => cellTxt(pre[k]))), postT = await Promise.all(days.map(async (_, k) => (same(pre[k], post[k]) ? "تم" : await cellTxt(post[k]))));
+    const preT = await Promise.all(days.map((_, k) => cellTxt(pre[k]))), postT = await Promise.all(days.map((_, k) => cellTxt(post[k]))); // البعدية تُكتب كاملة دائماً (لا «تم»)
     rows.push(`<tr class="wp-pre"><th class="wp-n" rowspan="2">${esc(r.name)}</th><td class="wp-t">القبلية</td>${preT.map((t) => `<td>${t}</td>`).join("")}<td class="wp-pct" rowspan="2">${r.match?.pct == null ? "" : r.match.pct + "%"}</td></tr>
       <tr class="wp-post"><td class="wp-t red">البعدية</td>${postT.map((t) => `<td class="red">${t}</td>`).join("")}</tr>`);
   }
