@@ -6,6 +6,21 @@ import { field, bindFields, savePill } from "../kit.js";
 import { LOGOS, COVER_LINES, FIRST_SUPERVISOR, MONTHLY_ACH } from "../templates.js";
 import { FONTS, HEAD_FONTS, PRINT_FONTS, COLORS, SIZES, SHAPES, MODES, DEFAULT_UI, applyUI, migrate } from "../theme.js";
 
+// أسماء الموجهين حسب التخصص (القوائم المنسدلة ← أسماء الموجهين): كل سطر «التخصص|الاسم»
+// التخصص كما يُكتب تحت الاسم في النماذج: الابتدائية / المتوسطة / الثانوية - الكيمياء …
+const nrm = (t) => String(t || "").replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي").replace(/ـ/g, "").replace(/\s+/g, " ").trim();
+export const specOf = (stage, subject) => { const s = String(stage || "").trim(), sub = String(subject || "").trim().replace(/^ال/, "");
+  if (s === "ابتدائي") return "الابتدائية"; if (s === "متوسط") return "المتوسطة"; if (s === "ثانوي") return sub ? `الثانوية - ال${sub}` : "الثانوية"; return ""; };
+const guideNames = () => opts("guide_names").map((l) => String(l).split("|").map((x) => x.trim())).filter(([s, n]) => s && n);
+function nameOptions(stage, subject, value) {
+  const all = guideNames(), sp = nrm(specOf(stage, subject));
+  const mine = sp ? all.filter(([s]) => nrm(s) === sp || (sp === nrm("الثانوية") && nrm(s).startsWith(sp))) : all;
+  const groups = [...new Set(mine.map(([s]) => s))];
+  const has = mine.some(([, n]) => n === value);
+  return `<option value="">— اختر اسمك —</option>${groups.map((g) => `<optgroup label="${esc(g)}">${mine.filter(([s]) => s === g).map(([, n]) => `<option ${n === value ? "selected" : ""}>${esc(n)}</option>`).join("")}</optgroup>`).join("")}
+    ${value && !has ? `<option selected>${esc(value)}</option>` : ""}<option value="__other">+ اسمي غير موجود…</option>`;
+}
+
 export default async function (main, { name }) {
   let rec = state.guide || { kind: "guide_data", title: "البيانات الرئيسية", data: {
     full_name: state.profile.full_name, guidance: "التوجيه الفني العام للعلوم", directorate: "الإدارة العامة لمنطقة الأحمدي التعليمية", region: "الأحمدي", subject: "", stage: "" } };
@@ -15,7 +30,8 @@ export default async function (main, { name }) {
     <div class="page-head"><div><h1>${name === "settings" ? "الإعدادات والمظهر" : "البيانات الرئيسية للموجّه الفني"}</h1>
     <div class="sub">تُدخل مرة واحدة وتظهر تلقائياً في كل التقارير والإحصائيات.</div></div></div>
     <section class="panel" id="basic"><h2>بيانات الموجّه</h2><div class="form">
-      ${field({ label: "اسم الموجّه الفني", key: "full_name", value: d().full_name, required: true })}
+      ${guideNames().length ? `<div class="f"><label for="g-name" class="req">اسم الموجّه الفني</label><select id="g-name" class="no-gender">${nameOptions(d().stage, d().subject, d().full_name)}</select>
+        <div class="hint">الأسماء حسب المرحلة والتخصص المختارين بالأسفل.</div></div>` : field({ label: "اسم الموجّه الفني", key: "full_name", value: d().full_name, required: true })}
       <div class="f no-gender"><label for="g-gender">صياغة الموقع</label><select id="g-gender"><option value="موجّه" ${!/ة/.test(d().gender || "") ? "selected" : ""}>مذكر — عام (اختر، أضف…) الافتراضي</option><option value="موجّهة" ${/ة/.test(d().gender || "") ? "selected" : ""}>مؤنث (اختاري، أضيفي…)</option></select>
         <small class="hint">صياغة المخاطبة في الواجهة. أسماء المدارس والمعلمين والطلاب تبقى بصيغة عامة للجميع.</small></div>
       ${field({ label: "المسمى الوظيفي", key: "job_title", type: "select", options: opts("job_titles"), value: d().job_title })}
@@ -85,7 +101,16 @@ export default async function (main, { name }) {
   $("#hide-dir", main).onchange = (e) => ed.change((r) => { r.data.cover = { ...(r.data.cover || {}), hideDirector: e.target.checked }; });
   $("#g-gender", main).onchange = async (e) => { const v = e.target.value; ed.change((r) => { r.data.gender = v; }, { immediate: true }); try { await ed.save(); } catch (_) {}
     toast(/ة/.test(v) ? "تم — الصياغة بالمؤنث" : "تم — الصياغة بالمذكر"); setTimeout(() => location.reload(), 700); };
-  bindFields($("#basic", main), (k, v) => ed.change((r) => { r.data[k] = v; if (k === "full_name") r.title = "البيانات الرئيسية"; r.academic_year = r.academic_year || academicYearOf(); }));
+  bindFields($("#basic", main), (k, v) => { ed.change((r) => { r.data[k] = v; if (k === "full_name") r.title = "البيانات الرئيسية"; r.academic_year = r.academic_year || academicYearOf(); });
+    const gn = $("#g-name", main); if (gn && (k === "stage" || k === "subject")) gn.innerHTML = nameOptions(d().stage, d().subject, d().full_name); });
+  const gn = $("#g-name", main);
+  if (gn) gn.onchange = async () => {
+    let v = gn.value;
+    if (v === "__other") { v = await modal({ title: "اكتب اسمك", body: `<div class="f"><input id="g-nn" type="text" value="${esc(d().full_name || "")}" aria-label="الاسم"></div><p class="hint">يمكن للمشرف إضافته لقائمة الأسماء من «القوائم المنسدلة».</p>`,
+      actions: [{ label: "إلغاء", value: null }, { label: "حفظ", kind: "primary", value: (b) => b.querySelector("#g-nn").value.trim() }] }); }
+    if (v) ed.change((r) => { r.data.full_name = v; r.title = "البيانات الرئيسية"; r.academic_year = r.academic_year || academicYearOf(); });
+    gn.innerHTML = nameOptions(d().stage, d().subject, d().full_name);
+  };
 
   const imgSlot = async (box, key, category) => {
     const id = d()[key];
