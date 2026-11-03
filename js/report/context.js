@@ -50,7 +50,8 @@ export async function visitStatsContext({ year, term, school = "", includeUnvisi
     if (!byTeacher.has(v.teacher_id)) byTeacher.set(v.teacher_id, []);
     byTeacher.get(v.teacher_id).push({ id: v.id, date: v.record_date, cls: [v.data?.grade, v.data?.section].filter(Boolean).join("/") });
   }
-  const teachers = state.teachers.filter((t) => (!school || t.school_id === school) && (includeUnvisited || byTeacher.has(t.id)));
+  // معلم بلا مدرسة (مدرسته محذوفة) لا يظهر إلا إذا كانت له زيارات — حتى لا تتكرر الأسماء
+  const teachers = state.teachers.filter((t) => (!school || t.school_id === school) && (includeUnvisited || byTeacher.has(t.id)) && (schoolById(t.school_id) || byTeacher.has(t.id)));
   // سبب عدم الزيارة (إجازة دراسية، مجلس، وضع...) يُحفظ مع المعلم لكل عام وفترة
   const reasonOf = (t) => {
     const nv = t.data?.no_visit || {};

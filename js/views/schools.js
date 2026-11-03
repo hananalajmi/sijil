@@ -7,12 +7,45 @@ import { field, bindFields, recordPage } from "../kit.js";
 import { listView } from "./_list.js";
 import { openStored } from "../openfile.js";
 
+// نقل معلم لمدرسة أخرى (عند النقل): زياراته السابقة تبقى باسم مدرستها القديمة
+export async function moveTeacher(t, fromId) {
+  const opts = state.schools.filter((s) => s.id !== fromId).map((s) => `<option value="${s.id}">${esc(s.title)}</option>`).join("");
+  if (!opts) { toast("أضيفي المدرسة الجديدة أولاً من «المدارس والمعلمات»", "error"); return false; }
+  const to = await modal({ title: `نقل «${t.title}»`, body: `<div class="f"><label for="mv-s">المدرسة الجديدة</label><select id="mv-s">${opts}</select></div><p class="hint">زياراته السابقة تبقى كما هي، والزيارات الجديدة تُسجَّل في مدرسته الجديدة.</p>`,
+    actions: [{ label: "إلغاء", value: null }, { label: "نقل", kind: "primary", value: (b) => b.querySelector("#mv-s").value }] });
+  if (!to) return false;
+  if (state.teachers.some((x) => x.school_id === to && x.id !== t.id && x.title.trim() === t.title.trim())) { toast("الاسم موجود في المدرسة الجديدة", "error"); return false; }
+  try { await api.update(t.id, { school_id: to }, t.version); await refreshPeople(); toast("تم النقل"); return true; } catch (e) { toast(e.message, "error"); return false; }
+}
+// معلمون بلا مدرسة (مدرستهم حُذفت أو لم تُحدد): نقل أو حذف، وحذف المكرر الموجود باسمه في مدرسة
+function orphanPanel(main) {
+  const host = $(".container", main); if (!host) return;
+  const paint = () => {
+    $("#orph", main)?.remove();
+    const orph = state.teachers.filter((t) => !state.schools.some((s) => s.id === t.school_id));
+    if (!orph.length) return;
+    const named = new Set(state.teachers.filter((t) => state.schools.some((s) => s.id === t.school_id)).map((t) => t.title.trim()));
+    const dup = orph.filter((t) => named.has(t.title.trim()));
+    host.insertAdjacentHTML("beforeend", `<section class="panel" id="orph"><h2>معلمون بدون مدرسة (${orph.length})</h2>
+      <p class="hint" style="margin-top:0">مدرستهم محذوفة أو غير محددة، فتظهر أسماؤهم مكررة في الإحصائيات. ${dup.length ? `منهم <b>${dup.length}</b> موجودون بأسمائهم في مدارس.` : ""}</p>
+      ${dup.length ? `<button class="btn" id="orph-dup">حذف المكرر (${dup.length})</button>` : ""}
+      <div class="list" style="margin-top:8px">${orph.map((t) => `<div class="item" data-id="${t.id}"><span class="t">${esc(t.title)}${named.has(t.title.trim()) ? ' <span class="pill">مكرر</span>' : ""}</span>
+        <span class="s"><button class="btn small ghost" data-mv>نقل لمدرسة</button><button class="btn small ghost" data-del style="color:var(--bad)">حذف</button></span></div>`).join("")}</div></section>`);
+    const del = async (ts) => { for (const t of ts) { try { await api.update(t.id, { deleted_at: new Date().toISOString() }, t.version); } catch (e) { toast(e.message, "error"); } } await refreshPeople(); paint(); };
+    const b = $("#orph-dup", main); if (b) b.onclick = async () => { if (await confirmBox("حذف المكرر", `يُنقل ${dup.length} اسم مكرر (بدون مدرسة) إلى سلة المحذوفات. الأسماء الموجودة في مدارسها تبقى، والزيارات السابقة تبقى.`, "حذف", true)) del(dup); };
+    $$("#orph .item", main).forEach((it) => { const t = orph.find((x) => x.id === it.dataset.id);
+      it.querySelector("[data-mv]").onclick = async () => { if (await moveTeacher(t, null)) paint(); };
+      it.querySelector("[data-del]").onclick = async () => { if (await confirmBox("حذف الاسم", `يُنقل «${t.title}» إلى سلة المحذوفات.`, "حذف", true)) del([t]); }; });
+  };
+  paint();
+}
+
 const FILE_KINDS = [["budget", "ميزانية المدرسة (PDF أو Word أو Excel)"], ["schedule", "جدول المدرسة (صورة أو PDF أو Word أو Excel)"], ["department", "بيانات القسم العلمي (PDF أو Word أو Excel)"]];
 const ACCEPT = ".pdf,.docx,.doc,.xlsx,.xls,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
 export default async function (main, { id }) {
   if (!id) return listView(main, { kind: "school", title: "المدارس والمعلمات", sub: "اسم المدرسة وأسماء معلماتها؛ تظهر للاختيار في الزيارات والتقارير", newLabel: "+ مدرسة",
-    extraHead: `<label class="btn">إنشاء من ملف الميزانية<input type="file" id="bud-new" accept="${ACCEPT}" hidden></label>`, onReady: () => { const inp = $("#bud-new", main); if (inp) inp.onchange = () => { const f = inp.files[0]; inp.value = ""; if (f) fromBudget(f); }; },byYear: false,
+    extraHead: `<label class="btn">إنشاء من ملف الميزانية<input type="file" id="bud-new" accept="${ACCEPT}" hidden></label>`, onReady: () => { orphanPanel(main); const inp = $("#bud-new", main); if (inp) inp.onchange = () => { const f = inp.files[0]; inp.value = ""; if (f) fromBudget(f); }; },byYear: false,
     emptyText: "أضيفي اسم المدرسة، ثم أسماء معلماتها أو ارفعي ملف الميزانية لاستخراجها.",
     columns: [{ label: "المدرسة", get: (r) => r.title }, { label: "المعلمات", get: (r) => state.teachers.filter((t) => t.school_id === r.id).length, cls: "num" }] });
 
@@ -32,7 +65,7 @@ export default async function (main, { id }) {
       const ts = state.teachers.filter((t) => t.school_id === ed.rec.id);
       $("#tbtns", body).innerHTML = `<button class="btn" id="addt">+ إضافة أسماء</button>`;
       tl.innerHTML = ts.length ? `<div class="list">${ts.map((t) => `<div class="item" data-id="${t.id}"><span class="t">${esc(t.title)}</span>
-          <span class="s"><button class="btn small ghost" data-ren>تعديل الاسم</button><button class="btn small ghost" data-del style="color:var(--bad)">حذف</button></span></div>`).join("")}</div>`
+          <span class="s"><button class="btn small ghost" data-ren>تعديل الاسم</button><button class="btn small ghost" data-mv>نقل لمدرسة أخرى</button><button class="btn small ghost" data-del style="color:var(--bad)">حذف</button></span></div>`).join("")}</div>`
         : `<p class="hint">لا توجد أسماء بعد. أضيفيها يدوياً، أو ارفعي ملف الميزانية بالأسفل لاستخراجها.</p>`;
       $("#addt", body).onclick = async () => {
         const box = document.createElement("div");
@@ -60,6 +93,7 @@ export default async function (main, { id }) {
           if (!v) return;
           try { await api.update(t.id, { title: v }, t.version); await refreshPeople(); paintTeachers(); toast("حُفظ"); } catch (e) { toast(e.message, "error"); }
         };
+        it.querySelector("[data-mv]").onclick = async () => { if (await moveTeacher(t, ed.rec.id)) paintTeachers(); };
         it.querySelector("[data-del]").onclick = async () => {
           if (!(await confirmBox("حذف الاسم", `يُنقل «${t.title}» إلى سلة المحذوفات، وتبقى زياراتها السابقة كما هي.`, "حذف", true))) return;
           try { await api.update(t.id, { deleted_at: new Date().toISOString() }, t.version); await refreshPeople(); paintTeachers(); } catch (e) { toast(e.message, "error"); }
