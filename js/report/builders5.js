@@ -70,14 +70,15 @@ export async function wpPreReport(ctx) {
 export async function wpPrePostReport(ctx) {
   const { placeName } = await import("../views/wplan.js");
   const days = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"], sw = STAGE_WORD[ctx.stage] || ctx.stage;
-  const header = await wpHead(ctx, `الخطة القبلية والبعدية للمرحلة ${sw} (${ctx.year || ""})`, ctx.week);
+  const header = await wpHead(ctx, ctx.allStages ? `الخطة القبلية والبعدية لجميع المراحل (${ctx.year || ""})` : `الخطة القبلية والبعدية للمرحلة ${sw} (${ctx.year || ""})`, ctx.week);
+  const nm = (r) => esc(r.name) + (ctx.allStages && r.stage ? `<div class="wf-st">${esc(STAGE_WORD[r.stage] || r.stage)}</div>` : "");
   const same = (a, b) => { const A = (a || []).map(placeName).filter(Boolean).sort().join("|"), B = (b || []).map(placeName).filter(Boolean).sort().join("|"); return !!A && A === B; };
   const rows = [];
   for (const r of ctx.rows) {
-    if (!r.cur) { rows.push(`<tr class="wp-pre"><th class="wp-n" rowspan="2">${esc(r.name)}</th><td class="wp-t">القبلية</td><td colspan="5" rowspan="2" class="red">لا توجد خطة (لم تُسلَّم)</td><td class="wp-pct" rowspan="2"></td></tr><tr class="wp-post"><td class="wp-t red">البعدية</td></tr>`); continue; }
+    if (!r.cur) { rows.push(`<tr class="wp-pre"><th class="wp-n" rowspan="2">${nm(r)}</th><td class="wp-t">القبلية</td><td colspan="5" rowspan="2" class="red">لا توجد خطة (لم تُسلَّم)</td><td class="wp-pct" rowspan="2"></td></tr><tr class="wp-post"><td class="wp-t red">البعدية</td></tr>`); continue; }
     const pre = r.cur?.data.pre || {}, post = r.cur?.data.post || {};
     const preT = await Promise.all(days.map((_, k) => cellTxt(pre[k]))), postT = await Promise.all(days.map((_, k) => cellTxt(post[k]))); // البعدية تُكتب كاملة دائماً (لا «تم»)
-    rows.push(`<tr class="wp-pre"><th class="wp-n" rowspan="2">${esc(r.name)}</th><td class="wp-t">القبلية</td>${preT.map((t) => `<td>${t}</td>`).join("")}<td class="wp-pct" rowspan="2">${r.match?.pct == null ? "" : r.match.pct + "%"}</td></tr>
+    rows.push(`<tr class="wp-pre"><th class="wp-n" rowspan="2">${nm(r)}</th><td class="wp-t">القبلية</td>${preT.map((t) => `<td>${t}</td>`).join("")}<td class="wp-pct" rowspan="2">${r.match?.pct == null ? "" : r.match.pct + "%"}</td></tr>
       <tr class="wp-post"><td class="wp-t red">البعدية</td>${postT.map((t) => `<td class="red">${t}</td>`).join("")}</tr>`);
   }
   return { orientation: "landscape", cls: "t-wp2", header, identity: "", footer: wpFoot(ctx), blocks: [{ table: { cls: "grid wp-tbl", thead: `<tr><th class="wp-n">اسم الموجه الفني</th><th class="wp-t">نوع الخطة</th>${days.map((d) => `<th>${d}</th>`).join("")}<th class="wp-pct">نسبة الالتزام</th></tr>`, rows } }] };

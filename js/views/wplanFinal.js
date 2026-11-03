@@ -3,7 +3,8 @@
 import { api } from "../api.js";
 import { state, G, opts, setGuideData } from "../store.js";
 import { esc, $, $$, today, fmtDate, weekStart, addDays, toast } from "../ui.js";
-import { KIND, isFinalCollector } from "./wplan.js";
+import { KIND, isFinalCollector, matchOf } from "./wplan.js";
+import { academicYearOf } from "../ui.js";
 
 export const STAGE_ORDER = ["ابتدائي", "متوسط", "ثانوي"];
 const ORD = ["", "الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس", "السابع", "الثامن", "التاسع", "العاشر"];
@@ -30,10 +31,10 @@ export async function finalCtx(week) {
   for (const r of [...(a || []), ...(b || [])]) if (!people.has(r.owner_id)) people.set(r.owner_id, { id: r.owner_id, name: r.data?.guide_name || "—", stage: r.data?.stage || "" });
   const so = (s) => { const i = STAGE_ORDER.indexOf(s); return i < 0 ? 9 : i; };
   const rows = [...people.values()].map((p) => { const c = (a || []).find((r) => r.owner_id === p.id), n = (b || []).find((r) => r.owner_id === p.id);
-    return { ...p, name: c?.data?.guide_name || n?.data?.guide_name || p.name, stage: p.stage || c?.data?.stage || n?.data?.stage || "", cur: c || null, next: n || null }; })
+    return { ...p, name: c?.data?.guide_name || n?.data?.guide_name || p.name, stage: p.stage || c?.data?.stage || n?.data?.stage || "", cur: c || null, next: n || null, match: c ? matchOf(c.data.pre, c.data.post) : null }; })
     .sort((x, y) => so(x.stage) - so(y.stage) || x.name.localeCompare(y.name, "ar"));
   const region = String(G().region || "الأحمدي").replace(/^منطقة\s*/, "").replace(/\s*التعليمية$/, "");
-  return { kind: "wp_final", week: cur, next, rows, region, observer: G().wp_observer || "", weekNoCur: weekNo(cur), weekNoNext: weekNo(next) };
+  return { kind: "wp_final", week: cur, next, rows, region, observer: G().wp_observer || "", allStages: true, year: academicYearOf(cur), first: G().first_supervisor || "", weekNoCur: weekNo(cur), weekNoNext: weekNo(next) };
 }
 
 export default async function (main, { params }) {
@@ -45,7 +46,8 @@ export default async function (main, { params }) {
       <div class="sub">«ملخص تقرير الزيارات» من البعدية لأسبوع ${fmtDate(ctx.week)}${ctx.weekNoCur ? ` (الأسبوع ${ordinal(ctx.weekNoCur)})` : ""}، و«الخطة القبلية للزيارات» لأسبوع ${fmtDate(ctx.next)}${ctx.weekNoNext ? ` (الأسبوع ${ordinal(ctx.weekNoNext)})` : ""}.</div></div>
       <div class="row" style="gap:8px;flex-wrap:wrap"><input type="date" id="wf-wk" value="${ctx.week}" aria-label="الأسبوع">
         <a class="btn primary" href="#/print/wp-final?view=pre&${q}">الخطة القبلية للزيارات (الأسبوع القادم)</a>
-        <a class="btn primary" href="#/print/wp-final?view=post&${q}">ملخص تقرير الزيارات (هذا الأسبوع)</a></div></div>
+        <a class="btn primary" href="#/print/wp-final?view=post&${q}">ملخص تقرير الزيارات (هذا الأسبوع)</a>
+        <a class="btn primary" href="#/print/wp-final?view=prepost&${q}">القبلية والبعدية مع نسبة الالتزام (هذا الأسبوع)</a></div></div>
     <section class="panel"><div class="form"><div class="f"><label for="wf-obs">مراقب التوجيه الفني (يظهر في الخطة القبلية)</label><input id="wf-obs" value="${esc(ctx.observer)}"></div></div>
       <p class="hint" style="margin:6px 0 0">${ctx.weekNoCur ? "" : "حدّد «بداية الأسبوع الأول» من القوائم المنسدلة ليظهر رقم الأسبوع. "}النموذجان يُطبعان PDF أو يُصدَّران Word للتعديل.</p></section>
     ${ctx.rows.length ? STAGE_ORDER.concat([""]).map((s) => { const rs = ctx.rows.filter((r) => (STAGE_ORDER.includes(r.stage) ? r.stage : "") === s); if (!rs.length) return "";
