@@ -14,12 +14,12 @@ export async function collectCtx(week, stage) {
   const [names, a, b] = await Promise.all([api.rpc("wp_stage_guides", { p_stage: stage }).catch(() => null),
     api.listSubmitted(KIND, "week_start", cur).catch(() => []), api.listSubmitted(KIND, "week_start", next).catch(() => [])]);
   const inStage = (r) => !stage || (r.data?.stage || "") === stage;
-  const A = (a || []).filter(inStage).map(withPost), B = (b || []).filter(inStage);
+  const A = (a || []).filter(inStage).map(withPost), B = (b || []).filter(inStage).map(withPost);
   const people = new Map();
   for (const n of names || []) people.set(n.id, { id: n.id, name: n.full_name });
   for (const r of [...A, ...B]) if (!people.has(r.owner_id)) people.set(r.owner_id, { id: r.owner_id, name: r.data?.guide_name || "—" });
   const rows = [...people.values()].map((p) => { const c = A.find((r) => r.owner_id === p.id), n = B.find((r) => r.owner_id === p.id);
-    return { ...p, name: fullNameOf(c?.data?.guide_name || n?.data?.guide_name || p.name, stage), cur: c || null, next: n || null, match: c ? matchOf(c.data.pre, c.data.post) : null }; })
+    return { ...p, name: fullNameOf(c?.data?.guide_name || n?.data?.guide_name || p.name, stage), cur: c || null, next: n || null, match: c?.data.post_sent ? matchOf(c.data.pre, c.data.post) : null }; })
     .map((r) => ({ ...r, stage, subject: subjectOf(r.name, r.cur || r.next) })).sort(guideOrder([stage]));
   return { kind: "wp_collect", week: cur, next, stage, rows, year: academicYearOf(cur).replace("-", "-"), first: G().first_supervisor || "", guide: { full_name: G().full_name || "" } };
 }
@@ -29,7 +29,7 @@ export default async function (main, { params }) {
   const stage = isAdmin() ? params.stage || G().stage || opts("stages")[0] : G().stage || "";
   if (!stage) { main.innerHTML = `<div class="container"><div class="empty"><h2>حدّد مرحلتك أولاً</h2><p>من البيانات الرئيسية ← المرحلة؛ تظهر لك خطط موجهي مرحلتك.</p></div></div>`; return; }
   const ctx = await collectCtx(params.week, stage);
-  const sentN = ctx.rows.filter((r) => r.cur && r.next).length;
+  const sentN = ctx.rows.filter((r) => r.cur?.data.post_sent && r.next).length;
   main.innerHTML = `<div class="container"><div class="page-head"><div><a class="hub-back" href="#/wplan">خطتي الأسبوعية</a><h1>تجميع الخطط الأسبوعية — ${esc(stage)}</h1>
       <div class="sub">البعدية لأسبوع ${fmtDate(ctx.week)} ونسبة تطابقها، والقبلية لأسبوع ${fmtDate(ctx.next)}. سلّم ${sentN} من ${ctx.rows.length}.</div></div>
       <div class="row" style="gap:8px;flex-wrap:wrap">${isAdmin() ? `<select id="wc-st" aria-label="المرحلة">${opts("stages").map((s) => `<option ${s === stage ? "selected" : ""}>${esc(s)}</option>`).join("")}</select>` : ""}
@@ -37,7 +37,7 @@ export default async function (main, { params }) {
         <a class="btn primary" href="#/print/wp-collect?view=pre&week=${ctx.week}&stage=${encodeURIComponent(stage)}">القبلية (الأسبوع القادم)</a>
         <a class="btn" href="#/print/wp-collect?week=${ctx.week}&stage=${encodeURIComponent(stage)}">التفاصيل</a></div></div>
     ${ctx.rows.length ? `<div class="tbl-wrap"><table class="data"><thead><tr><th>الموجه</th><th>البعدية (هذا الأسبوع)</th><th>نسبة التطابق</th><th>القبلية (القادم)</th><th></th></tr></thead><tbody>
-      ${ctx.rows.map((r, i) => `<tr><td>${esc(r.name)}</td><td>${r.cur ? `<span class="pill ok">سُلّمت${r.cur.data.late ? " متأخرة" : ""}</span>` : '<span class="pill bad">لم تُسلّم</span>'}</td>
+      ${ctx.rows.map((r, i) => `<tr><td>${esc(r.name)}</td><td>${r.cur?.data.post_sent ? `<span class="pill ok">سُلّمت${r.cur.data.late ? " متأخرة" : ""}</span>` : '<span class="pill bad">لم تُسلّم</span>'}</td>
         <td>${r.match?.pct == null ? "—" : `<b>${r.match.pct}%</b>`}</td><td>${r.next ? `<span class="pill ok">سُلّمت${r.next.data.late ? " متأخرة" : ""}</span>` : '<span class="pill bad">لم تُسلّم</span>'}</td>
         <td><button class="btn small" data-x="${i}">التفاصيل</button>${r.cur || r.next ? ` <button class="btn small" data-ed="${i}">تعديل</button>` : ""}</td></tr>
         <tr class="wc-det" data-d="${i}" hidden><td colspan="5"><table class="data"><thead><tr><th>اليوم</th><th>المخطط (القبلية)</th><th>المنفذ (البعدية)</th><th>القبلية للأسبوع القادم</th></tr></thead><tbody>
@@ -69,8 +69,9 @@ async function editPlan(r) {
   try {
     for (const k of ["cur", "next"]) {
       if (!r[k]) continue;
-      const { post_auto, ...data } = r[k].data, next = { ...data };
-      parts.forEach(([kk, part], pi) => { if (kk !== k) return; next[part] = Object.fromEntries(WORK_DAYS.map((_, i) => [i, linesToItems(box.querySelector(`#pe-${pi}-${i}`).value, data[part]?.[i])])); if (part === "post") next.post_started = true; });
+      const { live_pre, live_post, post_sent, ...shown } = r[k].data, next = { ...shown, pre: live_pre || {}, post: live_post || {} };
+      parts.forEach(([kk, part], pi) => { if (kk !== k) return; const v = Object.fromEntries(WORK_DAYS.map((_, i) => [i, linesToItems(box.querySelector(`#pe-${pi}-${i}`).value, shown[part]?.[i])]));
+        next[part] = v; next[part === "post" ? "sent_post" : "sent_pre"] = v; if (part === "post") { next.post_started = true; next.post_sent_at ||= new Date().toISOString(); } });
       next.edited_by = G().full_name || state.profile?.full_name || ""; next.edited_at = new Date().toISOString();
       await api.update(r[k].id, { data: next }, r[k].version);
     }

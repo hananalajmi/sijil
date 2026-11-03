@@ -26,10 +26,10 @@ export function fullNameOf(name, stage = "") {
   const best = hit.length > 1 && st ? hit.filter(([s]) => nrm(s).includes(st)) : hit;
   return best.length === 1 ? best[0][1] : name || "";
 }
-// البعدية كما تظهر للمسؤول: إذا لم يبدأ الموجه بعديته بعد، تظهر نسخة من قبليته لنفس الأسبوع (يعدّلها لاحقاً)
+// ما يراه المسؤول: نسخة لحظة الإرسال (البعدية لا تظهر إلا بعد إرسالها؛ القبلية المستوردة تظهر كما هي)
 export function withPost(rec) {
-  if (!rec) return rec; const d = rec.data || {}, has = Object.values(d.post || {}).some((a) => (a || []).length);
-  return d.post_started || has ? rec : { ...rec, data: { ...d, post: JSON.parse(JSON.stringify(d.pre || {})), post_auto: true } };
+  if (!rec) return rec; const d = rec.data || {};
+  return { ...rec, data: { ...d, live_pre: d.pre, live_post: d.post, pre: d.sent_pre || d.pre || {}, post: d.sent_post || {}, post_sent: !!d.sent_post } };
 }
 // ترتيب الموجهين في نماذج التجميع: الابتدائي، المتوسط، ثم الثانوي حسب المادة (كيمياء، فيزياء، أحياء، جيولوجيا)
 export const SUBJECT_ORDER = ["كيمياء", "فيزياء", "أحياء", "جيولوجيا"];
@@ -113,7 +113,8 @@ export default async function (main, { params }) {
   rCur.data.post ||= emptyDays(); rNext.data.pre ||= emptyDays(); rCur.data.pre ||= emptyDays();
   // البعدية تبدأ نسخةً من القبلية لنفس الأسبوع (يعدّل منها ما تغيّر)، وإن لم توجد قبلية لليوم فمن الزيارات المسجلة
   const copy = (arr) => (arr || []).map((x) => ({ ...x, auto: true }));
-  let filled = 0; if (!locked && !rCur.data.post_started) { for (let i = 0; i < 5; i++) if (!(rCur.data.post[i] || []).length) { const src = (rCur.data.pre[i] || []).length ? copy(rCur.data.pre[i]) : auto[i]; if (src.length) { rCur.data.post[i] = src; filled++; } } rCur.data.post_started = true; }
+  // البعدية لا تُعبأ تلقائياً: الموجه يضغط «نسخ القبلية إلى البعدية» أو «تحديث من الزيارات» ثم يعدّل
+  const filled = 0;
   const recs = { cur: rCur, next: rNext };
   // اسم المدرسة يُحفظ مع البند (المسؤول عن التجميع لا يرى مدارس غيره)
   const named = (dd) => Object.fromEntries(Object.entries(dd || {}).map(([i, arr]) => [i, (arr || []).map((it) => { const s = schoolById(it?.place); return s ? { ...it, place_name: s.title, school: true } : it; })]));
@@ -139,11 +140,11 @@ export default async function (main, { params }) {
           ${placeName(it) || it.act ? `<input class="wp-txt" data-f="text" value="${esc(itemText(it))}" aria-label="نص البند كما يظهر (يمكن تعديله)" title="نص البند كما يظهر — يمكنك تعديله">` : ""}</div>`).join("")}</div>
       <button class="btn small" data-add>+ إضافة</button></div>`).join("");
   const paint = () => {
-    const m = matchOf(recs.cur.data.pre, recs.cur.data.post), sent = (r) => (r.data.submitted ? `<span class="pill ok">أُرسلت ${r.data.sent_at ? fmtDate(r.data.sent_at.slice(0, 10)) : ""}</span>` : '<span class="pill">لم تُرسل</span>');
+    const m = matchOf(recs.cur.data.pre, recs.cur.data.post), sent = (r) => { const at = r === recs.cur ? r.data.post_sent_at : r.data.submitted && r.data.sent_at; return at ? `<span class="pill ok">أُرسلت ${fmtDate(String(at).slice(0, 10))}</span>` : '<span class="pill">لم تُرسل</span>'; };
     $("#wp-body", main).innerHTML = `
       <div class="panel" style="${locked ? "border-color:#e0b54a;background:#fff8e1" : ""}">${locked ? `🔒 <b>الخطة مقفلة</b> — انتهى موعد التعديل (الأربعاء ${fmtDate(addDays(cur, 3))} الساعة 8 مساءً).${recs.cur.data.submitted ? "" : " يمكنك إرسالها متأخرة فقط دون تعديل."}` : `⏰ آخر موعد للتعديل والإرسال: الأربعاء ${fmtDate(addDays(cur, 3))} الساعة 8 مساءً، وبعدها تُقفل الخطة.`}</div>
       <section class="panel"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h2 style="margin:0">البعدية — هذا الأسبوع (${fmtDate(cur)} – ${fmtDate(addDays(cur, 4))})</h2>${sent(recs.cur)}</div>
-        <p class="hint">تبدأ نسخةً من قبليتك لهذا الأسبوع: اترك ما نُفّذ كما هو، واحذف أو غيّر الخيار فيما تغيّر. <button class="btn small ghost" id="wp-copy">نسخ القبلية من جديد</button> <button class="btn small ghost" id="wp-refill">تحديث من الزيارات</button></p>
+        <p class="hint">اضغط «نسخ القبلية إلى البعدية» ثم عدّل ما تغيّر، أو اكتبها بنفسك. لا تظهر للمسؤول إلا بعد «إرسال للمسؤول». <button class="btn small" id="wp-copy">نسخ القبلية إلى البعدية</button> <button class="btn small ghost" id="wp-refill">تحديث من الزيارات</button></p>
         <div class="wp-match">${m.pct === null ? "لا توجد خطة قبلية لهذا الأسبوع للمقارنة." : `<b>نسبة التطابق مع القبلية: ${m.pct}%</b> (${m.done} من 5 أيام)${m.missed.length ? `<br><span class="hint">لم يُنفّذ: ${m.missed.map(([i, p]) => `${WORK_DAYS[i]}: ${esc(p)}`).join("، ")}</span>` : ""}${m.extra.length ? `<br><span class="hint">إضافي غير مخطط: ${m.extra.map(([i, p]) => `${WORK_DAYS[i]}: ${esc(p)}`).join("، ")}</span>` : ""}`}</div>
         <details class="wp-prev"><summary>🔒 قبليتك لهذا الأسبوع (مقفلة للاطلاع)</summary><div class="wp-ro">${days(cur).map((dt, i) => `<div><b>${WORK_DAYS[i]}</b>: ${(recs.cur.data.pre[i] || []).filter((x) => placeName(x)).map((x) => esc(itemText(x))).join(" + ") || '<span class="hint">—</span>'}</div>`).join("")}</div></details>
         ${dayRows("cur", "post", cur)}</section>
@@ -151,7 +152,7 @@ export default async function (main, { params }) {
         ${dayRows("next", "pre", next)}</section>
       <div class="row" style="gap:8px;margin:12px 0"><button class="btn primary" id="wp-send">إرسال للمسؤول (البعدية والقبلية)</button><span class="hint">يمكنك التعديل وإعادة الإرسال حتى الأربعاء 8 مساءً.</span></div>`;
     bind();
-    if (locked) { $$(".wp-day select, .wp-day input, .wp-day button, #wp-refill, #wp-copy", main).forEach((x) => (x.disabled = true)); const sb = $("#wp-send", main); if (recs.cur.data.submitted && recs.next.data.submitted) sb.disabled = true; else sb.textContent = "إرسال (متأخر)"; }
+    if (locked) { $$(".wp-day select, .wp-day input, .wp-day button, #wp-refill, #wp-copy", main).forEach((x) => (x.disabled = true)); const sb = $("#wp-send", main); if (recs.cur.data.post_sent_at && recs.next.data.submitted) sb.disabled = true; else sb.textContent = "إرسال (متأخر)"; }
   };
   const bind = () => {
     $$(".wp-day", main).forEach((dEl) => {
@@ -174,7 +175,11 @@ export default async function (main, { params }) {
     $("#wp-send", main).onclick = async () => {
       if (!G().stage) return toast("حدّد مرحلتك في البيانات الرئيسية أولاً (ليصل للمسؤول عن مرحلتك)", "error");
       const at = new Date().toISOString();
-      for (const k of ["cur", "next"]) { if (recs[k].data.submitted && locked) continue; recs[k].data.submitted = true; recs[k].data.sent_at = at; if (locked) recs[k].data.late = true; await saveNow(k); }
+      // ما يراه المسؤول = نسخة لحظة الإرسال؛ أي تعديل بعدها لا يظهر إلا بإعادة الإرسال
+      for (const k of ["cur", "next"]) { const d = recs[k].data, was = k === "cur" ? !!d.post_sent_at : !!d.submitted; if (was && locked) continue;
+        d.submitted = true; d.sent_at = at; if (locked) d.late = true;
+        if (k === "cur") { d.sent_post = JSON.parse(JSON.stringify(d.post || {})); d.post_sent_at = at; } else d.sent_pre = JSON.parse(JSON.stringify(d.pre || {}));
+        await saveNow(k); }
       toast("أُرسلت الخطة للمسؤول عن التجميع"); paint();
     };
   };

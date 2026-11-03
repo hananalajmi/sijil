@@ -77,6 +77,9 @@ export async function wpPrePostReport(ctx) {
   for (const r of ctx.rows) {
     if (!r.cur) { rows.push(`<tr class="wp-pre"><th class="wp-n" rowspan="2">${nm(r)}</th><td class="wp-t">القبلية</td><td colspan="5" rowspan="2" class="red">لا توجد خطة (لم تُسلَّم)</td><td class="wp-pct" rowspan="2"></td></tr><tr class="wp-post"><td class="wp-t red">البعدية</td></tr>`); continue; }
     const pre = r.cur?.data.pre || {}, post = r.cur?.data.post || {};
+    if (!r.cur.data.post_sent) { const preT0 = await Promise.all(days.map((_, k) => cellTxt(pre[k])));
+      rows.push(`<tr class="wp-pre"><th class="wp-n" rowspan="2">${nm(r)}</th><td class="wp-t">القبلية</td>${preT0.map((t) => `<td>${t}</td>`).join("")}<td class="wp-pct" rowspan="2"></td></tr>
+        <tr class="wp-post"><td class="wp-t red">البعدية</td><td colspan="5" class="red">لم تُسلَّم البعدية بعد</td></tr>`); continue; }
     const preT = await Promise.all(days.map((_, k) => cellTxt(pre[k]))), postT = await Promise.all(days.map((_, k) => cellTxt(post[k]))); // البعدية تُكتب كاملة دائماً (لا «تم»)
     rows.push(`<tr class="wp-pre"><th class="wp-n" rowspan="2">${nm(r)}</th><td class="wp-t">القبلية</td>${preT.map((t) => `<td>${t}</td>`).join("")}<td class="wp-pct" rowspan="2">${r.match?.pct == null ? "" : r.match.pct + "%"}</td></tr>
       <tr class="wp-post"><td class="wp-t red">البعدية</td>${postT.map((t) => `<td class="red">${t}</td>`).join("")}</tr>`);
@@ -128,7 +131,7 @@ export async function wpFinalPost(ctx) {
       <tr><th>من</th><td>${dmyS(ws)}</td><th>إلى</th><td>${dmyS(addDays(ws, 4))}</td></tr></table>`;
   const thead = `<tr><th class="wf-m">م</th><th class="wf-n">الموجه الفني</th><th>الزيارات الميدانية للمدارس خلال الاسبوع</th><th class="wf-o">أعمال أخرى</th></tr>`;
   const rows = ctx.rows.map((r, i) => { const post = r.cur?.data?.post;
-    return r.cur ? `<tr><td class="wf-m">${i + 1}</td><td class="wf-n">${wfName(r)}</td><td class="wf-days">${DAYS.map((d, k) => `<div class="wf-day"><b>${d}:</b> ${school(post?.[k])}</div>`).join("")}</td><td class="wf-o">${other(post)}</td></tr>`
+    return r.cur?.data?.post_sent ? `<tr><td class="wf-m">${i + 1}</td><td class="wf-n">${wfName(r)}</td><td class="wf-days">${DAYS.map((d, k) => `<div class="wf-day"><b>${d}:</b> ${school(post?.[k])}</div>`).join("")}</td><td class="wf-o">${other(post)}</td></tr>`
       : `<tr><td class="wf-m">${i + 1}</td><td class="wf-n">${wfName(r)}</td><td colspan="2" class="red">لا توجد خطة (لم تُسلَّم)</td></tr>`; });
   return { orientation: "portrait", cls: "t-wf", header, identity: "", footer: "", blocks: [{ table: { cls: "grid wf-tbl wf-post",
     colgroup: `<colgroup><col style="width:6%"><col style="width:22%"><col><col style="width:24%"></colgroup>`, thead, rows } }] };
