@@ -58,7 +58,7 @@ function linesToItems(text, old) {
     return OTHER_RE.test(l) ? { place: l, place_name: l, text: l, other: true } : { place: l, place_name: l, text: l, school: true };
   });
 }
-async function editPlan(r) {
+export async function editPlan(r) {
   const parts = [["cur", "post", "البعدية (هذا الأسبوع)"], ["cur", "pre", "القبلية (هذا الأسبوع)"], ["next", "pre", "القبلية (الأسبوع القادم)"]].filter(([k]) => r[k]);
   const val = (k, part, i) => (r[k].data[part]?.[i] || []).filter((x) => placeName(x)).map((x) => itemText(x)).join("\n");
   const box = document.createElement("div");
