@@ -26,9 +26,13 @@
 .sig-name { margin-top: 2mm; }
 /* التوقيع والختم والتاريخ بأحجام موحّدة ومتناسقة في كل النماذج */
 .sig-marks { height: 14mm; display: flex; justify-content: center; align-items: center; gap: 3mm; }
+.sig-marks.stacked { height: auto; min-height: 14mm; flex-direction: column; gap: .5mm; }
+.sig-marks .sig-st { display: flex; justify-content: center; }
+.sig-marks .sig-sd { display: flex; justify-content: center; align-items: center; gap: 3mm; min-height: 6mm; }
+.sig-marks .sig-sd .sig-date { margin-top: 0; white-space: nowrap; }
 .sig-marks img, .cr-sigimg img { object-fit: contain; }
 .sig-marks .sig-img, .cr-sigimg .sig-img { max-height: 10mm; max-width: 26mm; }
-.sig-marks .stamp-img, .cr-sigimg .stamp-img { max-height: 14mm; max-width: 22mm; }
+.sig-marks .stamp-img, .cr-sigimg .stamp-img { max-height: 18mm; max-width: 36mm; } /* الختم أكبر من التوقيع */
 .sig-date { font-size: 9.5pt; margin-top: .5mm; }
 
 /* صور التوثيق */

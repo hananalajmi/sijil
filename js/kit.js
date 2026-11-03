@@ -14,6 +14,8 @@ export const KIND_ROUTE = {
   school: "schools", teacher: "schools", department: "schools", teacher_visit: "teacher-visits", school_visit: "school-visits",
   exam_followup: "exams", weekly_report: "weekly", monthly_achievements: "monthly-ach-old", shared_achievements: "monthly-ach", group_sheet: "group-sheet", form: "forms", monthly_plan: "monthly", important_date: "dates", event_report: "events", note: "print", guide_data: "guide",
 };
+// سجلات يمكن نسخها (نفس الكلام لزيارة جديدة)
+export const COPYABLE = new Set(["school_visit", "teacher_visit", "event_report"]);
 export const PRINTABLE = new Set(["teacher_visit", "school_visit", "event_report", "weekly_report", "monthly_achievements", "monthly_plan", "shared_achievements", "form"]);
 
 // النماذج التي لها نسخة فارغة (للطباعة أو الإرسال)
@@ -135,6 +137,7 @@ export async function recordPage(main, { rec, title, render, beforeApprove, newR
       ${PRINTABLE.has(r.kind) ? (appr ? `<button class="btn" id="unapprove">إلغاء الاعتماد</button>` : `<button class="btn primary" id="approve">اعتماد</button>`) : ""}
       <button class="btn danger" id="trash" ${r.id && !appr ? "" : "disabled"} title="${appr ? "التقرير المعتمد لا يُحذف" : ""}">حذف</button>
       ${BLANKABLE[r.kind] ? `<a class="btn ghost" href="#/print/${BLANKABLE[r.kind](r)}" title="النموذج فارغاً للطباعة أو لإرساله لمعلم آخر">نسخة فارغة</a>` : ""}
+      ${COPYABLE.has(r.kind) && r.id ? `<button class="btn" id="dup" title="ينشئ زيارة جديدة بنفس الكلام بتاريخ اليوم، فتعدّلين ما يلزم">نسخ وتعديل</button>` : ""}
       <button class="btn ghost" id="log" ${r.id ? "" : "disabled"}>سجل العمليات</button>`;
     bar.appendChild(savePill());
     $("#prev", bar).onclick = () => go(`#/${route}/${listIds[idx - 1]}`);
@@ -150,6 +153,11 @@ export async function recordPage(main, { rec, title, render, beforeApprove, newR
     $("#unapprove", bar) && ($("#unapprove", bar).onclick = unapprove);
     $("#trash", bar).onclick = trash;
     $("#log", bar).onclick = showLog;
+    $("#dup", bar) && ($("#dup", bar).onclick = async () => {
+      if (!(await ensureSaved())) return;
+      const s = ed.rec, d = JSON.parse(JSON.stringify(s.data || {})), t = today();
+      try { const c = await api.create({ kind: s.kind, title: s.title, school_id: s.school_id, teacher_id: s.teacher_id, term: s.term, academic_year: s.academic_year, record_date: t, data: d });
+        toast("أُنشئت نسخة بتاريخ اليوم — عدّلي ما يلزم"); go(`#/${route}/${c.id}`); } catch (e) { toast("تعذّر النسخ: " + e.message, "error"); } });
     $("#rec-sub", main).textContent = r.id ? `آخر تعديل: ${new Date(r.updated_at).toLocaleString("ar-KW")}` : "سجل جديد — يُحفظ تلقائياً عند أول إدخال";
     $("#approved", main).innerHTML = appr ? `<div class="approved-banner"><b>تقرير معتمد</b><span class="grow">اعتُمد في ${new Date(r.approved_at).toLocaleString("ar-KW")}. النسخة المطبوعة ثابتة ولا تتغير بتعديل بيانات المدرسة أو المعلم.</span></div>` : "";
   }

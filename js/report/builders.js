@@ -42,9 +42,9 @@ async function sigSlot(s) {
   return `<div class="sig">
     <div class="sig-title">${val(s.title)}</div>
     ${s.noName ? "" : `<div class="sig-name">${s.prefix ?? "أ /"} ${val(s.name) || '<span class="dots"></span>'}</div>`}
-    <div class="sig-marks">${sig}${stamp}</div>
-    ${s.date ? `<div class="sig-date">${val(s.date)}</div>` : ""}
-  </div>`;
+    ${sig || stamp ? `<div class="sig-marks stacked">${stamp ? `<div class="sig-st">${stamp}</div>` : ""}<div class="sig-sd">${sig}${s.date ? `<span class="sig-date">${val(s.date)}</span>` : ""}</div></div>`
+      : `<div class="sig-marks"></div>${s.date ? `<div class="sig-date">${val(s.date)}</div>` : ""}`}
+  </div>`; // الترتيب: الاسم، ثم الختم تحته، ثم التوقيع تحته والتاريخ بجانب التوقيع
 }
 export const sigRow = async (slots, cls = "") => `<div class="sigs ${cls}">${(await Promise.all(slots.map(sigSlot))).join("")}</div>`;
 // توقيع الموجّه: الصورة والختم يظهران فقط إذا اختار المستخدم ذلك لهذا التقرير
@@ -128,18 +128,15 @@ export async function schoolVisit(ctx) {
     ...[["الهدف من الزيارة", d.goals_text], ["السجلات", d.records_text]].filter(([, t]) => t && t.trim()).map(([h, t]) => `<div class="sv-para"><b>${h}:</b> ${esc(t.trim())}</div>`),
     ...done.map((v) => `<div class="ln">${v}</div>`),
   ];
-  const minLines = 22;
   // تملأ الأسطر المنقطة المساحة المتبقية من المربع كما في النموذج الورقي، دون إضافة صفحات
   const left = `<div class="sv-main"><div class="sv-main-h">• زيارة معلم + ما تم إنجازه :</div>
       <div class="ln sv-tr sv-cols"><span>اسم المعلم</span><span>الصف</span><span>الفصل</span><span>الحصة</span><span>عنوان الدرس</span></div>
       ${visitLines.join("")}<div class="sv-fill"></div></div>`;
   const right = `<div class="sv-side">${box("الهدف من الزيارة", SCHOOL_VISIT.goals, d.goals, d.goals_other)}${box("السجلات التي تمت متابعتها", SCHOOL_VISIT.records, d.records, d.records_other)}</div>`;
   const blocks = [];
-  if (visitLines.length <= minLines) blocks.push({ html: `<div class="sv-cols2">${right}${left}</div>` });
-  else {
-    blocks.push({ html: `<div class="sv-cols2 side-only">${right}</div>` });
-    blocks.push({ group: { cls: "sv-main", head: `<div class="sv-main-h">• زيارة معلم + ما تم إنجازه :</div><div class="ln sv-tr sv-cols"><span>اسم المعلم</span><span>الصف</span><span>الفصل</span><span>الحصة</span><span>عنوان الدرس</span></div>`, items: visitLines } });
-  }
+  // زيارة الموجه صفحة واحدة دائماً (onePage): يُصغَّر الكلام إذا زاد بدل الانتقال لصفحة ثانية
+  blocks.push({ html: `<div class="sv-cols2">${right}${left}</div>` });
+
   const recs = d.blank ? Array.from({ length: 4 }, () => `<div class="ln blank-ln">&nbsp;</div>`) : nl(d.recommendations).map((v) => `<div class="ln">${v}</div>`);
   const recFill = Array.from({ length: Math.max(0, 4 - recs.length) }, () => `<div class="ln"></div>`);
   blocks.push({ group: { cls: "sv-recs", head: `<div class="sv-main-h">• ما يستجد من أعمال / التوصيات :</div>`, items: [...recs, ...recFill] } });
@@ -150,7 +147,7 @@ export async function schoolVisit(ctx) {
     mySig(ctx, "الموجه الفني"),
     { title: "مدير المدرسة", name: d.principal_name },
   ], "sv-sigs");
-  return { orientation: "portrait", frame: false, cls: "t-sv", header, identity, blocks, footer };
+  return { orientation: "portrait", frame: false, cls: "t-sv", header, identity, blocks, footer, onePage: true };
 }
 
 /* ============================== الإحصائيات ============================== */

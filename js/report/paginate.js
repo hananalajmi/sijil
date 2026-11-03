@@ -156,6 +156,13 @@ export async function paginate(rep, container) {
       }
     }
     };
+  // onePage: النموذج كله في صفحة واحدة دائماً؛ إن زاد الكلام يُصغَّر المحتوى تدريجياً حتى يتسع
+  if (rep.onePage) {
+    const wrap = el(`<div class="blk one-page">${rep.blocks.map(asHtml).join("")}</div>`);
+    body.appendChild(wrap); await waitImages(sheet);
+    let z = 1; while (overflows(body) && z > 0.35) { z = Math.round((z - 0.02) * 100) / 100; wrap.style.zoom = String(z); }
+    rep.blocks = [];
+  }
   for (const b of rep.blocks) {
     // keep: قسم كامل (بند) لا يُقسم بين صفحتين ما دام يتسع في صفحة واحدة
     if (b.keep) {
