@@ -82,3 +82,48 @@ export async function wpPrePostReport(ctx) {
   }
   return { orientation: "landscape", cls: "t-wp2", header, identity: "", footer: wpFoot(ctx), blocks: [{ table: { cls: "grid wp-tbl", thead: `<tr><th class="wp-n">اسم الموجه الفني</th><th class="wp-t">نوع الخطة</th>${days.map((d) => `<th>${d}</th>`).join("")}<th class="wp-pct">نسبة الالتزام</th></tr>`, rows } }] };
 }
+
+// ===== التجميع النهائي (كل المراحل): «الخطة القبلية للزيارات» و«ملخص تقرير الزيارات» — على هيئة النموذجين المرفقين =====
+const dmyS = (iso) => { const [y, m, d] = String(iso || "").split("-"); return y ? `${Number(d)}/${Number(m)}/${y}` : ""; };
+async function wfParts() {
+  const { placeName, itemText, isSchoolItem } = await import("../views/wplan.js");
+  const { ordinal } = await import("../views/wplanFinal.js");
+  const { addDays } = await import("../ui.js");
+  const txt = (x) => esc(itemText(x)) + (x.note && !String(itemText(x)).includes(x.note) ? ` (${esc(x.note)})` : "");
+  const school = (arr) => (arr || []).filter((x) => placeName(x) && isSchoolItem(x)).map(txt).join("<br>");
+  const DAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"];
+  const other = (dd) => DAYS.map((d, k) => { const o = (dd?.[k] || []).filter((x) => placeName(x) && !isSchoolItem(x)).map(txt); return o.length ? `<div><b>${d}:</b> ${o.join(" + ")}</div>` : ""; }).join("");
+  return { school, other, DAYS, ordinal, addDays };
+}
+const wfName = (r) => `${esc(r.name)}<div class="wf-st">${esc(STAGE_WORD[r.stage] || r.stage || "")}</div>`;
+
+export async function wpFinalPre(ctx) {
+  const { school, other, DAYS, ordinal, addDays } = await wfParts();
+  const ws = ctx.next, H = await headLogos(ctx, "wp_final");
+  const header = `${logoRow({ ...H, c: `<div class="wf-title">الخطة القبلية للزيارات</div>` }, "wm-logos wf-logos")}
+    <table class="grid wf-info"><tr><th>المنطقة التعليمية</th><td>${esc(ctx.region)}</td><th>الاسبوع</th><td>${esc(ordinal(ctx.weekNoNext) || "")}</td><th>من :</th><td>${dmyS(ws)}</td><th>إلى :</th><td>${dmyS(addDays(ws, 4))}</td></tr></table>`;
+  const dh = DAYS.map((d, k) => { const [y, m, dd] = addDays(ws, k).split("-"); return `<th>${d}<div class="wf-d">${Number(dd)}/ ${Number(m)} /${y}م</div></th>`; }).join("");
+  const thead = `<tr><th colspan="8" class="wf-band">زيارات الموجهين للمدارس ( زيارة إدارة المدرسة – زيارة القسم – زيارة الفصول )</th></tr>
+    <tr><th colspan="2" class="wf-nh">مراقب التوجيه الفني</th>${dh}<th class="wf-o">أعمال أخرى</th></tr>`;
+  const rows = [`<tr class="wf-obs"><td colspan="2">${esc(ctx.observer || "")}</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`,
+    `<tr class="wf-sub"><th class="wf-m">م</th><th>اسم الموجه الفني</th><td colspan="6"></td></tr>`];
+  ctx.rows.forEach((r, i) => { const pre = r.next?.data?.pre;
+    rows.push(r.next ? `<tr><td class="wf-m">${i + 1}</td><td class="wf-n">${wfName(r)}</td>${DAYS.map((_, k) => `<td>${school(pre?.[k])}</td>`).join("")}<td class="wf-o">${other(pre)}</td></tr>`
+      : `<tr><td class="wf-m">${i + 1}</td><td class="wf-n">${wfName(r)}</td><td colspan="6" class="red">لا توجد خطة (لم تُسلَّم)</td></tr>`); });
+  return { orientation: "landscape", cls: "t-wf", header, identity: "", footer: "", blocks: [{ table: { cls: "grid wf-tbl",
+    colgroup: `<colgroup><col style="width:4%"><col style="width:14%"><col><col><col><col><col><col style="width:15%"></colgroup>`, thead, rows } }] };
+}
+
+export async function wpFinalPost(ctx) {
+  const { school, other, DAYS, ordinal, addDays } = await wfParts();
+  const ws = ctx.week, H = await headLogos(ctx, "wp_final");
+  const header = `${logoRow({ ...H, c: `<div class="wf-title">ملخص تقرير الزيارات</div>` }, "wm-logos wf-logos")}
+    <table class="grid wf-info"><tr><th>المنطقة التعليمية</th><td>${esc(ctx.region)}</td><th>الاسبوع</th><td>${esc(ordinal(ctx.weekNoCur) || "")}</td></tr>
+      <tr><th>من</th><td>${dmyS(ws)}</td><th>إلى</th><td>${dmyS(addDays(ws, 4))}</td></tr></table>`;
+  const thead = `<tr><th class="wf-m">م</th><th class="wf-n">الموجه الفني</th><th>الزيارات الميدانية للمدارس خلال الاسبوع</th><th class="wf-o">أعمال أخرى</th></tr>`;
+  const rows = ctx.rows.map((r, i) => { const post = r.cur?.data?.post;
+    return r.cur ? `<tr><td class="wf-m">${i + 1}</td><td class="wf-n">${wfName(r)}</td><td class="wf-days">${DAYS.map((d, k) => `<div class="wf-day"><b>${d}:</b> ${school(post?.[k])}</div>`).join("")}</td><td class="wf-o">${other(post)}</td></tr>`
+      : `<tr><td class="wf-m">${i + 1}</td><td class="wf-n">${wfName(r)}</td><td colspan="2" class="red">لا توجد خطة (لم تُسلَّم)</td></tr>`; });
+  return { orientation: "portrait", cls: "t-wf", header, identity: "", footer: "", blocks: [{ table: { cls: "grid wf-tbl wf-post",
+    colgroup: `<colgroup><col style="width:6%"><col style="width:22%"><col><col style="width:24%"></colgroup>`, thead, rows } }] };
+}

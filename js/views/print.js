@@ -32,6 +32,8 @@ export async function resolveReport(id, params) {
   if (id === "stats-exams") return [await examStatsContext({ year: params.year || state.year, term: params.term, examType: params.type, version: params.version }), params.type === "practical" ? "إحصائية الامتحان العملي" : "إحصائية الامتحان النظري", `#/stats-${params.type}`, null];
   if (id === "wp-collect") { const { collectCtx } = await import("./wplanCollect.js"); const c = await collectCtx(params.week, params.stage || ""); c.view = params.view || "";
     return [c, params.view === "pre" ? `الخطة القبلية ${c.stage}` : params.view === "prepost" ? `الخطة القبلية والبعدية ${c.stage}` : "تجميع الخطط الأسبوعية", "#/wplan-collect?week=" + (params.week || ""), null]; }
+  if (id === "wp-final") { const { finalCtx } = await import("./wplanFinal.js"); const c = await finalCtx(params.week); c.view = params.view || "pre";
+    return [c, c.view === "post" ? "ملخص تقرير الزيارات" : "الخطة القبلية للزيارات", "#/wplan-final?week=" + (params.week || ""), null]; }
   if (id === "compiled-ach") return [await compiledMonthlyContext(params.month), "الإنجازات الشهرية المجمعة", "#/compile?month=" + params.month, null];
   // نسخة فارغة من أي نموذج (للطباعة أو لإرسالها لمعلم/زميلة يعبّئها بيده): بلا اسمي وتوقيعي وختمي
   if (id === "blank-criteria") { const c = await recordContext({ kind: "form", title: "بطاقة قياس المعايير الفنية", academic_year: state.year, data: { type: "criteria", blank: true } }); c.print = {}; return [c, "بطاقة قياس المعايير الفنية (فارغة)", "#/forms?sec=criteria", null]; }

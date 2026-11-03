@@ -524,3 +524,24 @@
 .t-wp2 .wp-foot { display: flex; justify-content: center; margin-top: 3mm; }
 .t-wp2 .wp-foot span { border: 1.2pt solid #000; background: #d9d9d9; padding: 1.5mm 8mm; font-weight: 800; font-size: 12pt; }
 .t-wp2 .wp-logos.hl-row { grid-template-columns: 1fr auto 1fr; }
+/* التجميع النهائي للخطط (كل المراحل) */
+.t-wf .sheet-inner { padding: 8mm 9mm 9mm; }
+.t-wf .wf-logos .logo { height: 19mm; max-width: 50mm; object-fit: contain; }
+.t-wf .wf-title { font-size: 13pt; font-weight: 800; text-decoration: underline; text-align: center; }
+.t-wf table.wf-info { width: 100%; border-collapse: collapse; margin: 2mm 0 3mm; font-size: 11pt; }
+.t-wf table.wf-info th, .t-wf table.wf-info td { border: .8pt solid #000; padding: 1.2mm 2mm; text-align: center; }
+.t-wf table.wf-info th { font-weight: 800; background: #f2f2f2; }
+.t-wf table.wf-tbl { width: 100%; border-collapse: collapse; font-size: 9.5pt; table-layout: fixed; }
+.t-wf table.wf-tbl th, .t-wf table.wf-tbl td { border: .8pt solid #000; padding: 1.2mm 1.4mm; text-align: center; vertical-align: middle; line-height: 1.45; }
+.t-wf table.wf-tbl th { font-weight: 800; background: #f2f2f2; }
+.t-wf .wf-band { font-size: 11pt; letter-spacing: .5pt; }
+.t-wf .wf-d { font-weight: 700; font-size: 9pt; margin-top: .5mm; }
+.t-wf .wf-n { font-weight: 800; }
+.t-wf .wf-st { font-size: 8pt; font-weight: 600; color: #444; margin-top: .6mm; }
+.t-wf .wf-o { text-align: right !important; font-size: 9pt; }
+.t-wf .wf-obs td { height: 9mm; font-weight: 800; }
+.t-wf .wf-sub td { border-left-color: transparent; border-right-color: transparent; }
+.t-wf .wf-days { padding: 0 !important; text-align: right !important; }
+.t-wf .wf-day { border-bottom: .6pt solid #000; padding: 1.1mm 1.6mm; min-height: 6.5mm; }
+.t-wf .wf-day:last-child { border-bottom: 0; }
+.t-wf .red { color: #d00000; font-weight: 800; }

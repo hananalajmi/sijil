@@ -6,11 +6,16 @@ import { state, G, opts, schoolById } from "../store.js";
 import { esc, $, $$, today, fmtDate, weekStart, addDays, academicYearOf, toast, debounce, WORK_DAYS } from "../ui.js";
 
 export const KIND = "weekly_plan";
+// المسؤول عن التجميع النهائي (كل المراحل): يعيّنه المشرف من «الحسابات والصلاحيات»
+export const isFinalCollector = () => (state.options?.wp_final_collectors?.items || []).includes(state.profile?.id);
+// البند مدرسة (لا مكتب/تكليف/اجتماع…)
+export const isSchoolItem = (it) => !!it && (it.school || !!schoolById(it.place) || (!!placeName(it) && !PLACES.includes(it.place) && !PLACES.includes(it.place_name)));
 export const PLACES = ["مكتب التوجيه", "تكليف", "اجتماع", "ورشة / إنماء مهني", "دورة تدريبية", "إجازة", "أخرى"];
 export const ACTS = () => [...new Set([...opts("school_visit_types"), "زيارة معلم", "متابعة السجلات", "متابعة امتحانات", "حضور اجتماع", "حضور ورشة", "عمل مكتبي"])];
 const myName = () => G().full_name || state.profile?.full_name || "";
 const days = (ws) => [0, 1, 2, 3, 4].map((i) => addDays(ws, i));
-export const placeName = (it) => it?.place_name || schoolById(it?.place)?.title || it?.place || "";
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
+export const placeName = (it) => it?.place_name || schoolById(it?.place)?.title || (UUID.test(it?.place || "") ? "مدرسة" : it?.place || "");
 // نص البند كما يُقرأ: «زيارة توجيهية لثانوية الواحة» (النشاط + المدرسة)، أو المكان وحده (مكتب، اجتماع…)
 export const itemText = (it) => { if (String(it?.text || "").trim()) return String(it.text).trim(); return autoText(it); };
 const autoText = (it) => { const p = placeName(it), a = String(it?.act || "").trim(), isSchool = !!schoolById(it?.place) || /^(مدرسة|ثانوية|متوسطة|ابتدائية|روضة)/.test(p);
@@ -63,7 +68,7 @@ export default async function (main, { params }) {
   const cur = weekStart(params.week || today()), next = addDays(cur, 7);
   main.innerHTML = `<div class="container"><div class="page-head"><div><a class="hub-back" href="#/hub/plans">الخطط</a><h1>خطتي الأسبوعية</h1>
       <div class="sub">كل أربعاء: البعدية لهذا الأسبوع (ما نُفّذ) والقبلية للأسبوع القادم، ثم «إرسال للمسؤول».</div></div>
-      <div class="row"><label class="row" style="gap:6px">الأسبوع <input type="date" id="wp-wk" value="${cur}"></label>${state.profile?.is_collector ? `<a class="btn" href="#/wplan-collect">تجميع خطط المرحلة</a>` : ""}</div></div>
+      <div class="row"><label class="row" style="gap:6px">الأسبوع <input type="date" id="wp-wk" value="${cur}"></label>${state.profile?.is_collector ? `<a class="btn" href="#/wplan-collect">تجميع خطط المرحلة</a>` : ""}${isFinalCollector() ? `<a class="btn" href="#/wplan-final">التجميع النهائي (كل المراحل)</a>` : ""}</div></div>
     <div id="wp-body"><p class="hint">جارٍ التحميل…</p></div></div>`;
   $("#wp-wk", main).onchange = (e) => { location.hash = `#/wplan?week=${weekStart(e.target.value || today())}`; };
   // القفل: الأربعاء 8 مساءً (بتوقيت الكويت) لهذا الأسبوع — تُقفل البعدية الحالية والقبلية للأسبوع القادم معاً
@@ -75,8 +80,10 @@ export default async function (main, { params }) {
   const copy = (arr) => (arr || []).map((x) => ({ ...x, auto: true }));
   let filled = 0; if (!locked && !rCur.data.post_started) { for (let i = 0; i < 5; i++) if (!(rCur.data.post[i] || []).length) { const src = (rCur.data.pre[i] || []).length ? copy(rCur.data.pre[i]) : auto[i]; if (src.length) { rCur.data.post[i] = src; filled++; } } rCur.data.post_started = true; }
   const recs = { cur: rCur, next: rNext };
+  // اسم المدرسة يُحفظ مع البند (المسؤول عن التجميع لا يرى مدارس غيره)
+  const named = (dd) => Object.fromEntries(Object.entries(dd || {}).map(([i, arr]) => [i, (arr || []).map((it) => { const s = schoolById(it?.place); return s ? { ...it, place_name: s.title, school: true } : it; })]));
   const saveNow = async (k) => { const r = recs[k]; const stamp = { stage: G().stage || "", guide_name: myName(), subject: G().subject || "" };
-    try { recs[k] = await api.update(r.id, { data: { ...r.data, ...stamp } }, r.version); } catch (e) { toast("تعذّر الحفظ: " + e.message, "error"); } };
+    try { recs[k] = await api.update(r.id, { data: { ...r.data, ...(locked ? {} : { pre: named(r.data.pre), post: named(r.data.post) }), ...stamp } }, r.version); } catch (e) { toast("تعذّر الحفظ: " + e.message, "error"); } };
   const save = { cur: debounce(() => saveNow("cur"), 700), next: debounce(() => saveNow("next"), 700) };
   if (filled) saveNow("cur");
 
