@@ -26,6 +26,11 @@ export function fullNameOf(name, stage = "") {
   const best = hit.length > 1 && st ? hit.filter(([s]) => nrm(s).includes(st)) : hit;
   return best.length === 1 ? best[0][1] : name || "";
 }
+// البعدية كما تظهر للمسؤول: إذا لم يبدأ الموجه بعديته بعد، تظهر نسخة من قبليته لنفس الأسبوع (يعدّلها لاحقاً)
+export function withPost(rec) {
+  if (!rec) return rec; const d = rec.data || {}, has = Object.values(d.post || {}).some((a) => (a || []).length);
+  return d.post_started || has ? rec : { ...rec, data: { ...d, post: JSON.parse(JSON.stringify(d.pre || {})), post_auto: true } };
+}
 // ترتيب الموجهين في نماذج التجميع: الابتدائي، المتوسط، ثم الثانوي حسب المادة (كيمياء، فيزياء، أحياء، جيولوجيا)
 export const SUBJECT_ORDER = ["كيمياء", "فيزياء", "أحياء", "جيولوجيا"];
 // مادة الموجه: من خطته، وإلا من «أسماء الموجهين حسب التخصص»

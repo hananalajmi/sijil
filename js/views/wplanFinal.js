@@ -3,7 +3,7 @@
 import { api } from "../api.js";
 import { state, G, opts, setGuideData } from "../store.js";
 import { esc, $, $$, today, fmtDate, weekStart, addDays, toast } from "../ui.js";
-import { KIND, isFinalCollector, matchOf, fullNameOf, subjectOf, guideOrder } from "./wplan.js";
+import { KIND, isFinalCollector, matchOf, fullNameOf, subjectOf, guideOrder, withPost } from "./wplan.js";
 import { academicYearOf } from "../ui.js";
 
 export const STAGE_ORDER = ["ابتدائي", "متوسط", "ثانوي"];
@@ -30,7 +30,7 @@ export async function finalCtx(week) {
   for (const n of names || []) people.set(n.id, { id: n.id, name: n.full_name, stage: n.stage || "" });
   for (const r of [...(a || []), ...(b || [])]) if (!people.has(r.owner_id)) people.set(r.owner_id, { id: r.owner_id, name: r.data?.guide_name || "—", stage: r.data?.stage || "" });
   const so = (s) => { const i = STAGE_ORDER.indexOf(s); return i < 0 ? 9 : i; };
-  const rows = [...people.values()].map((p) => { const c = (a || []).find((r) => r.owner_id === p.id), n = (b || []).find((r) => r.owner_id === p.id);
+  const rows = [...people.values()].map((p) => { const c = withPost((a || []).find((r) => r.owner_id === p.id)), n = (b || []).find((r) => r.owner_id === p.id);
     return { ...p, name: fullNameOf(c?.data?.guide_name || n?.data?.guide_name || p.name, p.stage || c?.data?.stage || n?.data?.stage || ""), stage: p.stage || c?.data?.stage || n?.data?.stage || "", cur: c || null, next: n || null, match: c ? matchOf(c.data.pre, c.data.post) : null }; })
     .map((r) => ({ ...r, subject: subjectOf(r.name, r.cur || r.next) })).sort(guideOrder(STAGE_ORDER));
   const region = String(G().region || "الأحمدي").replace(/^منطقة\s*/, "").replace(/\s*التعليمية$/, "");
