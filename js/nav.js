@@ -34,5 +34,5 @@ export function planLinks() {
 export function itemsOf(s) {
   if (s.id !== "plans") return s.items || [];
   const it = [...s.items], i = it.findIndex(([r]) => r === "tasks");
-  it.splice(i < 0 ? it.length : i, 0, ...planLinks()); return it;
+  return it; // روابط الخطط الخارجية (Forms وWord) حُذفت: الخطة تُكتب داخل الموقع
 }
