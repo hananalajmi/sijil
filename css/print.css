@@ -409,7 +409,10 @@
 .cr-sigimg { display: inline-flex; align-items: center; gap: 3mm; vertical-align: middle; }
 
 /* نص الهدف والسجلات أسفل مربع الاختيارات */
-.t-sv .sv-para { margin-inline: 2mm; line-height: 6.2mm; text-align: justify; background: repeating-linear-gradient(to bottom, transparent 0 calc(6.2mm - .8pt), #9a9a9a calc(6.2mm - .8pt) 6.2mm); }
+/* زيارة الموجه: كل سطر بنفس الخط والمسافة، والجملة الطويلة تلتف داخل سطرها بمسافة مريحة */
+.t-sv .sv-main .ln { font-size: 11pt; line-height: 1.8; padding: .8mm 1mm .5mm; }
+.t-sv .sv-main .ln.sv-cols { font-size: 10pt; }
+.t-sv .sv-para { text-align: right; }
 
 /* ===== الشهادات الجاهزة (A4 أفقي كامل) ===== */
 .sheet.t-ce .sheet-inner { padding: 0; } .sheet.t-ce .pg-num, .sheet.t-ce .pg-header, .sheet.t-ce .pg-identity, .sheet.t-ce .pg-footer { display: none; } .sheet.t-ce .pg-body { height: 100%; }

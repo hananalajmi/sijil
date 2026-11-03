@@ -125,7 +125,9 @@ export async function schoolVisit(ctx) {
   const visitLines = [
     ...rows.map((r) => `<div class="ln sv-tr"><span>${val(r.teacher_name)}</span><span>${val(r.grade)}</span><span>${val(r.section)}</span><span>${val(r.period)}</span><span>${val(r.lesson)}</span></div>`),
     // نص الهدف ونص السجلات (يُكتب تلقائياً في الشاشة) على الأسطر المنقطة
-    ...[["الهدف من الزيارة", d.goals_text], ["السجلات", d.records_text]].filter(([, t]) => t && t.trim()).map(([h, t]) => `<div class="sv-para"><b>${h}:</b> ${esc(t.trim())}</div>`),
+    // كل جملة في سطر مستقل (تنتهي بنقطة أو سطر جديد)، بنفس حجم الخط والمسافات
+    ...[["الهدف من الزيارة", d.goals_text], ["السجلات", d.records_text]].filter(([, t]) => t && t.trim()).flatMap(([h, t]) =>
+      t.trim().split(/\n+|(?<=\.)\s+/).map((x) => x.trim()).filter(Boolean).map((x, i) => `<div class="ln sv-para">${i ? "" : `<b>${h}:</b> `}${esc(x)}</div>`)),
     ...done.map((v) => `<div class="ln">${v}</div>`),
   ];
   // تملأ الأسطر المنقطة المساحة المتبقية من المربع كما في النموذج الورقي، دون إضافة صفحات
