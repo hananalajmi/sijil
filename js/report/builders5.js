@@ -71,7 +71,7 @@ export async function wpPrePostReport(ctx) {
   const { placeName } = await import("../views/wplan.js");
   const days = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"], sw = STAGE_WORD[ctx.stage] || ctx.stage;
   const header = await wpHead(ctx, ctx.allStages ? `الخطة القبلية والبعدية لجميع المراحل (${ctx.year || ""})` : `الخطة القبلية والبعدية للمرحلة ${sw} (${ctx.year || ""})`, ctx.week);
-  const nm = (r) => esc(r.name) + (ctx.allStages && r.stage ? `<div class="wf-st">${esc(STAGE_WORD[r.stage] || r.stage)}</div>` : "");
+  const nm = (r) => esc(r.name) + (ctx.allStages && r.stage ? `<div class="wf-st">${esc(stageLine(r))}</div>` : "");
   const same = (a, b) => { const A = (a || []).map(placeName).filter(Boolean).sort().join("|"), B = (b || []).map(placeName).filter(Boolean).sort().join("|"); return !!A && A === B; };
   const rows = [];
   for (const r of ctx.rows) {
@@ -100,7 +100,8 @@ async function wfParts() {
 }
 // نموذجا الزيارات: الاسم الأول واسم العائلة فقط (الخطة القبلية والبعدية: الاسم كاملاً)
 const firstLast = (n) => { const w = String(n || "").trim().split(/\s+/).filter(Boolean); return w.length > 2 ? `${w[0]} ${w[w.length - 1]}` : w.join(" "); };
-const wfName = (r) => `${esc(r.cur?.data?.visit_name || r.next?.data?.visit_name || firstLast(r.name))}<div class="wf-st">${esc(STAGE_WORD[r.stage] || r.stage || "")}</div>`;
+const stageLine = (r) => (STAGE_WORD[r.stage] || r.stage || "") + (r.stage === "ثانوي" && r.subject ? ` - ال${String(r.subject).replace(/^ال/, "")}` : "");
+const wfName = (r) => `${esc(r.cur?.data?.visit_name || r.next?.data?.visit_name || firstLast(r.name))}<div class="wf-st">${esc(stageLine(r))}</div>`;
 
 export async function wpFinalPre(ctx) {
   const { school, other, DAYS, ordinal, addDays } = await wfParts();

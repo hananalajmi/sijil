@@ -3,7 +3,7 @@
 import { api } from "../api.js";
 import { state, G, opts } from "../store.js";
 import { esc, $, $$, today, fmtDate, weekStart, addDays, WORK_DAYS, academicYearOf } from "../ui.js";
-import { KIND, matchOf, placeName, itemText, fullNameOf } from "./wplan.js";
+import { KIND, matchOf, placeName, itemText, fullNameOf, subjectOf, guideOrder } from "./wplan.js";
 
 const fmtItems = (arr) => (arr || []).filter((x) => placeName(x)).map((x) => esc(itemText(x)) + (x.note ? ` <span class="hint">(${esc(x.note)})</span>` : "")).join("<br>") || '<span class="hint">—</span>';
 const isAdmin = () => false; // المشرف لا يرى خطط الموجهين؛ التجميع للمسؤول عن كل مرحلة فقط
@@ -20,7 +20,7 @@ export async function collectCtx(week, stage) {
   for (const r of [...A, ...B]) if (!people.has(r.owner_id)) people.set(r.owner_id, { id: r.owner_id, name: r.data?.guide_name || "—" });
   const rows = [...people.values()].map((p) => { const c = A.find((r) => r.owner_id === p.id), n = B.find((r) => r.owner_id === p.id);
     return { ...p, name: fullNameOf(c?.data?.guide_name || n?.data?.guide_name || p.name, stage), cur: c || null, next: n || null, match: c ? matchOf(c.data.pre, c.data.post) : null }; })
-    .sort((x, y) => x.name.localeCompare(y.name, "ar"));
+    .map((r) => ({ ...r, stage, subject: subjectOf(r.name, r.cur || r.next) })).sort(guideOrder([stage]));
   return { kind: "wp_collect", week: cur, next, stage, rows, year: academicYearOf(cur).replace("-", "-"), first: G().first_supervisor || "", guide: { full_name: G().full_name || "" } };
 }
 

@@ -26,6 +26,18 @@ export function fullNameOf(name, stage = "") {
   const best = hit.length > 1 && st ? hit.filter(([s]) => nrm(s).includes(st)) : hit;
   return best.length === 1 ? best[0][1] : name || "";
 }
+// ترتيب الموجهين في نماذج التجميع: الابتدائي، المتوسط، ثم الثانوي حسب المادة (كيمياء، فيزياء، أحياء، جيولوجيا)
+export const SUBJECT_ORDER = ["كيمياء", "فيزياء", "أحياء", "جيولوجيا"];
+// مادة الموجه: من خطته، وإلا من «أسماء الموجهين حسب التخصص»
+export function subjectOf(name, rec) {
+  const s = String(rec?.data?.subject || "").trim(); if (s) return s;
+  const full = fullNameOf(name), hit = opts("guide_names").map((l) => String(l).split("|").map((x) => x.trim())).find(([, n]) => n === full);
+  return hit ? (SUBJECT_ORDER.find((x) => nrm(hit[0]).includes(nrm(x))) || "") : "";
+}
+export function guideOrder(stageOrder) {
+  const so = (s) => { const i = stageOrder.indexOf(s); return i < 0 ? 9 : i; }, sj = (s) => { const i = SUBJECT_ORDER.indexOf(String(s || "").replace(/^ال/, "")); return i < 0 ? 9 : i; };
+  return (x, y) => so(x.stage) - so(y.stage) || (x.stage === "ثانوي" ? sj(x.subject) - sj(y.subject) : 0) || x.name.localeCompare(y.name, "ar");
+}
 const myName = () => fullNameOf(G().full_name || state.profile?.full_name || "", G().stage);
 const days = (ws) => [0, 1, 2, 3, 4].map((i) => addDays(ws, i));
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
