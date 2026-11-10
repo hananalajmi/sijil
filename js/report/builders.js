@@ -146,7 +146,7 @@ export async function schoolVisit(ctx) {
 
   const recs = d.blank ? Array.from({ length: 4 }, () => `<div class="ln blank-ln">&nbsp;</div>`) : nl(d.recommendations).map((v) => `<div class="ln">${v}</div>`);
   const recFill = Array.from({ length: Math.max(0, 4 - recs.length) }, () => `<div class="ln"></div>`);
-  blocks.push({ group: { cls: "sv-recs", head: `<div class="sv-main-h">• ما يستجد من أعمال / التوصيات :</div>`, items: [...recs, ...recFill] } });
+  blocks.push({ group: { cls: "sv-recs", head: `<div class="sv-main-h">• ما يستجد من أعمال / التوصيات :</div>`, items: [...recs, ...recFill], optional: recFill.length } });
   const photos = (d.photos || []).filter(Boolean);
   if (photos.length) blocks.push({ html: `<div class="photo-row n${photos.length}">${(await Promise.all(photos.map((p) => img(p, "photo")))).join("")}</div>` });
   const footer = await sigRow([

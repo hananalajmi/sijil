@@ -96,6 +96,9 @@ export async function paginate(rep, container) {
       if (!overflows(body)) return;
       // مربع قابل للضغط (مثل «خامساً: الملاحظات»): تُقلَّل المسافة فوقه ليبقى في الصفحة نفسها بدل صفحة جديدة
       if (g.squeeze) { node.classList.add("squeezed"); if (!overflows(body)) return; node.classList.remove("squeezed"); }
+      // أسطر فارغة اختيارية في آخر المربع (مثل أسطر التوصيات): تُحذف واحداً واحداً ليبقى المربع في الصفحة نفسها
+      if (g.optional) { let k = 0; const box = node.querySelector(".grp-items"); while (overflows(body) && k < g.optional && box.lastElementChild) { box.lastElementChild.remove(); k++; } if (!overflows(body)) return;
+        body.removeChild(node); node = build(g.items, false); body.appendChild(node); }
       body.removeChild(node);
       // 2) إن كان المربع يتسع في صفحة كاملة: يُنقل كاملاً إلى الصفحة التالية (حتى لو بقي فراغ)
       body.appendChild(node);
