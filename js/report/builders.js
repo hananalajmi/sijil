@@ -136,8 +136,13 @@ export async function schoolVisit(ctx) {
       ${visitLines.join("")}<div class="sv-fill"></div></div>`;
   const right = `<div class="sv-side">${box("الهدف من الزيارة", SCHOOL_VISIT.goals, d.goals, d.goals_other)}${box("السجلات التي تمت متابعتها", SCHOOL_VISIT.records, d.records, d.records_other)}</div>`;
   const blocks = [];
-  // زيارة الموجه صفحة واحدة دائماً (onePage): يُصغَّر الكلام إذا زاد بدل الانتقال لصفحة ثانية
-  blocks.push({ html: `<div class="sv-cols2">${right}${left}</div>` });
+  // الخط بحجمه الطبيعي دائماً: إذا زاد الكلام ينتقل الباقي لصفحة ثانية (لا تصغير)
+  const minLines = 22;
+  if (visitLines.length <= minLines) blocks.push({ html: `<div class="sv-cols2">${right}${left}</div>` });
+  else {
+    blocks.push({ html: `<div class="sv-cols2 side-only">${right}</div>` });
+    blocks.push({ group: { cls: "sv-main", head: `<div class="sv-main-h">• زيارة معلم + ما تم إنجازه :</div><div class="ln sv-tr sv-cols"><span>اسم المعلم</span><span>الصف</span><span>الفصل</span><span>الحصة</span><span>عنوان الدرس</span></div>`, items: visitLines } });
+  }
 
   const recs = d.blank ? Array.from({ length: 4 }, () => `<div class="ln blank-ln">&nbsp;</div>`) : nl(d.recommendations).map((v) => `<div class="ln">${v}</div>`);
   const recFill = Array.from({ length: Math.max(0, 4 - recs.length) }, () => `<div class="ln"></div>`);
@@ -149,7 +154,7 @@ export async function schoolVisit(ctx) {
     mySig(ctx, "الموجه الفني"),
     { title: "مدير المدرسة", name: d.principal_name },
   ], "sv-sigs");
-  return { orientation: "portrait", frame: false, cls: "t-sv", header, identity, blocks, footer, onePage: true };
+  return { orientation: "portrait", frame: false, cls: "t-sv", header, identity, blocks, footer, fixedOrientation: true };
 }
 
 /* ============================== الإحصائيات ============================== */
