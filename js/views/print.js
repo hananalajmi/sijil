@@ -83,7 +83,8 @@ export default async function (main, { id, params }) {
   const sheets = $("#sheets", main);
   const templateOrientation = rep.orientation || "portrait";
   const oKey = "sijil.orient." + (ctx.kind || ctx.rec?.kind);
-  try { const o = localStorage.getItem(oKey); if (o) $("#orient", main).value = o; } catch (_) {}
+  // النماذج ذات الصفحة الواحدة (زيارة الموجه) تفتح دائماً بالاتجاه الطولي حسب القالب، ولا يُحفظ اختيار «عرضي» لها
+  try { const o = localStorage.getItem(oKey); if (o && !rep.onePage) $("#orient", main).value = o; } catch (_) {}
   let pageStyle = document.getElementById("page-style");
   if (!pageStyle) { pageStyle = document.createElement("style"); pageStyle.id = "page-style"; document.head.appendChild(pageStyle); }
   // حجم الطباعة (تصغير الصفحة داخل الورقة): يُحفظ على هذا الجهاز. الافتراضي في الآيباد وسفاري 82%، وفي غيرهما كامل
@@ -120,7 +121,7 @@ export default async function (main, { id, params }) {
   await renderFit();
   addEventListener("resize", fitPreview);
   $("#bw", main).onchange = renderFit;
-  $("#orient", main).onchange = () => { try { localStorage.setItem(oKey, $("#orient", main).value); } catch (_) {} renderFit(); };
+  $("#orient", main).onchange = () => { try { if (!rep.onePage) localStorage.setItem(oKey, $("#orient", main).value); } catch (_) {} renderFit(); };
 
   // فتح نافذة الطباعة (اختيار الطابعة أو الحفظ PDF). بعض الصفحات المضمّنة تمنعها، فنكتشف ذلك ونوضّح البديل
   // الآيفون والآيباد يضيفان رابط الموقع والتاريخ أعلى وأسفل كل ورقة ولا يمكن إلغاؤهما من الموقع؛
