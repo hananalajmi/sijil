@@ -72,14 +72,14 @@ export function matchOf(pre, post) {
   return { planned, done: okDays, days: 5, pct: planned ? okDays * 20 : null, missed, extra };
 }
 
-async function recFor(ws, create) {
+export async function recFor(ws, create) {
   const all = await api.list({ kind: KIND }).catch(() => []);
   let r = all.find((x) => x.data?.week_start === ws && (!state.profile || x.owner_id === state.profile.id || !x.owner_id));
   if (!r && create) r = await api.create({ kind: KIND, title: `الخطة الأسبوعية ${fmtDate(ws)}`, record_date: ws, academic_year: academicYearOf(ws), data: { week_start: ws, pre: emptyDays(), post: emptyDays() } });
   return r || null;
 }
 // البعدية من الزيارات المسجلة في الأسبوع (زيارة المدرسة وزيارة المعلم)
-async function visitsOf(ws) {
+export async function visitsOf(ws) {
   const end = addDays(ws, 4);
   const vs = await api.list({ kinds: ["school_visit", "teacher_visit"] }).catch(() => []);
   const out = emptyDays();

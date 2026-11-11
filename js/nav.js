@@ -28,7 +28,10 @@ export const sectionOf = (route) => [...SECTIONS, MORE].find((s) => s.route === 
 export function planLinks() {
   const st = String(G().stage || "").trim();
   return opts("plan_links").map((l) => String(l).split("|").map((x) => x.trim())).filter(([s, t, u]) => t && /^https?:\/\//.test(u || "") && (!st || !s || s === "الكل" || s === st))
-    .map(([s, t, u]) => [u, s && s !== "الكل" && !t.includes(s) ? `${t} (${s})` : t, "doc", s && s !== "الكل" ? `للمرحلة: ${s}` : "لكل المراحل"]);
+    // روابط نماذج Forms للخطة القبلية/البعدية: تفتح أولاً صفحة تجهيز الخطة (من التقويم والزيارات) للمراجعة والنسخ، ثم النموذج
+    .map(([s, t, u]) => { const isForm = /forms\.(cloud\.microsoft|office\.com)/.test(u) && /قبلية|بعدية/.test(t);
+      const r = isForm ? `plan-form?part=${/قبلية/.test(t) ? "pre" : "post"}&u=${encodeURIComponent(u)}` : u;
+      return [r, s && s !== "الكل" && !t.includes(s) ? `${t} (${s})` : t, "doc", isForm ? "مراجعة الخطة من التقويم ونسخها ثم فتح النموذج" : s && s !== "الكل" ? `للمرحلة: ${s}` : "لكل المراحل"]; });
 }
 // صفحات القسم مع روابط الخطط (قبل «قائمة المهام» في قسم الخطط)
 export function itemsOf(s) {
