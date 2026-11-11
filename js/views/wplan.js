@@ -151,10 +151,11 @@ export default async function (main, { params }) {
         <details class="wp-prev"><summary>🔒 قبليتك لهذا الأسبوع (مقفلة للاطلاع)</summary><div class="wp-ro">${days(cur).map((dt, i) => `<div><b>${WORK_DAYS[i]}</b>: ${(recs.cur.data.pre[i] || []).filter((x) => placeName(x)).map((x) => esc(itemText(x))).join(" + ") || '<span class="hint">—</span>'}</div>`).join("")}</div></details>
         ${dayRows("cur", "post", cur)}</section>
       <section class="panel"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h2 style="margin:0">القبلية — الأسبوع القادم (${fmtDate(next)} – ${fmtDate(addDays(next, 4))})</h2>${sent(recs.next)}</div>
+        <p class="hint" style="margin:0 0 8px">تُعبأ الأيام الفارغة من التقويم (الاجتماعات والفعاليات والورش) والتكاليف، ثم عدّل ما يلزم. <button class="btn small" id="wp-cal">تعبئة من التقويم</button></p>
         ${dayRows("next", "pre", next)}</section>
       <div class="row" style="gap:8px;margin:12px 0"><button class="btn primary" id="wp-send">إرسال للمسؤول (البعدية والقبلية)</button><span class="hint">يمكنك التعديل وإعادة الإرسال حتى الأربعاء 8 مساءً.</span></div>`;
     bind();
-    if (locked) { $$(".wp-day select, .wp-day input, .wp-day button, #wp-refill, #wp-copy", main).forEach((x) => (x.disabled = true)); const sb = $("#wp-send", main); if (recs.cur.data.post_sent_at && recs.next.data.submitted) sb.disabled = true; else sb.textContent = "إرسال (متأخر)"; }
+    if (locked) { $$(".wp-day select, .wp-day input, .wp-day button, #wp-refill, #wp-copy, #wp-cal", main).forEach((x) => (x.disabled = true)); const sb = $("#wp-send", main); if (recs.cur.data.post_sent_at && recs.next.data.submitted) sb.disabled = true; else sb.textContent = "إرسال (متأخر)"; }
   };
   const bind = () => {
     $$(".wp-day", main).forEach((dEl) => {
@@ -173,6 +174,19 @@ export default async function (main, { params }) {
           if (inp.tagName !== "INPUT") paint(); })); });
     });
     $("#wp-copy", main).onclick = async () => { for (let i = 0; i < 5; i++) recs.cur.data.post[i] = copy(recs.cur.data.pre[i]); await saveNow("cur"); paint(); toast("نُسخت القبلية إلى البعدية"); };
+    // القبلية للأسبوع القادم من التقويم: التواريخ الهامة (اجتماع، ورشة، دورة…) والتكاليف، في الأيام الفارغة فقط
+    $("#wp-cal", main).onclick = async () => {
+      const tk = await visitsOf(next), evs = (await api.list({ kind: "important_date" }).catch(() => [])).filter((e) => e.record_date);
+      let n = 0;
+      for (let i = 0; i < 5; i++) {
+        const dt = addDays(next, i), day = (recs.next.data.pre[i] ||= []); if (day.length) continue;
+        for (const e of evs.filter((e) => e.record_date <= dt && (e.data?.end_date || e.record_date) >= dt)) {
+          const t = e.title + (e.data?.place ? ` - ${e.data.place}` : ""); day.push({ place: "أخرى", place_name: t, text: t, other: true, auto: true }); n++; }
+        for (const it of (tk[i] || []).filter((x) => x.place === "تكليف")) { day.push(it); n++; }
+      }
+      if (!n) return toast("لا توجد مواعيد في التقويم للأيام الفارغة من الأسبوع القادم");
+      await saveNow("next"); paint(); toast(`أُضيف ${n} من التقويم — راجعها وعدّل`);
+    };
     $("#wp-refill", main).onclick = async () => { const a = await visitsOf(cur); for (let i = 0; i < 5; i++) for (const it of a[i]) if (!(recs.cur.data.post[i] ||= []).some((x) => x.place === it.place)) recs.cur.data.post[i].push(it); await saveNow("cur"); paint(); toast("أُضيفت الزيارات"); };
     $("#wp-send", main).onclick = async () => {
       if (!G().stage) return toast("حدّد مرحلتك في البيانات الرئيسية أولاً (ليصل للمسؤول عن مرحلتك)", "error");
