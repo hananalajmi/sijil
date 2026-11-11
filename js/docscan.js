@@ -84,7 +84,21 @@ export function whiten(c) {
   const big = document.createElement("canvas"); big.width = W; big.height = H; const gg = big.getContext("2d", { willReadFrequently: true });
   gg.imageSmoothingQuality = "high"; gg.drawImage(b, 0, 0, W, H);
   const P = g.getImageData(0, 0, W, H), d = P.data, B = gg.getImageData(0, 0, W, H).data;
-  for (let i = 0; i < d.length; i += 4) for (let ch = 0; ch < 3; ch++) { const v = (d[i + ch] / Math.max(40, B[i + ch])) * 255; d[i + ch] = v > 235 ? 255 : v < 30 ? v * 0.8 : v; }
+  // 1) قسمة على الخلفية (إزالة الظل)، ثم ورقة بيضاء صافية: ما فوق 205 أبيض، والحبر يُشدّ ليصبح أوضح
+  const WH = 205, LO = 70, n = W * H, white = new Uint8Array(n);
+  for (let i = 0, p = 0; i < d.length; i += 4, p++) {
+    const v = [0, 1, 2].map((ch) => (d[i + ch] / Math.max(40, B[i + ch])) * 255), L = 0.3 * v[0] + 0.59 * v[1] + 0.11 * v[2];
+    if (L > WH) { d[i] = d[i + 1] = d[i + 2] = 255; white[p] = 1; continue; }
+    for (let ch = 0; ch < 3; ch++) d[i + ch] = Math.max(0, Math.min(255, ((v[ch] - LO) / (WH - LO)) * 255));
+  }
+  // 2) إزالة البقع والنقاط الصغيرة (حبيبات التصوير والنسخ): نقطة داكنة أغلب جيرانها أبيض تصير بيضاء
+  for (let pass = 0; pass < 2; pass++) {
+    const kill = [];
+    for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) { const p = y * W + x; if (white[p]) continue;
+      let w = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if ((dy || dx) && white[p + dy * W + dx]) w++;
+      if (w >= 7) kill.push(p); }
+    for (const p of kill) { white[p] = 1; const i = p * 4; d[i] = d[i + 1] = d[i + 2] = 255; }
+  }
   g.putImageData(P, 0, 0);
 }
 
