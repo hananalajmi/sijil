@@ -21,7 +21,9 @@
 
 /* التوقيعات */
 .sigs { display: flex; justify-content: space-between; gap: 6mm; }
-.sig { flex: 1 1 0; text-align: center; min-width: 0; }
+.sig { flex: 1 1 0; text-align: center; min-width: 0; display: flex; flex-direction: column; }
+/* التواقيع في صف واحد: صور التوقيع تنزل لأسفل الخانة فتتحاذى مع توقيع الموجه (تحت الختم) */
+.sigs > .sig > .sig-marks.stacked { margin-top: auto; }
 .sig-title { font-weight: 700; }
 .sig-name { margin-top: 2mm; }
 /* التوقيع والختم والتاريخ بأحجام موحّدة ومتناسقة في كل النماذج */
