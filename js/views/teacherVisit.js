@@ -63,13 +63,13 @@ export default async function (main, { id, params }) {
         ${field({ label: "المكان", key: "place", type: "select", options: opts("places"), value: d.place, remember: "places" })}
         ${field({ label: "عنوان الدرس", key: "lesson", value: d.lesson, wide: true })}
       </div><div class="sv-link" id="svlink" role="status"></div></section>
-      <p class="hint">لكل بند ثلاثة مستويات جاهزة؛ اختاري منها أو اكتبي ملاحظة. «تعديل الخيارات» يضيف أو يغيّر خيارات البند لك وحدك. يمكن ترك أي بند فارغاً، ولن يظهر في الطباعة.</p>
+      <p class="hint">لكل بند ثلاثة مستويات جاهزة؛ اختاري منها، ويظهر النص تحتها لتعدّلي عليه أو تضيفي، أو اكتبي ملاحظة. «تعديل الخيارات» يضيف أو يغيّر خيارات البند لك وحدك. يمكن ترك أي بند فارغاً، ولن يظهر في الطباعة.</p>
       <div class="tv-sections">${TEACHER_VISIT.sections.map((s) => `<div class="tv-sec" data-s="${s.key}"><h3>${esc(s.screenTitle)}<small data-count></small></h3>
         ${s.items.map((label, i) => { const v = d.items[s.key]?.[i] || ""; const list = opts(tvOptionKey(s.key, i)); const isList = !v || list.includes(v);
           return `<div class="tv-item ${v ? "filled" : ""}" data-i="${i}"><span class="n">${i + 1}</span><span class="lbl">${esc(label)}</span><div class="ctl">
             <div class="row" style="flex-wrap:nowrap"><select aria-label="${esc(label)}" style="flex:1;min-width:0"><option value="">—</option>${list.map((o, k) => `<option value="${esc(o)}" ${o === v ? "selected" : ""}>${["●●●", "●●○", "●○○"][k] ? ["●●●", "●●○", "●○○"][k] + " " : ""}${esc(o)}</option>`).join("")}<option value="__add">+ إضافة خيار جديد للقائمة…</option><option value="__text" ${!isList ? "selected" : ""}>✎ كتابة ملاحظة…</option></select>
             <button type="button" class="btn small ghost" data-editopts title="تعديل خيارات هذا البند">تعديل الخيارات</button></div>
-            <textarea aria-label="ملاحظة: ${esc(label)}" ${isList ? "hidden" : ""}>${isList ? "" : esc(v)}</textarea></div></div>`; }).join("")}</div>`).join("")}</div>
+            <textarea aria-label="نص البند: ${esc(label)}" placeholder="عدّلي النص أو أضيفي عليه" ${v ? "" : "hidden"}>${esc(v)}</textarea></div></div>`; }).join("")}</div>`).join("")}</div>
       <section class="panel" style="margin-top:14px"><h2>التوصيات</h2>${field({ label: "كل توصية في سطر", key: "recommendations", type: "textarea", value: d.recommendations, wide: true, rows: 5 })}</section>
       <section class="panel"><h2>توثيق الزيارة</h2><p class="hint">حتى 3 صور، وتُطبع أسفل التوصيات.</p><div id="photos"></div></section>
       <section class="panel"><h2>التوقيعات على الشاشة</h2><div class="row" id="sigs"></div></section>
@@ -105,9 +105,11 @@ export default async function (main, { id, params }) {
         const sel = it.querySelector("select"), ta = it.querySelector("textarea");
         const set = (v) => { ed.change((x) => { x.data.items[s] ||= []; x.data.items[s][i] = v; }); it.classList.toggle("filled", !!v.trim()); counts(); };
         sel.onchange = async () => {
-          if (sel.value === "__add") { const v = await promptNewOption(sel, tvOptionKey(s, i)); ta.hidden = true; ta.value = ""; set(v || ""); return; }
-          if (sel.value === "__text") { ta.hidden = false; ta.focus(); set(ta.value); } else { ta.hidden = true; ta.value = ""; set(sel.value); } };
-        ta.oninput = () => set(ta.value);
+          // النص المختار يظهر في خانة قابلة للتعديل والإضافة (للزيارة هذه فقط، ولا يغيّر القائمة)
+          if (sel.value === "__add") { const v = await promptNewOption(sel, tvOptionKey(s, i)); ta.hidden = !v; ta.value = v || ""; set(v || ""); return; }
+          if (sel.value === "__text") { ta.hidden = false; ta.focus(); set(ta.value); return; }
+          ta.value = sel.value; ta.hidden = !sel.value; set(sel.value); };
+        ta.oninput = () => { const list = opts(tvOptionKey(s, i)); if (!list.includes(ta.value) && sel.value !== "__text") sel.value = "__text"; set(ta.value); };
         it.querySelector("[data-editopts]").onclick = async () => {
           const key = tvOptionKey(s, i);
           const items = await modal({ title: "خيارات: " + TEACHER_VISIT.sections.find((x) => x.key === s).items[i],
@@ -118,7 +120,7 @@ export default async function (main, { id, params }) {
           await setMyOptions(key, list);
           const cur = ed.rec.data.items?.[s]?.[i] || "";
           sel.innerHTML = `<option value="">—</option>${list.map((o, k) => `<option value="${esc(o)}" ${o === cur ? "selected" : ""}>${["●●●", "●●○", "●○○"][k] ? ["●●●", "●●○", "●○○"][k] + " " : ""}${esc(o)}</option>`).join("")}<option value="__add">+ إضافة خيار جديد للقائمة…</option><option value="__text">✎ كتابة ملاحظة…</option>`;
-          if (cur && !list.includes(cur)) { sel.value = "__text"; ta.hidden = false; ta.value = cur; }
+          if (cur && !list.includes(cur)) sel.value = "__text";
           toast("حُفظت خيارات البند");
         };
       });
