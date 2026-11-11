@@ -14,18 +14,19 @@ export default async function (main, { params }) {
   const rec = await recFor(ws, false);
   const fromPlan = Object.fromEntries(WORK_DAYS.map((_, i) => [i, lines(rec?.data?.[part]?.[i])]));
   // من التقويم والزيارات (للأيام الفارغة في البعدية)
+  // الأيام الفارغة: البعدية من الزيارات والتكاليف والتقويم، والقبلية (الأسبوع القادم) من التقويم والتكاليف
   let extra = {};
-  if (part === "post") {
+  {
     const v = await visitsOf(ws);
     const evs = (await api.list({ kind: "important_date" }).catch(() => [])).filter((e) => e.record_date);
     extra = Object.fromEntries(WORK_DAYS.map((_, i) => { const dt = addDays(ws, i);
       const ev = evs.filter((e) => e.record_date <= dt && (e.data?.end_date || e.record_date) >= dt).map((e) => e.title + (e.data?.place ? ` - ${e.data.place}` : ""));
-      return [i, [...lines(v[i]), ...ev]]; }));
+      return [i, [...lines(part === "post" ? v[i] : (v[i] || []).filter((x) => x.place === "تكليف")), ...ev]]; }));
   }
   const dayText = (i) => [...new Set([...(fromPlan[i].length ? fromPlan[i] : extra[i] || [])])].join(" + ");
   main.innerHTML = `<div class="container"><div class="page-head"><div><a class="hub-back" href="#/hub/plans">الخطط</a>
       <h1>${part === "post" ? "الخطة البعدية" : "الخطة القبلية"} — قبل الإرسال في Forms</h1>
-      <div class="sub">أسبوع ${fmtDate(ws)} – ${fmtDate(addDays(ws, 4))}. ${part === "post" ? "من بعديتك في «خطتي الأسبوعية»، والأيام الفارغة من التقويم والزيارات المسجلة." : "من قبليتك للأسبوع القادم في «خطتي الأسبوعية»."} راجعي وعدّلي، ثم انسخي كل يوم إلى خانته في النموذج.</div></div>
+      <div class="sub">أسبوع ${fmtDate(ws)} – ${fmtDate(addDays(ws, 4))}. ${part === "post" ? "من بعديتك في «خطتي الأسبوعية»، والأيام الفارغة من التقويم والزيارات المسجلة." : "للأسبوع القادم: من قبليتك في «خطتي الأسبوعية»، والأيام الفارغة من التقويم والتكاليف."} راجعي وعدّلي، ثم انسخي كل يوم إلى خانته في النموذج.</div></div>
       <div class="row" style="gap:8px;flex-wrap:wrap"><label class="row" style="gap:6px">الأسبوع <input type="date" id="pf-wk" value="${base}"></label>
         <button class="btn" id="pf-all">نسخ الكل</button>${url ? `<a class="btn primary" href="${esc(url)}" target="_blank" rel="noopener">فتح النموذج ↗</a>` : ""}</div></div>
     <section class="panel"><div class="form">${WORK_DAYS.map((d, i) => `<div class="f wide"><label for="pf-${i}">${d} ${fmtDate(addDays(ws, i))}</label>
