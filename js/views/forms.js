@@ -70,6 +70,7 @@ export default async function (main, { id, params }) {
         ${field({ label: "وذلك للقيام بـ (المهمة)", key: "task", type: "textarea", value: d.task, wide: true, rows: 3, required: true, placeholder: "مثال: حضور ورشة عمل بعنوان الاتزان (إنماء مهني مبرمج) في ثانوية الصباحية" })}
         ${field({ label: "خلال المدة من", key: "from", type: "date", value: d.from, required: true })}
         ${field({ label: "حتى", key: "to", type: "date", value: d.to })}
+        <div class="f wide"><label>نوع التكليف</label><div class="tk-kinds" style="display:flex;flex-wrap:wrap;gap:6px 18px">${T.kindOptions.map((k) => `<label style="display:flex;gap:6px;align-items:center;font-weight:500;width:auto;white-space:nowrap;margin:0"><input type="checkbox" style="width:auto" data-tk-kind="${esc(k)}" ${(d.kinds || []).includes(k) ? "checked" : ""}> ${esc(k)}</label>`).join("")}</div><p class="hint">تظهر الخيارات في النموذج المطبوع، والمحدد عليه علامة ✓</p></div>
         ${field({ label: "يتعذر عليهم الحضور إلى مقر العمل للتوقيع عند", key: "sign_at", type: "select", options: T.signAtOptions, value: d.sign_at, remember: "takleef_sign_at" })}
         ${field({ label: "المسمى في التوقيع (اتركيه فارغاً للافتراضي)", key: "manager", type: "textarea", rows: 2, value: d.manager || "", placeholder: `${T.manager} في منطقة … التعليمية`, hint: "مثال: مدير الإدارة ثم سطر (التابع لها الموظف)" })}
       </div></section>
@@ -98,6 +99,8 @@ export default async function (main, { id, params }) {
         });
         if (k === "date") { const h = $("[data-key='hijri']", body); if (h) h.value = ed.rec.data.hijri; }
       });
+
+      $$("[data-tk-kind]", body).forEach((c) => { c.onchange = () => { const ks = $$("[data-tk-kind]:checked", body).map((x) => x.dataset.tkKind); ed.change((x) => { x.data.kinds = ks; }, { immediate: true }); }; });
 
       // ---- المكلَّفون
       const paintPeople = () => {

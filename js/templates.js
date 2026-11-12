@@ -378,6 +378,7 @@ export const FORMS = {
     addressee: "مدير الشئون التعليمية",
     addresseeNote: "(الجهة المشرفة على الدوام)",
     signAtOptions: ["الحضور", "الانصراف", "الحضور والانصراف"],
+    kindOptions: ["بداية الدوام", "أثناء الدوام", "نهاية الدوام"],
     manager: "مراقب التوجيه الفني للعلوم", managerNote: "",
     minLines: 7,
   },

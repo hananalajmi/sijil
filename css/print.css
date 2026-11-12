@@ -554,3 +554,4 @@
 .t-wf .wf-day { border-bottom: .6pt solid #000; padding: 1.1mm 1.6mm; min-height: 6.5mm; }
 .t-wf .wf-day:last-child { border-bottom: 0; }
 .t-wf .red { color: #d00000; font-weight: 800; }
+.fm-kinds .fm-kind { display: inline-block; margin-inline-start: 7mm; white-space: nowrap; }
