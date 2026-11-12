@@ -15,7 +15,7 @@ export const KIND_ROUTE = {
   exam_followup: "exams", weekly_report: "weekly", monthly_achievements: "monthly-ach-old", shared_achievements: "monthly-ach", group_sheet: "group-sheet", form: "forms", monthly_plan: "monthly", important_date: "dates", event_report: "events", note: "print", guide_data: "guide",
 };
 // سجلات يمكن نسخها (نفس الكلام لزيارة جديدة)
-export const COPYABLE = new Set(["school_visit", "teacher_visit", "event_report"]);
+export const COPYABLE = new Set(["school_visit", "teacher_visit", "event_report", "form"]);
 export const PRINTABLE = new Set(["teacher_visit", "school_visit", "event_report", "weekly_report", "monthly_achievements", "monthly_plan", "shared_achievements", "form"]);
 
 // النماذج التي لها نسخة فارغة (للطباعة أو الإرسال)

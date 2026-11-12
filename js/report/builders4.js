@@ -1,12 +1,13 @@
 // النماذج الرسمية للتوقيع — «تكليف بمهمة خارج مقر العمل» (نموذج رقم 4، صفحة 14 من القرار 41/2006)
 // يُطبع مُعبّأً من بيانات النموذج، أو فارغاً (blank) للتعبئة باليد.
-import { esc, fmtDateSlash } from "../ui.js";
+import { esc, fmtDateSlash, dayName } from "../ui.js";
 import { FORMS, FIRST_SUPERVISOR } from "../templates.js";
 import { logo, sigSlotHtml, headLogos } from "./builders.js";
 
 const dots = (w = 38) => `<span class="dots" style="min-width:${w}mm"></span>`;
 const v = (x, w) => (x ? `<b class="fm-v">${esc(x)}</b>` : dots(w));
 
+const ymdSlash = (iso) => { const [y, m, dd] = String(iso || "").split("-"); return y ? `${y}/${Number(m)}/${Number(dd)}` : ""; };
 export async function formTakleef(ctx) {
   const T = FORMS.takleef, d = ctx.rec.data || {}, blank = !!d.blank;
   const region = ctx.guide?.region || "الأحمدي";
@@ -17,8 +18,10 @@ export async function formTakleef(ctx) {
       ${H.c ? `<div class="fm-c">${H.c}</div>` : ""}
       <div class="fm-no">${H.l ? `<div class="fm-l">${H.l}</div>` : ""}<span>${esc(T.formNo)}</span><span>${esc(T.pageNo)}</span></div></div>
     <h1 class="fm-title">${esc(T.label)}</h1>
-    <div class="fm-line"><b>التاريخ :</b> ${blank ? dots(45) : v(fmtDateSlash(d.date || ctx.rec.record_date), 45)}</div>
-    <div class="fm-line"><b>الموافق :</b> ${blank ? dots(45) : v(d.hijri, 45)}</div>
+    ${d.date_style === "day" ? `<div class="fm-line"><b>اليوم :</b> ${blank ? dots(45) : v(dayName(d.date || ctx.rec.record_date), 45)}</div>
+    <div class="fm-line"><b>الموافق :</b> ${blank ? dots(45) : v(ymdSlash(d.date || ctx.rec.record_date), 45)}</div>`
+    : `<div class="fm-line"><b>التاريخ :</b> ${blank ? dots(45) : v(fmtDateSlash(d.date || ctx.rec.record_date), 45)}</div>
+    <div class="fm-line"><b>الموافق :</b> ${blank ? dots(45) : v(d.hijri, 45)}</div>`}
     <div class="fm-line"><b>السيد المحترم / ${blank ? esc(T.addressee) : esc(d.addressee || T.addressee)}</b> ${esc(T.addresseeNote)}</div>
     <div class="fm-line"><b>بعد التحية ،،،</b></div>
     <div class="fm-line fm-para">تقرر تكليف السيد / السادة التالية أسماؤهم بأداء مهمة خارج مقر العمل وذلك للقيام بـ
@@ -28,7 +31,7 @@ export async function formTakleef(ctx) {
   const rows = people.map((p, i) => `<tr><td class="c-n">${i + 1}</td><td class="fm-name">${esc(p.name)}</td><td class="fm-cid" dir="ltr">${esc(p.civil_id)}</td></tr>`);
   for (let i = rows.length; i < T.minLines; i++) rows.push(`<tr><td class="c-n">${i + 1}</td><td class="fm-name">&nbsp;</td><td class="fm-cid"></td></tr>`);
   const tail = `<div class="fm-line fm-after">رجاء العلم حيث يتعذر عليهم الحضور الى مقر العمل للتوقيع عند ( ${!blank && d.sign_at ? `<b class="fm-v">${esc(d.sign_at)}</b>` : dots(40)} )</div>
-    <div class="fm-sign"><div><b>${esc(T.manager)} في منطقة ${esc(region)} التعليمية</b>${FIRST_SUPERVISOR.name ? `<div><b>أ. ${esc(FIRST_SUPERVISOR.name)}</b></div>` : ""}<div class="fm-sign-space"></div></div></div>`;
+    <div class="fm-sign"><div>${String(d.manager || "").trim() ? `<b>${esc(d.manager).replace(/\n/g, "<br>")}</b>` : `<b>${esc(T.manager)} في منطقة ${esc(region)} التعليمية</b>${FIRST_SUPERVISOR.name ? `<div><b>أ. ${esc(FIRST_SUPERVISOR.name)}</b></div>` : ""}`}<div class="fm-sign-space"></div></div></div>`;
   return { orientation: "portrait", cls: "t-fm", header: "", identity: "", footer: "",
     blocks: [{ html: head }, { table: { cls: "fm-people", colgroup: `<colgroup><col style="width:12mm"><col><col style="width:52mm"></colgroup>`, thead: `<tr><th class="c-n">م</th><th>الاسم</th><th>الرقم المدني</th></tr>`, rows } }, { html: tail }] };
 }

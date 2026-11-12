@@ -63,13 +63,15 @@ export default async function (main, { id, params }) {
       <div class="steps-bar">${["البيانات", "المكلَّفون", "التوقيع", "الإرسال"].map((s, i) => `<span class="${i <= stepOf(d) ? "on" : ""}">${i + 1}. ${s}</span>`).join("")}</div>
       <section class="panel"><h2>1. بيانات التكليف</h2><div class="form">
         ${field({ label: "التاريخ", key: "date", type: "date", value: d.date || r.record_date, required: true })}
+        ${field({ label: "صيغة التاريخ في النموذج", key: "date_style", type: "select", options: ["التاريخ والهجري", "اليوم والموافق"], value: d.date_style === "day" ? "اليوم والموافق" : "التاريخ والهجري", custom: false })}
         ${field({ label: "الموافق (هجري)", key: "hijri", value: d.hijri || hijri(d.date || r.record_date), hint: "يُحسب تلقائياً من التاريخ، ويمكن تعديله" })}
         ${field({ label: "العام الدراسي", key: "academic_year", type: "select", options: years, value: r.academic_year, custom: false, hint: "من العام المختار في أعلى الصفحة" })}
         ${field({ label: "إلى السيد المحترم /", key: "addressee", value: d.addressee ?? T.addressee, hint: T.addresseeNote })}
         ${field({ label: "وذلك للقيام بـ (المهمة)", key: "task", type: "textarea", value: d.task, wide: true, rows: 3, required: true, placeholder: "مثال: حضور ورشة عمل بعنوان الاتزان (إنماء مهني مبرمج) في ثانوية الصباحية" })}
         ${field({ label: "خلال المدة من", key: "from", type: "date", value: d.from, required: true })}
         ${field({ label: "حتى", key: "to", type: "date", value: d.to })}
-        ${field({ label: "يتعذر عليهم الحضور إلى مقر العمل للتوقيع عند", key: "sign_at", type: "select", options: T.signAtOptions, value: d.sign_at, custom: false })}
+        ${field({ label: "يتعذر عليهم الحضور إلى مقر العمل للتوقيع عند", key: "sign_at", type: "select", options: T.signAtOptions, value: d.sign_at, remember: "takleef_sign_at" })}
+        ${field({ label: "المسمى في التوقيع (اتركيه فارغاً للافتراضي)", key: "manager", type: "textarea", rows: 2, value: d.manager || "", placeholder: `${T.manager} في منطقة … التعليمية`, hint: "مثال: مدير الإدارة ثم سطر (التابع لها الموظف)" })}
       </div></section>
 
       <section class="panel"><div class="page-head" style="margin-bottom:6px"><h2>2. المكلَّفون</h2><button class="btn" id="addp">+ اسم</button></div>
@@ -88,6 +90,7 @@ export default async function (main, { id, params }) {
       bindFields(body, (k, v) => {
         ed.change((x) => {
           if (k === "academic_year") x.academic_year = v || state.year;
+          else if (k === "date_style") x.data.date_style = v === "اليوم والموافق" ? "day" : "";
           else x.data[k] = v;
           if (k === "date") { x.record_date = v || null; x.data.hijri = hijri(v); }
           x.title = T.label + (x.data.task ? " — " + x.data.task.slice(0, 60) : "");
