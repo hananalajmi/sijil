@@ -555,3 +555,4 @@
 .t-wf .wf-day:last-child { border-bottom: 0; }
 .t-wf .red { color: #d00000; font-weight: 800; }
 .fm-kinds .fm-kind { display: inline-block; margin-inline-start: 7mm; white-space: nowrap; }
+.fm-kinds .fm-box { display: inline-block; width: 4mm; height: 4mm; border: .35mm solid #000; border-radius: .6mm; vertical-align: -0.6mm; margin-inline-end: 1.5mm; }
