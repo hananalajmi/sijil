@@ -70,7 +70,6 @@ export default async function (main, { id, params }) {
         ${field({ label: "وذلك للقيام بـ (المهمة)", key: "task", type: "textarea", value: d.task, wide: true, rows: 3, required: true, placeholder: "مثال: حضور ورشة عمل بعنوان الاتزان (إنماء مهني مبرمج) في ثانوية الصباحية" })}
         ${field({ label: "خلال المدة من", key: "from", type: "date", value: d.from, required: true })}
         ${field({ label: "حتى", key: "to", type: "date", value: d.to })}
-        ${field({ label: "يتعذر عليهم الحضور إلى مقر العمل للتوقيع عند", key: "sign_at", type: "select", options: T.signAtOptions, value: d.sign_at, remember: "takleef_sign_at" })}
         ${field({ label: "المسمى في التوقيع (اتركيه فارغاً للافتراضي)", key: "manager", type: "textarea", rows: 2, value: d.manager || "", placeholder: `${T.manager} في منطقة … التعليمية`, hint: "مثال: مدير الإدارة ثم سطر (التابع لها الموظف)" })}
       </div></section>
 
