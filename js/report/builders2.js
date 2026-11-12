@@ -60,7 +60,7 @@ export async function weeklyReport(ctx) {
   if (note) blocks.push({ group: { squeeze: true, cls: "ach-txt ach-note trail", head: H("خامساً", "الملاحظات"), items: nl(note).map((x) => `<div class="ln">${x}</div>`) } });
   const sigs = await finalSigs(ctx, "الموجه الفني");
   // التوقيع والختم حاشية أسفل الصفحة: في كل صفحة، أو في آخر صفحة فقط (لا تنتقل وحدها لصفحة جديدة)
-  return { orientation: "portrait", cls: "t-ach", covers: [cover, toc], header: running(ctx, WEEKLY_REPORT.title, period), identity: "", footer: sigs, noPageNum: true, footerLastOnly: ctx.print?.sigsEveryPage === false, blocks };
+  return { orientation: "portrait", cls: "t-ach", covers: [cover, toc], header: running(ctx, WEEKLY_REPORT.title, period), identity: "", footer: sigs, footerLastOnly: ctx.print?.sigsEveryPage === false, blocks };
 }
 
 /* ============================== الإنجازات الشهرية ============================== */

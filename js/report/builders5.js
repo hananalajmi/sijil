@@ -23,7 +23,7 @@ export async function weeklyMeeting(ctx) {
     { html: `<p class="wm-line"><b>الحضور</b> : ${(d.attendees || []).map(esc).join(" – ")}</p>` },
     { html: `<p class="wm-line"><b>الغياب</b> : ${absent}</p>` },
     { html: `<p class="wm-line"><b>ونوقشت فيه البنود</b> :</p>` },
-    ...items.map((t, i) => ({ html: `<p class="wm-item">${i + 1}– ${esc(t)}</p>` })),
+    ...items.map((t, i) => ({ html: `<p class="wm-item">${esc(t)}</p>` })),
   ];
   const footer = `<div class="wm-sigs"><div><div class="wm-st">مقرر التقرير الأسبوعي</div><div class="wm-sn">${d.reporter ? "أ. " + esc(d.reporter) : ""}</div>${safeImg(d.rep_stamp) || safeImg(d.rep_sig) ? `<div class="wm-mk">${safeImg(d.rep_stamp) ? `<img class="wm-stamp" src="${safeImg(d.rep_stamp)}" alt="">` : ""}${safeImg(d.rep_sig) ? `<img class="wm-sig" src="${safeImg(d.rep_sig)}" alt="">` : ""}</div>` : ""}</div>
     <div><div class="wm-st">الموجه الفني الأول للعلوم</div><div class="wm-sn">${d.first_name ? "أ. " + esc(d.first_name) : ""}</div></div></div>`;

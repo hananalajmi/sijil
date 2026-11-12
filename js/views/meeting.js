@@ -61,7 +61,7 @@ export default async function (main, { id, params }) {
           <select id="mt-reason" aria-label="سبب الغياب">${ABSENCE_REASONS.map((r) => `<option>${esc(r)}</option>`).join("")}</select><button class="btn small" type="button" id="mt-abs-add">إضافة</button></div>
         <div id="mt-abs-list" style="margin-top:8px">${(d.absent || []).map((a, i) => `<span class="pill" style="display:inline-flex;gap:6px;align-items:center;margin:3px">${esc(a.name)} (${esc(a.reason || "")}) <button type="button" class="btn small ghost" data-del-abs="${i}" aria-label="حذف ${esc(a.name)}" style="padding:0 6px">×</button></span>`).join("") || '<span class="hint">لا يوجد غياب.</span>'}</div></section>
       <section class="panel"><h2>البنود التي نوقشت</h2>
-        <div class="f"><label for="mt-items">كل بند في سطر (تُرقّم تلقائياً)</label><textarea id="mt-items" rows="9">${esc((d.items || []).join("\n"))}</textarea></div></section>
+        <div class="f"><label for="mt-items">كل بند في سطر (اكتبي الرقم بنفسك إذا تبينه، والفرعيات بدون رقم)</label><textarea id="mt-items" rows="9">${esc((d.items || []).join("\n"))}</textarea></div></section>
       <section class="panel"><h2>التوقيع</h2><div class="form">
         <div class="f"><label for="mt-rep">مقرر التقرير الأسبوعي (الموجه المسؤول عن التسليم)</label>${nameSel('id="mt-rep"', d.reporter, "مقرر التقرير")}</div>
         ${field({ label: "الموجه الفني الأول للعلوم", key: "first_name", value: d.first_name })}</div>
@@ -90,7 +90,7 @@ export default async function (main, { id, params }) {
     $("#mt-abs", body).onchange = async (e) => { if (e.target.value === "__add") { const v = await addName(); e.target.value = ""; if (v) { e.target.add(new Option(v, v), e.target.options[e.target.options.length - 1]); e.target.value = v; } } };
     $$("[data-del-att]", body).forEach((b) => (b.onclick = () => { const i = Number(b.dataset.delAtt); ed.change((x) => { x.data.attendees = (x.data.attendees || []).filter((_, j) => j !== i); }); ed.redraw(); }));
     $$("[data-del-abs]", body).forEach((b) => (b.onclick = () => { const i = Number(b.dataset.delAbs); ed.change((x) => { x.data.absent = (x.data.absent || []).filter((_, j) => j !== i); }); ed.redraw(); }));
-    $("#mt-items", body).addEventListener("input", (e) => ed.change((x) => { x.data.items = e.target.value.split("\n").map((s) => s.replace(/^\s*\d+\s*[-–.)]\s*/, "").trim()).filter(Boolean); }));
+    $("#mt-items", body).addEventListener("input", (e) => ed.change((x) => { x.data.items = e.target.value.split("\n").map((s) => s.trim()).filter(Boolean); }));
     // توقيع المقرر وختمه: يُحفظان داخل الملف المشترك (يراهما الجميع عند الطباعة)
     const toData = (blob) => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => { const im = new Image(); im.onerror = rej;
       im.onload = () => { const k = Math.min(1, 700 / Math.max(im.width, im.height)), cv = document.createElement("canvas"); cv.width = Math.round(im.width * k); cv.height = Math.round(im.height * k); cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height); res(cv.toDataURL("image/png")); };
