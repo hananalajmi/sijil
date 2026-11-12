@@ -194,7 +194,7 @@ export async function paginate(rep, container) {
   const trailOnly = (p) => { const k = [...p.querySelectorAll(".pg-body > .blk")]; return k.length > 0 && k.every((x) => x.classList.contains("trail")); };
   const main_ = body_.filter((p) => !trailOnly(p)), lastMain = main_[main_.length - 1];
   body_.forEach((p) => { if (rep.footerLastOnly ? p !== lastMain : trailOnly(p)) p.querySelector(".pg-footer").style.visibility = "hidden"; });
-  if (pages.length > 1) pages.forEach((p, i) => (p.querySelector(".pg-num").textContent = `صفحة ${i + 1} من ${pages.length}`));
+  if (pages.length > 1 && !rep.noPageNum) pages.forEach((p, i) => (p.querySelector(".pg-num").textContent = `صفحة ${i + 1} من ${pages.length}`));
   return pages;
 }
 
