@@ -3,7 +3,7 @@
 //          3) طباعة أو Word للتوقيع  4) رفع النسخة الموقّعة والاحتفاظ بها  5) إرسالها
 // العام الدراسي يُؤخذ من العام المختار في أعلى الصفحة (ويمكن تغييره في النموذج).
 import { api } from "../api.js";
-import { state } from "../store.js";
+import { state, G, setGuideData } from "../store.js";
 import { esc, $, $$, today, fmtDate, toast, modal, confirmBox } from "../ui.js";
 import { field, bindFields, recordPage, go } from "../kit.js";
 import { listView } from "./_list.js";
@@ -74,7 +74,7 @@ export default async function (main, { id, params }) {
         ${field({ label: "المسمى في التوقيع (اتركيه فارغاً للافتراضي)", key: "manager", type: "textarea", rows: 2, value: d.manager || "", placeholder: `${T.manager} في منطقة … التعليمية`, hint: "مثال: مدير الإدارة ثم سطر (التابع لها الموظف)" })}
       </div></section>
 
-      <section class="panel"><div class="page-head" style="margin-bottom:6px"><h2>2. المكلَّفون</h2><button class="btn" id="addp">+ اسم</button></div>
+      <section class="panel"><div class="page-head" style="margin-bottom:6px"><h2>2. المكلَّفون</h2><div class="toolbar" style="margin:0"><button class="btn primary" id="fromfix">من القائمة الثابتة</button><button class="btn" id="addp">+ اسم</button><button class="btn ghost" id="savefix">حفظ كقائمة ثابتة</button></div></div>
         <p class="hint" style="margin-top:0">الرقم المدني 12 رقماً: تتلوّن الخانة بالأحمر إذا كان ناقصاً، وبالأخضر إذا اكتمل.</p>
         <div class="tbl-wrap"><table class="data people-t"><thead><tr><th class="c-n">م</th><th>الاسم</th><th>الرقم المدني</th><th></th></tr></thead><tbody id="ppl"></tbody></table></div>
         <div class="link-box" id="linkbox"></div></section>
@@ -122,6 +122,52 @@ export default async function (main, { id, params }) {
       };
       $("#addp", body).onclick = () => { const nid = rid(); ed.change((x) => { x.data.people = [...(x.data.people || []), { id: nid, name: "", civil_id: "" }]; }, { immediate: true }); paintPeople(); $(`tr[data-p="${nid}"] input`, body)?.focus(); };
       paintPeople();
+
+      // ---- القائمة الثابتة للمكلَّفين (تُحفظ في بياناتك فقط، لا في كود الموقع)
+      const fixed = () => (G().takleef_people || []).filter((p) => p && (p.name || p.civil_id));
+      const editFixed = async () => {
+        const txt = fixed().map((p) => `${p.name || ""} - ${p.civil_id || ""}`).join("\n");
+        const v = await modal({ title: "تعديل القائمة الثابتة", wide: true,
+          body: `<p class="hint" style="margin-top:0">كل سطر: الاسم ثم الرقم المدني (مثال: فاطمة أحمد - 123456789012). أضيفي سطراً أو احذفيه.</p><textarea id="fx-t" rows="12" style="width:100%">${esc(txt)}</textarea>`,
+          actions: [{ label: "إلغاء", value: null }, { label: "حفظ القائمة", kind: "primary", value: (b) => $("#fx-t", b).value }] });
+        if (v == null) return false;
+        const list = v.split(/\n+/).map((l) => l.trim()).filter(Boolean).map((l) => {
+          const n = normCivil(l), m = n.match(/[0-9]{12}/); const civil_id = m ? m[0] : "";
+          let name = l.replace(/[0-9٠-٩۰-۹]{6,}[0-9٠-٩۰-۹\s-]*/g, "").replace(/[\s\-–|،,:]+$/g, "").replace(/^[\s\-–|،,:]+/g, "").trim();
+          return { name, civil_id };
+        }).filter((p) => p.name || p.civil_id);
+        await setGuideData("takleef_people", list); toast(`حُفظت القائمة الثابتة (${list.length} اسم)`); return true;
+      };
+      $("#savefix", body).onclick = async () => {
+        const cur = (ed.rec.data.people || []).filter((p) => (p.name || "").trim() || p.civil_id).map((p) => ({ name: (p.name || "").trim(), civil_id: normCivil(p.civil_id) }));
+        if (!cur.length) { toast("لا توجد أسماء في هذا التكليف لحفظها", "error"); return; }
+        if (!(await confirmBox("حفظ كقائمة ثابتة", `ستُحفظ الأسماء الحالية (${cur.length}) كقائمتك الثابتة بدل القائمة السابقة (${fixed().length}). متابعة؟`, "حفظ"))) return;
+        await setGuideData("takleef_people", cur); toast(`حُفظت القائمة الثابتة (${cur.length} اسم)`);
+      };
+      $("#fromfix", body).onclick = async function pick() {
+        const list = fixed();
+        if (!list.length) {
+          const ok = await modal({ title: "القائمة الثابتة فارغة", body: `<p>اكتبي الأسماء في التكليف ثم اضغطي «حفظ كقائمة ثابتة»، أو أنشئي القائمة الآن.</p>`, actions: [{ label: "إغلاق", value: false }, { label: "إنشاء القائمة", kind: "primary", value: true }] });
+          if (ok && (await editFixed())) pick(); return;
+        }
+        const have = new Set((ed.rec.data.people || []).map((p) => normCivil(p.civil_id)).filter(Boolean));
+        const pr = modal({ title: "اختاري من القائمة الثابتة", wide: true,
+          body: `<p class="hint" style="margin-top:0">أزيلي علامة من لا تريدين إضافته. الموجود مسبقاً في التكليف لا يتكرر.</p>
+            <label style="display:block;margin:6px 0"><input type="checkbox" id="fx-all" checked> تحديد الكل</label>
+            <div id="fx-l">${list.map((p, i) => { const dup = have.has(normCivil(p.civil_id)); return `<label style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)"><input type="checkbox" data-i="${i}" ${dup ? "disabled" : "checked"}><span style="flex:1">${esc(p.name || "—")}</span><span dir="ltr" class="hint">${esc(p.civil_id || "")}</span>${dup ? '<span class="pill">موجود</span>' : ""}</label>`; }).join("")}</div>`,
+          actions: [{ label: "إلغاء", value: null }, { label: "تعديل القائمة", value: "edit" }, { label: "إضافة المحدد", kind: "primary", value: (b) => $$("#fx-l input:checked:not(:disabled)", b).map((c) => +c.dataset.i) }] });
+        const all = $("#fx-all"); if (all) all.onchange = () => $$("#fx-l input:not(:disabled)").forEach((c) => { c.checked = all.checked; });
+        const v = await pr;
+        if (v === "edit") { if (await editFixed()) pick(); return; }
+        if (!v || !v.length) return;
+        ed.change((x) => {
+          // يحل محل الصفوف الفارغة أولاً
+          x.data.people = (x.data.people || []).filter((p) => (p.name || "").trim() || p.civil_id);
+          v.forEach((i) => x.data.people.push({ id: rid(), name: list[i].name, civil_id: normCivil(list[i].civil_id) }));
+          if (x.data.stage === "draft" && x.data.task && x.data.from && x.data.people.length) x.data.stage = "ready";
+        }, { immediate: true });
+        paintPeople(); toast(`أُضيف ${v.length} اسم`);
+      };
 
       // ---- رابط التعبئة للمكلَّفين
       const paintLink = () => {
