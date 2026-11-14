@@ -5,6 +5,8 @@ export const NOT_NAME = /(ميزاني|مدرس|ثانوي|متوسط|ابتدا
 const ARABIC_ONLY = /^[ء-ي٠-٩ٰ-ۓ\s.ـ]+$/;
 
 let lib;
+// النص بلا توحيد pdf.js ثم نوحّده نحن (NFKC) بعد ترتيب الاتجاه: يمنع قلب «لا» المركبة (دلال ← دالل، الأولى ← األولى)
+const nk = (x) => String(x || "").normalize("NFKC");
 async function pdfjs() {
   if (lib) return lib;
   lib = await import("./vendor/pdfjs/pdf.min.mjs");
@@ -33,11 +35,11 @@ export async function namesFromPdf(file) {
   let chars = 0;
   for (let p = 1; p <= doc.numPages; p++) {
     const page = await doc.getPage(p);
-    const tc = await page.getTextContent();
+    const tc = await page.getTextContent({ disableNormalization: true });
     // 1) تجميع العناصر في أسطر حسب الارتفاع، ثم في خلايا حسب المسافة الأفقية
     const lines = new Map();
     for (const it of tc.items) {
-      const str = (it.str || "").trim(); if (!str) continue;
+      const str = nk(it.str).trim(); if (!str) continue;
       chars += str.length;
       const y = Math.round(it.transform[5] / 3) * 3;
       if (!lines.has(y)) lines.set(y, []);
@@ -88,8 +90,8 @@ export async function textFromPdf(file, maxPages = 3) {
   const doc = await getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false }).promise;
   const out = [];
   for (let p = 1; p <= Math.min(doc.numPages, maxPages); p++) {
-    const tc = await (await doc.getPage(p)).getTextContent(), lines = new Map();
-    for (const it of tc.items) { const s = (it.str || "").trim(); if (!s) continue; const y = Math.round(it.transform[5] / 3) * 3; if (!lines.has(y)) lines.set(y, []); lines.get(y).push([it.transform[4], s]); }
+    const tc = await (await doc.getPage(p)).getTextContent({ disableNormalization: true }), lines = new Map();
+    for (const it of tc.items) { const s = nk(it.str).trim(); if (!s) continue; const y = Math.round(it.transform[5] / 3) * 3; if (!lines.has(y)) lines.set(y, []); lines.get(y).push([it.transform[4], s]); }
     [...lines.entries()].sort((a, b) => b[0] - a[0]).forEach(([, its]) => out.push(its.sort((a, b) => b[0] - a[0]).map((x) => x[1]).join(" ")));
   }
   return out.join("\n");
@@ -116,21 +118,29 @@ export async function civilIdsFromBudget(file, names) {
   let rows;
   if (isPdf) rows = (await textFromPdf(file, 30)).split("\n");
   else { const { rowsFromFile } = await import("./namesImport.js"); rows = await rowsFromFile(file); }
-  const R = rows.map((r) => {
-    // أرقام مدنية في الصف (تُجمع الأرقام المفصولة بمسافات داخل الخلية)
-    const d = digits(r), ids = [...d.replace(/(\d)\s+(?=\d)/g, "$1").matchAll(/(?<!\d)\d{12}(?!\d)/g)].map((m) => m[0]);
-    return { t: normAr(r.replace(/\d+/g, " ")), ids };
-  }).filter((x) => x.ids.length);
+  const R = rows.map((r) => { const d = digits(r).replace(/(\d)\s+(?=\d)/g, "$1"); return { t: normAr(r.replace(/[0-9٠-٩۰-۹]+/g, " ")), id: (d.match(/(?<!\d)\d{12}(?!\d)/) || [])[0] || "" }; });
   const out = new Map();
   for (const n of names) {
     const k = normAr(n); if (!k) continue;
     const words = k.split(" "), short = words.slice(0, 3).join(" ");
-    const hit = R.find((r) => r.t.includes(k)) || (words.length > 3 ? R.find((r) => r.t.includes(short)) : null);
-    if (hit) out.set(n, hit.ids[0]);
+    let i = R.findIndex((r) => r.t.includes(k) && r.id);
+    if (i < 0) i = R.findIndex((r) => r.t.includes(k));
+    if (i < 0 && words.length > 3) i = R.findIndex((r) => r.t.includes(short));
+    const id = i < 0 ? "" : R[i].id || idBelow(R, i);
+    if (id) out.set(n, id);
   }
   return out;
 }
 
+// الرقم المدني في السطر/الصف التالي تحت الاسم (خلية الاسم ثم خلية الرقم)
+const idBelow = (R, i) => {
+  for (let j = i + 1; j <= i + 2 && j < R.length; j++) {
+    const r = R[j];
+    if (r.id && !/[ء-ي]{3,}\s+[ء-ي]{3,}/.test(r.t.replace(/رئيس|القسم|معلم/g, ""))) return r.id; // سطر رقم فقط (لا اسم آخر فيه)
+    if (/[ء-ي]{3,}\s+[ء-ي]{3,}/.test(r.t)) break; // وصلنا لاسم التالي
+  }
+  return "";
+};
 // قراءة ملف ميزانية مرفوع (بدون حفظه): اسم المدرسة، والمعلمات بأرقامهن المدنية، ورئيس القسم
 export async function budgetPeople(file) {
   const isPdf = /\.pdf$/i.test(file.name || "") || file.type === "application/pdf";
@@ -142,8 +152,11 @@ export async function budgetPeople(file) {
   const R = rows.map((r) => { const d = digits(r).replace(/(\d)\s+(?=\d)/g, "$1"); return { t: normAr(r.replace(/[0-9٠-٩۰-۹]+/g, " ")), id: (d.match(/(?<!\d)\d{12}(?!\d)/) || [])[0] || "", raw: r }; });
   const people = names.filter((n) => !/^(ال)?(رقم|الرقم|اسم|الاسم|المسمى|مسمى|الوظيف|الجنسي|ملاحظ)/.test(n.trim())).map((n) => {
     const k = normAr(n), short = k.split(" ").slice(0, 3).join(" ");
-    const hit = R.find((r) => r.t.includes(k) && r.id) || R.find((r) => r.t.includes(k)) || R.find((r) => r.t.includes(short) && r.id);
-    return { name: n, civil_id: hit?.id || "", head: !!hit && /رئيس/.test(hit.raw) };
+    let i = R.findIndex((r) => r.t.includes(k) && r.id);
+    if (i < 0) i = R.findIndex((r) => r.t.includes(k));
+    if (i < 0) i = R.findIndex((r) => r.t.includes(short));
+    const hit = R[i];
+    return { name: n, civil_id: hit ? hit.id || idBelow(R, i) : "", head: !!hit && /رئيس/.test(hit.raw) };
   });
   return { school: schoolNameFromText(text), people };
 }
