@@ -18,8 +18,9 @@ const schoolTitle = (id) => state.schools.find((s) => s.id === id)?.title || "";
 export const isGradingPurpose = (d) => !d.purpose || d.purpose === T.purposes[0];
 
 export function newGrading() {
-  return { kind: "form", title: T.label, record_date: today(), academic_year: state.year,
-    data: { type: "grading", purpose: T.purposes[0], last_col: "التوقيع", period: T.periods[0], grade: T.grade, subject: T.subject, region: G().region || "الأحمدي", rows: [] } };
+  // ملف مشترك بين الموجهين (نفس صلاحيات الإنجازات المشتركة)، ويُميَّز بـ data.doc
+  return { kind: "shared_achievements", title: T.label, record_date: today(), academic_year: state.year,
+    data: { doc: "teacher_list", type: "grading", purpose: T.purposes[0], last_col: "التوقيع", period: T.periods[0], grade: T.grade, subject: T.subject, region: G().region || "الأحمدي", rows: [] } };
 }
 export const gradingSummary = (r) => {
   const rows = (r.data.rows || []).filter((x) => !x.excl && (x.name || "").trim());
@@ -30,12 +31,12 @@ export async function gradingEditor(main, rec) {
   // الأرقام المدنية والفئات من نماذج اللجان السابقة (لا تُكتب كل مرة)
   const prev = new Map();
   try {
-    const old = (await api.list({ kind: "form" })).filter((r) => r.data?.type === "grading" && r.id !== rec.id)
+    const old = (await api.list({ kind: "shared_achievements" })).filter((r) => r.data?.doc === "teacher_list" && r.id !== rec.id)
       .sort((a, b) => String(a.updated_at || "").localeCompare(String(b.updated_at || "")));
     for (const r of old) for (const p of r.data.rows || []) { const k = (p.name || "").trim(); if (k) prev.set(k, { civil_id: p.civil_id || "", cat: p.cat || "" }); }
   } catch (_) {}
 
-  return recordPage(main, { backHref: "#/forms?sec=grading", newHref: "#/forms/new?type=grading", rec, title: T.label,
+  return recordPage(main, { backHref: "#/forms?sec=grading", newHref: "#/forms/new?type=grading", rec, title: T.label + " (ملف مشترك)", merge: true,
     beforeApprove: (r) => [!(r.data.rows || []).some((x) => !x.excl) && "أسماء المعلمين"].filter(Boolean),
     render(body, ed) {
       const r = ed.rec, d = r.data;

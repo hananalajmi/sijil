@@ -36,9 +36,9 @@ export default async function (main, { id, params }) {
     if (sec === "criteria") return listView(main, { kind: "form", title: "بطاقة قياس المعايير الفنية", sub: "بطاقة قياس المعايير الفنية للمواد الأساسية: الدرجات قوائم والمجموع تلقائي.", newLabel: "+ بطاقة قياس المعايير", newHref: "#/forms/new?type=criteria",
       rowsFilter: (r) => r.data.type === "criteria", extraHead: `<a class="btn" href="#/print/blank-criteria">بطاقة فارغة</a>`,
       columns: [{ label: "التاريخ", get: (r) => fmtDate(r.record_date) }, { label: "المدرسة والمجموع", get: (r) => criteriaSummary(r) }] });
-    if (sec === "grading") return listView(main, { kind: "form", title: "لجان وقوائم المعلمين", sub: "لجان تقدير الدرجات أو أسماء المعلمين لحضور ورشة أو دورة: تعبئة من ميزانية المدارس، مع الاستبعاد وتلوين الأسماء حسب الفئة.", newLabel: "+ قائمة جديدة", newHref: "#/forms/new?type=grading",
-      rowsFilter: (r) => r.data.type === "grading", extraHead: `<a class="btn" href="#/print/blank-grading">نموذج فارغ</a>`,
-      columns: [{ label: "العام", get: (r) => r.academic_year || "" }, { label: "اللجنة", get: (r) => gradingSummary(r) }] });
+    if (sec === "grading") return listView(main, { kind: "shared_achievements", title: "لجان وقوائم المعلمين", sub: "لجان تقدير الدرجات أو أسماء المعلمين لحضور ورشة أو دورة: تعبئة من ميزانية المدارس، مع الاستبعاد وتلوين الأسماء حسب الفئة.", newLabel: "+ قائمة جديدة", newHref: "#/forms/new?type=grading",
+      rowsFilter: (r) => r.data?.doc === "teacher_list", extraHead: `<a class="btn" href="#/print/blank-grading">نموذج فارغ</a>`,
+      columns: [{ label: "العام", get: (r) => r.academic_year || "" }, { label: "القائمة", get: (r) => gradingSummary(r) }] });
     if (sec === "cert") return listView(main, { kind: "form", title: "الشهادات", sub: "شهادات شكر وتقدير وتميّز ومشاركة وحضور بتصاميم جاهزة، شهادة A4 لكل اسم.", newLabel: "+ شهادة", newHref: "#/forms/new?type=cert",
       rowsFilter: (r) => r.data.type === "cert", extraHead: `<a class="btn" href="#/print/blank-cert">شهادة فارغة</a>`,
       columns: [{ label: "التاريخ", get: (r) => fmtDate(r.record_date) }, { label: "الشهادة", get: (r) => certSummary(r) }] });

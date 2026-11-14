@@ -45,6 +45,7 @@ export default async function (main, { id, params }) {
     }
     history.replaceState(null, "", `#/monthly-ach/${rec.id}`);
   } else rec = await api.get(id);
+  if (rec?.data?.doc === "teacher_list") { location.replace(`#/forms/${rec.id}`); return; } // لجان وقوائم المعلمين
   if (rec?.data?.doc === "weekly_meeting") { location.replace(`#/meeting/${rec.id}`); return; } // التقرير الأسبوعي له صفحته
   if (!rec) { main.innerHTML = `<div class="container"><div class="empty">الملف غير موجود</div></div>`; return; }
 
@@ -215,7 +216,7 @@ async function addMine(ed) {
 /* ---------------- قائمة الأشهر (لكل قسم ملفه) ---------------- */
 async function list(main) {
   const [allRecs0, secsAll] = await Promise.all([api.list({ kind: KIND }), api.sections().catch(() => [])]);
-  const allRecs = allRecs0.filter((r) => r.data?.doc !== "weekly_meeting");
+  const allRecs = allRecs0.filter((r) => !["weekly_meeting", "teacher_list"].includes(r.data?.doc));
   const secs = secsAll.filter(inSection);
   let pref = ""; try { pref = localStorage.getItem("sijil.sa.section") || ""; } catch (_) {}
   const cur = today().slice(0, 7);

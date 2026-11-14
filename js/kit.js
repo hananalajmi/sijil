@@ -137,7 +137,7 @@ export async function recordPage(main, { rec, title, render, beforeApprove, newR
       ${PRINTABLE.has(r.kind) ? (appr ? `<button class="btn" id="unapprove">إلغاء الاعتماد</button>` : `<button class="btn primary" id="approve">اعتماد</button>`) : ""}
       <button class="btn danger" id="trash" ${r.id && !appr ? "" : "disabled"} title="${appr ? "التقرير المعتمد لا يُحذف" : ""}">حذف</button>
       ${BLANKABLE[r.kind] ? `<a class="btn ghost" href="#/print/${BLANKABLE[r.kind](r)}" title="النموذج فارغاً للطباعة أو لإرساله لمعلم آخر">نسخة فارغة</a>` : ""}
-      ${COPYABLE.has(r.kind) && r.id ? `<button class="btn" id="dup" title="ينشئ زيارة جديدة بنفس الكلام بتاريخ اليوم، فتعدّلين ما يلزم">نسخ وتعديل</button>` : ""}
+      ${(COPYABLE.has(r.kind) || r.data?.doc === "teacher_list") && r.id ? `<button class="btn" id="dup" title="ينشئ زيارة جديدة بنفس الكلام بتاريخ اليوم، فتعدّلين ما يلزم">نسخ وتعديل</button>` : ""}
       <button class="btn ghost" id="log" ${r.id ? "" : "disabled"}>سجل العمليات</button>`;
     bar.appendChild(savePill());
     $("#prev", bar).onclick = () => go(`#/${route}/${listIds[idx - 1]}`);
