@@ -13,6 +13,7 @@ const rid = () => Math.random().toString(36).slice(2, 10);
 const CATS = [["", "عادي"], ["new", "جديد"], ["expert", "خبرة"], ["head", "رئيس قسم"]];
 // ألوان الفئات (تُغيَّر من القائمة وتُحفظ معها): يتلوّن السطر كله
 export const DEF_COLORS = { std: "#000000", new: "#e00000", expert: "#00a03c", head: "#0050d0" };
+export const rowColor = (d, p) => (/^#[0-9a-f]{6}$/i.test(p?.color || "") ? p.color : colorOf(d, p?.cat));
 export const colorOf = (d, cat) => ({ ...DEF_COLORS, ...(d?.colors || {}) })[cat || "std"] || "#000000";
 const ROLES = ["مصحح", "مراجع"];
 const EXCL = ["حالات خاصة", "غير ملتزمة بالحضور", "إحالة"];
@@ -84,17 +85,19 @@ export async function gradingEditor(main, rec) {
         $("#gr-g", body).style.display = G_ ? "" : "none"; $("#gr-o", body).style.display = G_ ? "none" : ""; $$("[data-gonly]", body).forEach((e) => (e.style.display = G_ ? "" : "none"));
         $("#gr-lc", body).textContent = G_ ? "العمل في اللجنة" : (ed.rec.data.last_col || "التوقيع");
         $("#gr-rows", body).innerHTML = rs.length ? rs.map((p, i) => `<tr data-p="${p.id}" style="${p.excl ? "opacity:.5" : ""}"><td class="c-n">${i + 1}</td>
-          <td>${p.by ? `<div class="hint" style="font-size:11px;margin-bottom:2px">أضافته: ${esc(p.by)}</div>` : ""}<input data-f="name" value="${esc(p.name || "")}" aria-label="الاسم ${i + 1}" style="min-width:170px;color:${colorOf(ed.rec.data, p.cat)};font-weight:600"></td>
-          <td><div class="cid-wrap"><input data-f="civil_id" class="cid" dir="ltr" inputmode="numeric" maxlength="14" value="${esc(p.civil_id || "")}" aria-label="الرقم المدني ${i + 1}" placeholder="12 رقماً" style="color:${colorOf(ed.rec.data, p.cat)}"><span class="cid-n"></span></div></td>
-          <td><input data-f="school" value="${esc(p.school || "")}" aria-label="مركز العمل ${i + 1}" style="min-width:130px;color:${colorOf(ed.rec.data, p.cat)}"></td>
-          <td><select data-f="cat" aria-label="الفئة ${i + 1}">${CATS.map(([v, l]) => `<option value="${v}" ${(p.cat || "") === v ? "selected" : ""}>${l}</option>`).join("")}</select></td>
+          <td>${p.by ? `<div class="hint" style="font-size:11px;margin-bottom:2px">أضافته: ${esc(p.by)}</div>` : ""}<input data-f="name" value="${esc(p.name || "")}" aria-label="الاسم ${i + 1}" style="min-width:170px;color:${rowColor(ed.rec.data, p)};font-weight:600"></td>
+          <td><div class="cid-wrap"><input data-f="civil_id" class="cid" dir="ltr" inputmode="numeric" maxlength="14" value="${esc(p.civil_id || "")}" aria-label="الرقم المدني ${i + 1}" placeholder="12 رقماً" style="color:${rowColor(ed.rec.data, p)}"><span class="cid-n"></span></div></td>
+          <td><input data-f="school" value="${esc(p.school || "")}" aria-label="مركز العمل ${i + 1}" style="min-width:130px;color:${rowColor(ed.rec.data, p)}"></td>
+          <td><div style="display:flex;gap:4px;align-items:center"><select data-f="cat" aria-label="الفئة ${i + 1}">${CATS.map(([v, l]) => `<option value="${v}" ${(p.cat || "") === v ? "selected" : ""}>${l}</option>`).join("")}</select><input type="color" data-rc value="${rowColor(ed.rec.data, p)}" title="لون هذا السطر" aria-label="لون السطر ${i + 1}" style="width:32px;height:30px;padding:0;border:1px solid var(--line);border-radius:6px;flex:none">${p.color ? `<button type="button" class="btn small ghost" data-rc0 title="رجوع للون الفئة" aria-label="رجوع للون الفئة ${i + 1}" style="padding:2px 6px">↺</button>` : ""}</div></td>
           <td>${G_ ? `<select data-f="role" aria-label="العمل في اللجنة ${i + 1}"><option value="">—</option>${ROLES.map((x) => `<option ${p.role === x ? "selected" : ""}>${x}</option>`).join("")}</select>` : `<input data-f="note" value="${esc(p.note || "")}" aria-label="العمود الأخير ${i + 1}" placeholder="(فارغ للتوقيع)" style="min-width:110px">`}</td>
           <td><select data-f="excl" aria-label="استبعاد ${i + 1}"><option value="">—</option>${EXCL.map((x) => `<option ${p.excl === x ? "selected" : ""}>${x}</option>`).join("")}</select></td>
           <td class="c-x"><button class="btn small ghost" data-rm style="color:var(--bad)" aria-label="حذف ${i + 1}">✕</button></td></tr>`).join("")
           : `<tr><td colspan="8" class="hint" style="text-align:center;padding:14px">لا توجد أسماء بعد — اضغطي «رفع ميزانية» أو «من مدارسي المسجلة».</td></tr>`;
         $$("#gr-rows tr[data-p]", body).forEach((tr) => {
           const pid = tr.dataset.p;
-          $$("input,select", tr).forEach((el) => {
+          $("[data-rc]", tr).onchange = (e) => { ed.change((x) => { const p = x.data.rows.find((y) => y.id === pid); if (p) p.color = e.target.value; }, { immediate: true }); paint(); };
+          $("[data-rc0]", tr)?.addEventListener("click", () => { ed.change((x) => { const p = x.data.rows.find((y) => y.id === pid); if (p) delete p.color; }, { immediate: true }); paint(); });
+          $$("[data-f]", tr).forEach((el) => {
             if (el.classList.contains("cid")) paintCivil(el);
             const ev = el.tagName === "SELECT" ? "change" : "input";
             el.addEventListener(ev, () => {

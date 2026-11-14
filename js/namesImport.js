@@ -64,7 +64,7 @@ export async function namesFromFile(file) {
     const seen = new Set(), out = [];
     const take = (arr) => { for (const n of arr) if (!seen.has(n)) { seen.add(n); out.push(n); } };
     for (const tc of doc.match(/<w:tc[ >][\s\S]*?<\/w:tc>/g) || []) {
-      const t = (tc.match(/<w:p[ >][\s\S]*?<\/w:p>/g) || []).map(wt).join(" ");
+      const t = (tc.match(/<w:p[ >][\s\S]*?<\/w:p>/g) || []).map(wt).join(" ").replace(/[0-9٠-٩۰-۹]{6,}/g, " "); // الرقم المدني في خلية الاسم نفسها
       const n = cleanName(t.replace(PREFIX, "").replace(TITLE, ""));
       if (looksLikeName(n)) take([n]);
     }
@@ -79,7 +79,7 @@ export async function namesFromFile(file) {
   for (const [k, xml] of Object.entries(files)) if (k.includes("worksheets")) for (const m of xml.match(/<is>[\s\S]*?<\/is>/g) || []) texts.push(unxml(m.replace(/<[^>]+>/g, "")));
   // في ملف Excel كل خلية منفصلة، فنأخذ ما يشبه الاسم فقط
   const seen = new Set(), out = [];
-  for (const t of texts) { const n = cleanName(t.replace(PREFIX, "").replace(TITLE, "")); if (looksLikeName(n) && !seen.has(n)) { seen.add(n); out.push(n); } }
+  for (const t0 of texts) { const t = t0.replace(/[0-9٠-٩۰-۹]{6,}/g, " "); const n = cleanName(t.replace(PREFIX, "").replace(TITLE, "")); if (looksLikeName(n) && !seen.has(n)) { seen.add(n); out.push(n); } }
   return out;
 }
 

@@ -294,7 +294,7 @@ export async function gradingForm(ctx) {
       <div>للعام الدراسي ${esc(yr[0] || "")}${yr[1] ? " / " + esc(yr[1]) : ""} م</div></div>
     <div class="gr-region"><b>المنطقة التعليمية:</b> ${blank ? "" : esc(d.region ?? ctx.guide?.region ?? "")}</div>`;
   const COL = { std: "#000000", new: "#e00000", expert: "#00a03c", head: "#0050d0", ...(d.colors || {}) };
-  const rows = rows0.map((p) => `<tr class="gc-${p.cat || "std"}" style="color:${/^#[0-9a-f]{6}$/i.test(COL[p.cat || "std"] || "") ? COL[p.cat || "std"] : "#000"}"><td class="gr-name">${esc(p.name || "")}</td><td dir="ltr">${esc(p.civil_id || "")}</td><td>${esc(p.school || "")}</td><td>${esc(isG ? p.role || "" : p.note || "")}</td></tr>`);
+  const rows = rows0.map((p) => `<tr class="gc-${p.cat || "std"}" style="color:${/^#[0-9a-f]{6}$/i.test(p.color || "") ? p.color : /^#[0-9a-f]{6}$/i.test(COL[p.cat || "std"] || "") ? COL[p.cat || "std"] : "#000"}"><td class="gr-name">${esc(p.name || "")}</td><td dir="ltr">${esc(p.civil_id || "")}</td><td>${esc(p.school || "")}</td><td>${esc(isG ? p.role || "" : p.note || "")}</td></tr>`);
   for (let i = rows.length; i < T.minLines; i++) rows.push(`<tr><td class="gr-name">&nbsp;</td><td></td><td></td><td></td></tr>`);
   return { orientation: "portrait", fixedOrientation: true, cls: "t-gr", header: "", identity: "", footer: "",
     blocks: [{ html: head }, { table: { cls: "gr-t", colgroup: `<colgroup><col style="width:30%"><col style="width:24%"><col style="width:21%"><col style="width:25%"></colgroup>`,
