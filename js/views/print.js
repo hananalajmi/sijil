@@ -38,6 +38,7 @@ export async function resolveReport(id, params) {
   // نسخة فارغة من أي نموذج (للطباعة أو لإرسالها لمعلم/زميلة يعبّئها بيده): بلا اسمي وتوقيعي وختمي
   if (id === "blank-criteria") { const c = await recordContext({ kind: "form", title: "بطاقة قياس المعايير الفنية", academic_year: state.year, data: { type: "criteria", blank: true } }); c.print = {}; return [c, "بطاقة قياس المعايير الفنية (فارغة)", "#/forms?sec=criteria", null]; }
   if (id === "blank-cert") { const c = await recordContext({ kind: "form", title: "شهادة", academic_year: state.year, data: { type: "cert", ctype: params.ctype || "thanks", design: params.design || "waves", blank: true, signers: [] } }); c.print = {}; return [c, "شهادة (فارغة)", "#/forms?sec=cert", null]; }
+  if (id === "blank-grading") { const c = await recordContext({ kind: "form", title: "لجان تقدير درجات امتحان", academic_year: state.year, data: { type: "grading", blank: true } }); c.print = {}; return [c, "لجان تقدير درجات امتحان (فارغ)", "#/forms?sec=grading", null]; }
   if (id === "blank-takleef") return [await recordContext({ kind: "form", title: "تكليف بمهمة خارج مقر العمل", academic_year: state.year, data: { type: "takleef", blank: true } }), "نموذج تكليف بمهمة (فارغ)", "#/forms?sec=takleef", null];
   const bk = (id.match(/^blank-(teacher_visit|school_visit|event_report)$/) || [])[1];
   if (bk) {

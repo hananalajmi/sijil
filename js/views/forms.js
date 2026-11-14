@@ -11,6 +11,7 @@ import { FORMS } from "../templates.js";
 import { openStored } from "../openfile.js";
 import { criteriaEditor, newCriteria, criteriaSummary } from "./criteria.js";
 import { certEditor, newCert, certSummary } from "./cert.js";
+import { gradingEditor, newGrading, gradingSummary } from "./grading.js";
 
 const STAGES = { draft: ["مسودة", ""], ready: ["جاهز للتوقيع", "warn"], signed: ["موقّع ومحفوظ", "ok"], sent: ["أُرسل", "ok"] };
 export const hijri = (iso) => { try { return new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura", { day: "numeric", month: "long", year: "numeric" }).format(new Date(iso + "T12:00:00")); } catch (_) { return ""; } };
@@ -31,10 +32,13 @@ const fillLink = (t) => `${location.href.split("#")[0]}#/f/${t}`;
 export default async function (main, { id, params }) {
   // ثلاث صفحات منفصلة: التكاليف، بطاقة قياس المعايير، الشهادات
   if (!id) {
-    const sec = params.sec || "takleef", isT = (r) => r.data.type !== "criteria" && r.data.type !== "cert";
+    const sec = params.sec || "takleef", isT = (r) => !["criteria", "cert", "grading"].includes(r.data.type);
     if (sec === "criteria") return listView(main, { kind: "form", title: "بطاقة قياس المعايير الفنية", sub: "بطاقة قياس المعايير الفنية للمواد الأساسية: الدرجات قوائم والمجموع تلقائي.", newLabel: "+ بطاقة قياس المعايير", newHref: "#/forms/new?type=criteria",
       rowsFilter: (r) => r.data.type === "criteria", extraHead: `<a class="btn" href="#/print/blank-criteria">بطاقة فارغة</a>`,
       columns: [{ label: "التاريخ", get: (r) => fmtDate(r.record_date) }, { label: "المدرسة والمجموع", get: (r) => criteriaSummary(r) }] });
+    if (sec === "grading") return listView(main, { kind: "form", title: "لجان تقدير درجات الامتحان", sub: "تعبئة المعلمين من ميزانية المدارس، والتوزيع مصححان لكل مراجع، مع الاستبعاد وتلوين الأسماء حسب الفئة.", newLabel: "+ لجنة تقدير درجات", newHref: "#/forms/new?type=grading",
+      rowsFilter: (r) => r.data.type === "grading", extraHead: `<a class="btn" href="#/print/blank-grading">نموذج فارغ</a>`,
+      columns: [{ label: "العام", get: (r) => r.academic_year || "" }, { label: "اللجنة", get: (r) => gradingSummary(r) }] });
     if (sec === "cert") return listView(main, { kind: "form", title: "الشهادات", sub: "شهادات شكر وتقدير وتميّز ومشاركة وحضور بتصاميم جاهزة، شهادة A4 لكل اسم.", newLabel: "+ شهادة", newHref: "#/forms/new?type=cert",
       rowsFilter: (r) => r.data.type === "cert", extraHead: `<a class="btn" href="#/print/blank-cert">شهادة فارغة</a>`,
       columns: [{ label: "التاريخ", get: (r) => fmtDate(r.record_date) }, { label: "الشهادة", get: (r) => certSummary(r) }] });
@@ -46,7 +50,8 @@ export default async function (main, { id, params }) {
   // بطاقة قياس المعايير الفنية
   if ((id === "new" && params.type === "criteria")) return criteriaEditor(main, newCriteria());
   if (id === "new" && params.type === "cert") return certEditor(main, newCert());
-  if (id !== "new") { const r0 = await api.get(id); if (r0?.data?.type === "criteria") return criteriaEditor(main, r0); if (r0?.data?.type === "cert") return certEditor(main, r0); }
+  if (id === "new" && params.type === "grading") return gradingEditor(main, newGrading());
+  if (id !== "new") { const r0 = await api.get(id); if (r0?.data?.type === "criteria") return criteriaEditor(main, r0); if (r0?.data?.type === "cert") return certEditor(main, r0); if (r0?.data?.type === "grading") return gradingEditor(main, r0); }
   const T = FORMS.takleef;
   const rec = id === "new"
     ? { kind: "form", title: T.label, record_date: today(), academic_year: state.year, data: { type: "takleef", date: today(), hijri: hijri(today()), addressee: T.addressee, task: "", from: "", to: "", sign_at: "", people: [], stage: "draft", open: false } }

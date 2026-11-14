@@ -278,3 +278,22 @@ async function certRenderer(o) {
     if (cv.toBlob) cv.toBlob((b) => done(b ? URL.createObjectURL(b) : cv.toDataURL("image/png")), "image/png"); else done(cv.toDataURL("image/png"));
   });
 }
+
+// ---------------- لجان تقدير درجات الامتحان ----------------
+// الاسم بلون الفئة: الجدد أحمر، الخبرة أخضر، رؤساء الأقسام أزرق، والباقي أسود. المستبعدات لا يظهرن.
+export async function gradingForm(ctx) {
+  const T = FORMS.grading, d = ctx.rec.data || {}, blank = !!d.blank;
+  const H = await headLogos(ctx, "grading");
+  const yr = String(ctx.rec.academic_year || "").split("-");
+  const rows0 = blank ? [] : (d.rows || []).filter((p) => !p.excl && ((p.name || "").trim() || (p.civil_id || "").trim()));
+  const head = `<div class="gr-head"><div class="gr-logo">${H.r}</div><div class="gr-logo">${H.c}</div><div class="gr-logo">${H.l}</div></div>
+    <div class="gr-title"><div>لجان تقدير درجات امتحان ( الفترة ${blank ? dots(18) : esc(d.period || "")} )</div>
+      <div>للصف ${blank ? dots(35) : esc(d.grade || T.grade)} / في مجال <span class="gr-subj">${blank ? dots(25) : esc(d.subject || T.subject)}</span></div>
+      <div>للعام الدراسي ${esc(yr[0] || "")}${yr[1] ? " / " + esc(yr[1]) : ""} م</div></div>
+    <div class="gr-region"><b>المنطقة التعليمية:</b> ${blank ? "" : esc(d.region ?? ctx.guide?.region ?? "")}</div>`;
+  const rows = rows0.map((p) => `<tr class="gc-${p.cat || "std"}"><td class="gr-name">${esc(p.name || "")}</td><td dir="ltr">${esc(p.civil_id || "")}</td><td>${esc(p.school || "")}</td><td>${esc(p.role || "")}</td></tr>`);
+  for (let i = rows.length; i < T.minLines; i++) rows.push(`<tr><td class="gr-name">&nbsp;</td><td></td><td></td><td></td></tr>`);
+  return { orientation: "portrait", fixedOrientation: true, cls: "t-gr", header: "", identity: "", footer: "",
+    blocks: [{ html: head }, { table: { cls: "gr-t", colgroup: `<colgroup><col style="width:30%"><col style="width:24%"><col style="width:21%"><col style="width:25%"></colgroup>`,
+      thead: `<tr><th>الاسم</th><th>الرقم المدني</th><th>مركز العمل</th><th>العمل في اللجنة</th></tr>`, rows } }] };
+}

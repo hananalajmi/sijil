@@ -557,3 +557,16 @@
 .fm-kinds { margin: 1mm 8mm 0 0; }
 .fm-kinds .fm-kind { margin: 1.2mm 0; }
 .fm-kinds .fm-box { display: inline-block; width: 4mm; height: 4mm; border: .35mm solid #000; border-radius: .6mm; vertical-align: -0.6mm; margin-inline-end: 1.5mm; }
+/* لجان تقدير درجات الامتحان */
+.t-gr .gr-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4mm; }
+.t-gr .gr-logo img { max-height: 26mm; max-width: 45mm; }
+.t-gr .gr-title { text-align: center; font-weight: 800; font-size: 15pt; line-height: 1.6; margin-bottom: 5mm; }
+.t-gr .gr-subj { color: #d00000; }
+.t-gr .gr-region { font-weight: 800; font-size: 13pt; margin: 0 6mm 2mm 0; }
+.t-gr table.gr-t { width: 100%; border-collapse: collapse; font-size: 12pt; }
+.t-gr table.gr-t th, .t-gr table.gr-t td { border: .3mm solid #000; padding: 1.6mm 2mm; text-align: center; height: 8mm; }
+.t-gr table.gr-t th { font-weight: 800; font-size: 13pt; }
+.t-gr table.gr-t td.gr-name { text-align: right; font-weight: 700; }
+.t-gr tr.gc-new td.gr-name { color: #c62828; }
+.t-gr tr.gc-expert td.gr-name { color: #2e7d32; }
+.t-gr tr.gc-head td.gr-name { color: #1565c0; }
