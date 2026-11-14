@@ -6,7 +6,7 @@ const ARABIC_ONLY = /^[ء-ي٠-٩ٰ-ۓ\s.ـ]+$/;
 
 let lib;
 // النص بلا توحيد pdf.js ثم نوحّده نحن (NFKC) بعد ترتيب الاتجاه: يمنع قلب «لا» المركبة (دلال ← دالل، الأولى ← األولى)
-const nk = (x) => String(x || "").normalize("NFKC");
+const nk = (x) => String(x || "").normalize("NFKC").replace(/[یى](?=[ء-ي])/g, "ي").replace(/ی/g, "ي").replace(/ھ/g, "ه").replace(/ک/g, "ك");
 async function pdfjs() {
   if (lib) return lib;
   lib = await import("./vendor/pdfjs/pdf.min.mjs");
@@ -119,25 +119,25 @@ export async function civilIdsFromBudget(file, names) {
   if (isPdf) rows = (await textFromPdf(file, 30)).split("\n");
   else { const { rowsFromFile } = await import("./namesImport.js"); rows = await rowsFromFile(file); }
   const R = rows.map((r) => { const d = digits(r).replace(/(\d)\s+(?=\d)/g, "$1"); return { t: normAr(r.replace(/[0-9٠-٩۰-۹]+/g, " ")), id: (d.match(/(?<!\d)\d{12}(?!\d)/) || [])[0] || "" }; });
-  const out = new Map();
+  const out = new Map(), keys = names.map(normAr);
   for (const n of names) {
     const k = normAr(n); if (!k) continue;
     const words = k.split(" "), short = words.slice(0, 3).join(" ");
     let i = R.findIndex((r) => r.t.includes(k) && r.id);
     if (i < 0) i = R.findIndex((r) => r.t.includes(k));
     if (i < 0 && words.length > 3) i = R.findIndex((r) => r.t.includes(short));
-    const id = i < 0 ? "" : R[i].id || idBelow(R, i);
+    const id = i < 0 ? "" : R[i].id || idBelow(R, i, keys.filter((x) => x !== k));
     if (id) out.set(n, id);
   }
   return out;
 }
 
 // الرقم المدني في السطر/الصف التالي تحت الاسم (خلية الاسم ثم خلية الرقم)
-const idBelow = (R, i) => {
-  for (let j = i + 1; j <= i + 2 && j < R.length; j++) {
+const idBelow = (R, i, others = []) => {
+  for (let j = i + 1; j <= i + 5 && j < R.length; j++) {
     const r = R[j];
-    if (r.id && !/[ء-ي]{3,}\s+[ء-ي]{3,}/.test(r.t.replace(/رئيس|القسم|معلم/g, ""))) return r.id; // سطر رقم فقط (لا اسم آخر فيه)
-    if (/[ء-ي]{3,}\s+[ء-ي]{3,}/.test(r.t)) break; // وصلنا لاسم التالي
+    if (others.some((k) => k && r.t.includes(k))) break; // وصلنا لسطر المعلمة التالية
+    if (r.id) return r.id;
   }
   return "";
 };
@@ -150,13 +150,24 @@ export async function budgetPeople(file) {
   if (isPdf) { [names, text] = await Promise.all([namesFromPdf(file), textFromPdf(file, 30)]); names = names.map(lam); text = lam(text); rows = text.split("\n"); }
   else { const m = await import("./namesImport.js"); [names, text, rows] = await Promise.all([m.namesFromFile(file), m.textFromFile(file), m.rowsFromFile(file)]); }
   const R = rows.map((r) => { const d = digits(r).replace(/(\d)\s+(?=\d)/g, "$1"); return { t: normAr(r.replace(/[0-9٠-٩۰-۹]+/g, " ")), id: (d.match(/(?<!\d)\d{12}(?!\d)/) || [])[0] || "", raw: r }; });
-  const people = names.filter((n) => !/^(ال)?(رقم|الرقم|اسم|الاسم|المسمى|مسمى|الوظيف|الجنسي|ملاحظ)/.test(n.trim())).map((n) => {
+  // أسماء فقط: بلا أرقام ولا مسميات وظيفية أو جنسيات
+  names = names.filter((n) => !/[0-9٠-٩۰-۹]/.test(n) && !/^(ال)?(رقم|الرقم|اسم|الاسم|المسمى|مسمى|الوظيف|الجنسي|ملاحظ|رئيس|رئيسة|معلم|معلمة|اجازة|إجازة)/.test(n.trim()) && !/(كويتي|سعودي|مصري|اردني|أردني|سوري|بحريني|عماني|يمني|لبناني|عراقي|فلسطيني|تونسي)/.test(n));
+  // في الميزانية سطر المعلمة فيه مسماها (معلمة/رئيسة قسم): إن وُجد ذلك نكتفي بهذه الأسماء (تُستبعد المناطق والملاحظات)
+  // مناطق السكن الشائعة (عمود «السكن») ليست أسماء معلمات
+  const AREA = /^(ام الهيمان|أم الهيمان|صباح الاحمد|صباح الأحمد|علي صباح السالم|جابر العلي|فهد الاحمد|فهد الأحمد|ابو حليفة|أبو حليفة|الفحيحيل|المنقف|الاحمدي|الأحمدي|الصباحية|الرقة|هدية|الظهر|العقيلة|الفنطاس|المهبولة|الوفرة|الخيران|الزور|الجليعة|بنيدر|الضباعية|مدينة صباح الاحمد|مدينة صباح الأحمد|الوفرة السكنية|الخيران السكنية)$/;
+  names = names.filter((n) => !AREA.test(normAr(n).replace(/ه$/, "ة")) && !AREA.test(n.trim()));
+  const idx = (n) => R.findIndex((r) => r.t.includes(normAr(n)));
+  const job = (j) => !!R[j] && /معلم|رئيس/.test(R[j].t);
+  const strong = names.filter((n) => { const i = idx(n); return i >= 0 && (job(i) || job(i - 1) || job(i + 1) || !!R[i].id); });
+  if (strong.length >= 2) names = strong;
+  const keys = names.map(normAr);
+  const people = names.map((n) => {
     const k = normAr(n), short = k.split(" ").slice(0, 3).join(" ");
     let i = R.findIndex((r) => r.t.includes(k) && r.id);
     if (i < 0) i = R.findIndex((r) => r.t.includes(k));
     if (i < 0) i = R.findIndex((r) => r.t.includes(short));
     const hit = R[i];
-    return { name: n, civil_id: hit ? hit.id || idBelow(R, i) : "", head: !!hit && /رئيس/.test(hit.raw) };
+    return { name: n, civil_id: hit ? hit.id || idBelow(R, i, keys.filter((x) => x !== k)) : "", head: !!hit && /رئيس/.test(hit.raw) };
   });
   return { school: schoolNameFromText(text), people };
 }
