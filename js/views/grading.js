@@ -15,6 +15,8 @@ const CAT_COLOR = { new: "#c62828", expert: "#2e7d32", head: "#1565c0" };
 const ROLES = ["مصحح", "مراجع"];
 const EXCL = ["حالات خاصة", "غير ملتزمة بالحضور", "إحالة"];
 const schoolTitle = (id) => state.schools.find((s) => s.id === id)?.title || "";
+// اسم الموجه الذي أضاف الصف (يظهر في الشاشة فقط، لا في المطبوع)
+const myName = () => String(G().full_name || state.profile?.full_name || "").trim();
 export const isGradingPurpose = (d) => !d.purpose || d.purpose === T.purposes[0];
 
 export function newGrading() {
@@ -79,7 +81,7 @@ export async function gradingEditor(main, rec) {
         $("#gr-g", body).style.display = G_ ? "" : "none"; $("#gr-o", body).style.display = G_ ? "none" : ""; $$("[data-gonly]", body).forEach((e) => (e.style.display = G_ ? "" : "none"));
         $("#gr-lc", body).textContent = G_ ? "العمل في اللجنة" : (ed.rec.data.last_col || "التوقيع");
         $("#gr-rows", body).innerHTML = rs.length ? rs.map((p, i) => `<tr data-p="${p.id}" style="${p.excl ? "opacity:.5" : ""}"><td class="c-n">${i + 1}</td>
-          <td><input data-f="name" value="${esc(p.name || "")}" aria-label="الاسم ${i + 1}" style="min-width:170px;color:${CAT_COLOR[p.cat] || "inherit"};font-weight:600"></td>
+          <td>${p.by ? `<div class="hint" style="font-size:11px;margin-bottom:2px">أضافته: ${esc(p.by)}</div>` : ""}<input data-f="name" value="${esc(p.name || "")}" aria-label="الاسم ${i + 1}" style="min-width:170px;color:${CAT_COLOR[p.cat] || "inherit"};font-weight:600"></td>
           <td><div class="cid-wrap"><input data-f="civil_id" class="cid" dir="ltr" inputmode="numeric" maxlength="14" value="${esc(p.civil_id || "")}" aria-label="الرقم المدني ${i + 1}" placeholder="12 رقماً"><span class="cid-n"></span></div></td>
           <td><input data-f="school" value="${esc(p.school || "")}" aria-label="مركز العمل ${i + 1}" style="min-width:130px"></td>
           <td><select data-f="cat" aria-label="الفئة ${i + 1}">${CATS.map(([v, l]) => `<option value="${v}" ${(p.cat || "") === v ? "selected" : ""}>${l}</option>`).join("")}</select></td>
@@ -104,7 +106,7 @@ export async function gradingEditor(main, rec) {
         count();
       };
 
-      $("#gr-add", body).onclick = () => { const nid = rid(); ed.change((x) => { x.data.rows = [...(x.data.rows || []), { id: nid, name: "", civil_id: "", school: "", cat: "", role: "", excl: "" }]; }, { immediate: true }); paint(); $(`tr[data-p="${nid}"] input`, body)?.focus(); };
+      $("#gr-add", body).onclick = () => { const nid = rid(); ed.change((x) => { x.data.rows = [...(x.data.rows || []), { id: nid, name: "", civil_id: "", school: "", cat: "", role: "", excl: "", by: myName() }]; }, { immediate: true }); paint(); $(`tr[data-p="${nid}"] input`, body)?.focus(); };
 
       // تعبئة من ميزانية المدارس: معلمو المدارس المختارة (المسجلون من ملف الميزانية في «المدارس والمعلمات»)
       $("#gr-fill", body).onclick = async () => {
@@ -123,7 +125,7 @@ export async function gradingEditor(main, rec) {
           const name = (t.title || "").trim(); if (!name || have.has(name)) continue; have.add(name);
           const pv = prev.get(name) || {};
           const cat = pv.cat || (/رئيس/.test(t.data?.job_title || "") ? "head" : "");
-          add.push({ id: rid(), teacher_id: t.id, name, civil_id: normCivil(t.data?.civil_id || pv.civil_id || ""), school: schoolTitle(sid), cat, role: "", excl: "" });
+          add.push({ id: rid(), teacher_id: t.id, name, civil_id: normCivil(t.data?.civil_id || pv.civil_id || ""), school: schoolTitle(sid), cat, role: "", excl: "", by: myName() });
         }
         if (!add.length) { toast("كل الأسماء مضافة مسبقاً"); return; }
         ed.change((x) => { x.data.rows = [...(x.data.rows || []).filter((p) => (p.name || "").trim()), ...add]; }, { immediate: true });
