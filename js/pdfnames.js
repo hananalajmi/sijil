@@ -83,11 +83,11 @@ export async function namesFromPdf(file) {
 }
 
 // نص الملف كاملاً (سطراً سطراً) — لاستخراج اسم المدرسة من ملف الميزانية
-export async function textFromPdf(file) {
+export async function textFromPdf(file, maxPages = 3) {
   const { getDocument } = await pdfjs();
   const doc = await getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false }).promise;
   const out = [];
-  for (let p = 1; p <= Math.min(doc.numPages, 3); p++) {
+  for (let p = 1; p <= Math.min(doc.numPages, maxPages); p++) {
     const tc = await (await doc.getPage(p)).getTextContent(), lines = new Map();
     for (const it of tc.items) { const s = (it.str || "").trim(); if (!s) continue; const y = Math.round(it.transform[5] / 3) * 3; if (!lines.has(y)) lines.set(y, []); lines.get(y).push([it.transform[4], s]); }
     [...lines.entries()].sort((a, b) => b[0] - a[0]).forEach(([, its]) => out.push(its.sort((a, b) => b[0] - a[0]).map((x) => x[1]).join(" ")));
@@ -105,4 +105,28 @@ export function schoolNameFromText(text) {
     return n.split(" ").slice(0, 7).join(" ");
   }
   return "";
+}
+
+// ---- الأرقام المدنية من ملف الميزانية: كل صف فيه اسم المعلمة ورقمها المدني (12 رقماً)
+const normAr = (s) => String(s || "").replace(/[ـ]/g, "").replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي").replace(/\s+/g, " ").trim();
+const digits = (s) => String(s || "").replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
+// يعيد Map: الاسم (كما في القائمة) ← الرقم المدني
+export async function civilIdsFromBudget(file, names) {
+  const isPdf = /\.pdf$/i.test(file.name || "") || file.type === "application/pdf";
+  let rows;
+  if (isPdf) rows = (await textFromPdf(file, 30)).split("\n");
+  else { const { rowsFromFile } = await import("./namesImport.js"); rows = await rowsFromFile(file); }
+  const R = rows.map((r) => {
+    // أرقام مدنية في الصف (تُجمع الأرقام المفصولة بمسافات داخل الخلية)
+    const d = digits(r), ids = [...d.replace(/(\d)\s+(?=\d)/g, "$1").matchAll(/(?<!\d)\d{12}(?!\d)/g)].map((m) => m[0]);
+    return { t: normAr(r.replace(/\d+/g, " ")), ids };
+  }).filter((x) => x.ids.length);
+  const out = new Map();
+  for (const n of names) {
+    const k = normAr(n); if (!k) continue;
+    const words = k.split(" "), short = words.slice(0, 3).join(" ");
+    const hit = R.find((r) => r.t.includes(k)) || (words.length > 3 ? R.find((r) => r.t.includes(short)) : null);
+    if (hit) out.set(n, hit.ids[0]);
+  }
+  return out;
 }

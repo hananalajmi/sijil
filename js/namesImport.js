@@ -91,3 +91,26 @@ export async function textFromFile(file) {
   const sst = files["xl/sharedStrings.xml"] || "";
   return (sst.match(/<si>[\s\S]*?<\/si>/g) || []).map((si) => unxml((si.match(/<t[^>]*>([\s\S]*?)<\/t>/g) || []).map((t) => t.replace(/<[^>]+>/g, "")).join(""))).join("\n");
 }
+
+// صفوف الجدول نصاً (سطر لكل صف، والخلايا مفصولة بـ « | ») — لربط الاسم برقمه المدني من ملف الميزانية
+export async function rowsFromFile(file) {
+  const files = await unzip(await file.arrayBuffer());
+  const doc = files["word/document.xml"];
+  const wt = (x) => unxml((x.match(/<w:t[ >][^<]*<\/w:t>|<w:t>[^<]*<\/w:t>/g) || []).map((t) => t.replace(/<[^>]+>/g, "")).join(""));
+  if (doc) return (doc.match(/<w:tr[ >][\s\S]*?<\/w:tr>/g) || []).map((tr) => (tr.match(/<w:tc[ >][\s\S]*?<\/w:tc>/g) || []).map((tc) => (tc.match(/<w:p[ >][\s\S]*?<\/w:p>/g) || []).map(wt).join(" ")).join(" | "));
+  const sst = (files["xl/sharedStrings.xml"] || "").match(/<si>[\s\S]*?<\/si>/g) || [];
+  const str = sst.map((si) => unxml((si.match(/<t[^>]*>([\s\S]*?)<\/t>/g) || []).map((t) => t.replace(/<[^>]+>/g, "")).join("")));
+  const out = [];
+  for (const [k, xml] of Object.entries(files)) if (k.includes("worksheets")) for (const row of xml.match(/<row[ >][\s\S]*?<\/row>/g) || []) {
+    const cells = (row.match(/<c[ >][\s\S]*?<\/c>|<c [^>]*\/>/g) || []).map((c) => {
+      const t = (c.match(/ t="(\w+)"/) || [])[1], v = (c.match(/<v>([\s\S]*?)<\/v>/) || [])[1];
+      if (t === "s") return str[Number(v)] || "";
+      if (t === "inlineStr") return unxml(c.replace(/<[^>]+>/g, ""));
+      // الرقم المدني قد يُحفظ رقماً (وأحياناً بصيغة أسية)
+      if (v && /e\+?\d+$/i.test(v)) { try { return BigInt(Math.round(Number(v))).toString(); } catch (_) { return v; } }
+      return unxml(v || "");
+    });
+    out.push(cells.join(" | "));
+  }
+  return out;
+}

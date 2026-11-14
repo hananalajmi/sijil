@@ -59,7 +59,7 @@ export async function gradingEditor(main, rec) {
         ${field({ label: "المنطقة التعليمية", key: "region", value: d.region ?? (G().region || "الأحمدي") })}
       </div></section>
       <section class="panel"><div class="page-head" style="margin-bottom:6px"><h2>المعلمون</h2>
-        <div class="toolbar" style="margin:0"><button class="btn primary" id="gr-fill">تعبئة من ميزانية المدارس</button><button class="btn" id="gr-add">+ اسم</button></div></div>
+        <div class="toolbar" style="margin:0"><button class="btn primary" id="gr-fill">تعبئة من ميزانية المدارس</button><button class="btn" id="gr-civ">الأرقام المدنية من الميزانيات</button><button class="btn" id="gr-add">+ اسم</button></div></div>
         <p class="hint" style="margin-top:0">الفئة تحدد لون الاسم في النموذج: <b style="color:${CAT_COLOR.new}">الجدد بالأحمر</b>، <b style="color:${CAT_COLOR.expert}">الخبرة بالأخضر</b>، <b style="color:${CAT_COLOR.head}">رؤساء الأقسام بالأزرق</b>، والباقي بالأسود. المستبعدات لا يظهرن في النموذج المطبوع.</p>
         <div id="gr-count" class="hint" style="font-weight:600;margin:6px 0"></div>
         <div class="tbl-wrap"><table class="data gr-t"><thead><tr><th class="c-n">م</th><th>الاسم</th><th>الرقم المدني</th><th>مركز العمل</th><th>الفئة</th><th id="gr-lc">العمل في اللجنة</th><th>استبعاد</th><th></th></tr></thead><tbody id="gr-rows"></tbody></table></div></section>`;
@@ -127,9 +127,38 @@ export async function gradingEditor(main, rec) {
           const cat = pv.cat || (/رئيس/.test(t.data?.job_title || "") ? "head" : "");
           add.push({ id: rid(), teacher_id: t.id, name, civil_id: normCivil(t.data?.civil_id || pv.civil_id || ""), school: schoolTitle(sid), cat, role: "", excl: "", by: myName() });
         }
-        if (!add.length) { toast("كل الأسماء مضافة مسبقاً"); return; }
-        ed.change((x) => { x.data.rows = [...(x.data.rows || []).filter((p) => (p.name || "").trim()), ...add]; }, { immediate: true });
-        paint(); toast(`أُضيف ${add.length} اسم`);
+        if (add.length) { ed.change((x) => { x.data.rows = [...(x.data.rows || []).filter((p) => (p.name || "").trim()), ...add]; }, { immediate: true }); paint(); }
+        // الأرقام المدنية من ملفات الميزانية المرفوعة لكل مدرسة (لمن ليس له رقم)
+        const got = await civilFromBudgets(ids);
+        toast(`${add.length ? `أُضيف ${add.length} اسم` : "كل الأسماء مضافة مسبقاً"}${got ? ` · ${got} رقم مدني من الميزانيات` : ""}`);
+      };
+
+      // يقرأ ملفات الميزانية (المرفقة بالمدارس) ويكمل الأرقام المدنية الناقصة
+      const civilFromBudgets = async (sids) => {
+        const names = new Map(); // المدرسة ← أسماء بلا رقم
+        for (const sid of sids) { const st = schoolTitle(sid); const ns = (ed.rec.data.rows || []).filter((p) => p.school === st && (p.name || "").trim() && !normCivil(p.civil_id)).map((p) => p.name.trim()); if (ns.length) names.set(sid, ns); }
+        if (!names.size) return 0;
+        toast("جارٍ قراءة الأرقام المدنية من ملفات الميزانية…");
+        const found = new Map(); let noFile = 0, failed = 0;
+        const { civilIdsFromBudget } = await import("../pdfnames.js");
+        for (const [sid, ns] of names) {
+          const files = (await api.files(`&record_id=eq.${sid}&category=eq.attachment`).catch(() => [])).filter((f) => f.subcategory === "budget");
+          if (!files.length) { noFile++; continue; }
+          for (const f of files) {
+            const left = ns.filter((n) => !found.has(n)); if (!left.length) break;
+            try { const blob = await api.fileBlob(f.storage_path); const m = await civilIdsFromBudget(new File([blob], f.title || "budget", { type: f.mime || blob.type }), left); m.forEach((v, k) => found.set(k, v)); }
+            catch (e) { console.warn(e); failed++; }
+          }
+        }
+        if (found.size) { ed.change((x) => { x.data.rows.forEach((p) => { const v = found.get((p.name || "").trim()); if (v && !normCivil(p.civil_id)) p.civil_id = v; }); }, { immediate: true }); paint(); }
+        const miss = [...names.values()].flat().length - found.size;
+        if (miss > 0) toast(`${miss} اسم بدون رقم مدني${noFile ? ` (${noFile} مدرسة بلا ملف ميزانية مرفوع)` : ""}${failed ? " — تعذّرت قراءة بعض الملفات (قد تكون مصوَّرة)" : ""}`, "error");
+        return found.size;
+      };
+      $("#gr-civ", body).onclick = async () => {
+        const sids = [...new Set((ed.rec.data.rows || []).map((p) => state.schools.find((s) => s.title === p.school)?.id).filter(Boolean))];
+        if (!sids.length) { toast("لا توجد مدارس من مدارسك في القائمة", "error"); return; }
+        const n = await civilFromBudgets(sids); if (n) toast(`أُضيف ${n} رقم مدني من الميزانيات`); else if (!(ed.rec.data.rows || []).some((p) => !normCivil(p.civil_id))) toast("كل الأسماء لها أرقام مدنية");
       };
 
       paint();
