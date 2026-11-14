@@ -59,7 +59,7 @@ export async function gradingEditor(main, rec) {
         ${field({ label: "المنطقة التعليمية", key: "region", value: d.region ?? (G().region || "الأحمدي") })}
       </div></section>
       <section class="panel"><div class="page-head" style="margin-bottom:6px"><h2>المعلمون</h2>
-        <div class="toolbar" style="margin:0"><button class="btn primary" id="gr-fill">تعبئة من ميزانية المدارس</button><button class="btn" id="gr-civ">الأرقام المدنية من الميزانيات</button><button class="btn" id="gr-add">+ اسم</button></div></div>
+        <div class="toolbar" style="margin:0"><button class="btn" id="gr-fill">من مدارسي المسجلة</button><label class="btn primary">رفع ميزانية<input type="file" id="gr-up" accept=".pdf,.docx,.xlsx,application/pdf" multiple hidden></label><button class="btn" id="gr-add">+ اسم</button></div></div>
         <p class="hint" style="margin-top:0">الفئة تحدد لون الاسم في النموذج: <b style="color:${CAT_COLOR.new}">الجدد بالأحمر</b>، <b style="color:${CAT_COLOR.expert}">الخبرة بالأخضر</b>، <b style="color:${CAT_COLOR.head}">رؤساء الأقسام بالأزرق</b>، والباقي بالأسود. المستبعدات لا يظهرن في النموذج المطبوع.</p>
         <div id="gr-count" class="hint" style="font-weight:600;margin:6px 0"></div>
         <div class="tbl-wrap"><table class="data gr-t"><thead><tr><th class="c-n">م</th><th>الاسم</th><th>الرقم المدني</th><th>مركز العمل</th><th>الفئة</th><th id="gr-lc">العمل في اللجنة</th><th>استبعاد</th><th></th></tr></thead><tbody id="gr-rows"></tbody></table></div></section>`;
@@ -88,7 +88,7 @@ export async function gradingEditor(main, rec) {
           <td>${G_ ? `<select data-f="role" aria-label="العمل في اللجنة ${i + 1}"><option value="">—</option>${ROLES.map((x) => `<option ${p.role === x ? "selected" : ""}>${x}</option>`).join("")}</select>` : `<input data-f="note" value="${esc(p.note || "")}" aria-label="العمود الأخير ${i + 1}" placeholder="(فارغ للتوقيع)" style="min-width:110px">`}</td>
           <td><select data-f="excl" aria-label="استبعاد ${i + 1}"><option value="">—</option>${EXCL.map((x) => `<option ${p.excl === x ? "selected" : ""}>${x}</option>`).join("")}</select></td>
           <td class="c-x"><button class="btn small ghost" data-rm style="color:var(--bad)" aria-label="حذف ${i + 1}">✕</button></td></tr>`).join("")
-          : `<tr><td colspan="8" class="hint" style="text-align:center;padding:14px">لا توجد أسماء بعد — اضغطي «تعبئة من ميزانية المدارس».</td></tr>`;
+          : `<tr><td colspan="8" class="hint" style="text-align:center;padding:14px">لا توجد أسماء بعد — اضغطي «رفع ميزانية» أو «من مدارسي المسجلة».</td></tr>`;
         $$("#gr-rows tr[data-p]", body).forEach((tr) => {
           const pid = tr.dataset.p;
           $$("input,select", tr).forEach((el) => {
@@ -155,10 +155,36 @@ export async function gradingEditor(main, rec) {
         if (miss > 0) toast(`${miss} اسم بدون رقم مدني${noFile ? ` (${noFile} مدرسة بلا ملف ميزانية مرفوع)` : ""}${failed ? " — تعذّرت قراءة بعض الملفات (قد تكون مصوَّرة)" : ""}`, "error");
         return found.size;
       };
-      $("#gr-civ", body).onclick = async () => {
-        const sids = [...new Set((ed.rec.data.rows || []).map((p) => state.schools.find((s) => s.title === p.school)?.id).filter(Boolean))];
-        if (!sids.length) { toast("لا توجد مدارس من مدارسك في القائمة", "error"); return; }
-        const n = await civilFromBudgets(sids); if (n) toast(`أُضيف ${n} رقم مدني من الميزانيات`); else if (!(ed.rec.data.rows || []).some((p) => !normCivil(p.civil_id))) toast("كل الأسماء لها أرقام مدنية");
+
+      // رفع ميزانية (ملف أو أكثر): يُقرأ على الجهاز ولا يُحفظ الملف؛ تُضاف الأسماء والأرقام المدنية بعد المراجعة
+      $("#gr-up", body).onchange = async (e) => {
+        const files = [...e.target.files]; e.target.value = ""; if (!files.length) return;
+        toast("جارٍ قراءة ملف الميزانية…");
+        const { budgetPeople } = await import("../pdfnames.js");
+        const res = [];
+        for (const f of files) { try { res.push({ f, ...(await budgetPeople(f)) }); } catch (err) { toast(`«${f.name}»: ${err.message || "تعذّرت القراءة"}`, "error"); } }
+        if (!res.length) return;
+        const cur = new Map((ed.rec.data.rows || []).map((p) => [(p.name || "").trim(), p]));
+        const box = document.createElement("div");
+        box.innerHTML = `<p class="hint" style="margin-top:0">راجعي اسم المدرسة والأسماء، وألغي تحديد ما ليس اسم معلمة. الملف لا يُحفظ في الموقع.</p>` + res.map((r, fi) => `
+          <div class="panel" style="padding:10px;margin:8px 0"><div class="f"><label>مركز العمل (${esc(r.f.name)})</label><input data-sch="${fi}" value="${esc(r.school)}" placeholder="اسم المدرسة"></div>
+          ${r.people.length ? r.people.map((p, i) => { const ex = cur.get(p.name); return `<label style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line)"><input type="checkbox" data-pp="${fi}:${i}" ${ex && normCivil(ex.civil_id) ? "" : "checked"}><span style="flex:1">${esc(p.name)}${p.head ? ' <span class="pill">رئيس قسم</span>' : ""}${ex ? ' <span class="pill">موجود</span>' : ""}</span><span dir="ltr" class="hint" style="${p.civil_id ? "" : "color:var(--bad)"}">${p.civil_id ? esc(p.civil_id) : "بدون رقم"}</span></label>`; }).join("")
+            : `<p class="hint">لم أجد أسماء مكتوبة في الملف (قد يكون مصوَّراً).</p>`}</div>`).join("");
+        const v = await modal({ title: "أسماء من الميزانية", wide: true, body: box, actions: [{ label: "إلغاء", value: null }, { label: "إضافة المحدد", kind: "primary",
+          value: (b) => ({ sch: $$("[data-sch]", b).map((x) => x.value.trim()), pick: $$("[data-pp]:checked", b).map((x) => x.dataset.pp.split(":").map(Number)) }) }] });
+        if (!v || !v.pick.length) return;
+        let added = 0, filled = 0;
+        ed.change((x) => {
+          x.data.rows = (x.data.rows || []).filter((p) => (p.name || "").trim());
+          for (const [fi, i] of v.pick) {
+            const p = res[fi].people[i], ex = x.data.rows.find((y) => (y.name || "").trim() === p.name);
+            if (ex) { if (!normCivil(ex.civil_id) && p.civil_id) { ex.civil_id = p.civil_id; filled++; } if (!ex.school && v.sch[fi]) ex.school = v.sch[fi]; continue; }
+            const pv = prev.get(p.name) || {};
+            x.data.rows.push({ id: rid(), name: p.name, civil_id: p.civil_id || normCivil(pv.civil_id || ""), school: v.sch[fi] || "", cat: pv.cat || (p.head ? "head" : ""), role: "", excl: "", by: myName() });
+            added++;
+          }
+        }, { immediate: true });
+        paint(); toast(`أُضيف ${added} اسم${filled ? ` وأُكمل ${filled} رقم مدني` : ""}`);
       };
 
       paint();

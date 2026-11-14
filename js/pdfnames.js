@@ -130,3 +130,20 @@ export async function civilIdsFromBudget(file, names) {
   }
   return out;
 }
+
+// قراءة ملف ميزانية مرفوع (بدون حفظه): اسم المدرسة، والمعلمات بأرقامهن المدنية، ورئيس القسم
+export async function budgetPeople(file) {
+  const isPdf = /\.pdf$/i.test(file.name || "") || file.type === "application/pdf";
+  let names, text, rows;
+  // بعض ملفات PDF تُخرج «لا» المركبة مقلوبة (األولى ← الأولى)
+  const lam = (x) => String(x).replace(/األ/g, "الأ").replace(/اإل/g, "الإ").replace(/اآل/g, "الآ");
+  if (isPdf) { [names, text] = await Promise.all([namesFromPdf(file), textFromPdf(file, 30)]); names = names.map(lam); text = lam(text); rows = text.split("\n"); }
+  else { const m = await import("./namesImport.js"); [names, text, rows] = await Promise.all([m.namesFromFile(file), m.textFromFile(file), m.rowsFromFile(file)]); }
+  const R = rows.map((r) => { const d = digits(r).replace(/(\d)\s+(?=\d)/g, "$1"); return { t: normAr(r.replace(/[0-9٠-٩۰-۹]+/g, " ")), id: (d.match(/(?<!\d)\d{12}(?!\d)/) || [])[0] || "", raw: r }; });
+  const people = names.filter((n) => !/^(ال)?(رقم|الرقم|اسم|الاسم|المسمى|مسمى|الوظيف|الجنسي|ملاحظ)/.test(n.trim())).map((n) => {
+    const k = normAr(n), short = k.split(" ").slice(0, 3).join(" ");
+    const hit = R.find((r) => r.t.includes(k) && r.id) || R.find((r) => r.t.includes(k)) || R.find((r) => r.t.includes(short) && r.id);
+    return { name: n, civil_id: hit?.id || "", head: !!hit && /رئيس/.test(hit.raw) };
+  });
+  return { school: schoolNameFromText(text), people };
+}
