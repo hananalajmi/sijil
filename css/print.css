@@ -570,3 +570,4 @@
 .t-gr tr.gc-new td.gr-name { color: #c62828; }
 .t-gr tr.gc-expert td.gr-name { color: #2e7d32; }
 .t-gr tr.gc-head td.gr-name { color: #1565c0; }
+.t-gr .gr-dp { font-size: 13pt; font-weight: 700; }

@@ -15,14 +15,15 @@ const CAT_COLOR = { new: "#c62828", expert: "#2e7d32", head: "#1565c0" };
 const ROLES = ["مصحح", "مراجع"];
 const EXCL = ["حالات خاصة", "غير ملتزمة بالحضور", "إحالة"];
 const schoolTitle = (id) => state.schools.find((s) => s.id === id)?.title || "";
+export const isGradingPurpose = (d) => !d.purpose || d.purpose === T.purposes[0];
 
 export function newGrading() {
   return { kind: "form", title: T.label, record_date: today(), academic_year: state.year,
-    data: { type: "grading", period: T.periods[0], grade: T.grade, subject: T.subject, region: G().region || "الأحمدي", rows: [] } };
+    data: { type: "grading", purpose: T.purposes[0], last_col: "التوقيع", period: T.periods[0], grade: T.grade, subject: T.subject, region: G().region || "الأحمدي", rows: [] } };
 }
 export const gradingSummary = (r) => {
   const rows = (r.data.rows || []).filter((x) => !x.excl && (x.name || "").trim());
-  return `الفترة ${r.data.period || ""} — ${rows.length} معلم`;
+  return `${isGradingPurpose(r.data) ? "لجان تقدير الدرجات — الفترة " + (r.data.period || "") : (r.data.purpose || "") + (r.data.topic ? ": " + r.data.topic : "")} — ${rows.length} معلم`;
 };
 
 export async function gradingEditor(main, rec) {
@@ -41,36 +42,47 @@ export async function gradingEditor(main, rec) {
       const years = [...new Set([state.year, r.academic_year].filter(Boolean))];
       body.innerHTML = `
       <section class="panel"><h2>البيانات</h2><div class="form">
+        ${field({ label: "الغرض من القائمة", key: "purpose", type: "select", options: T.purposes, value: d.purpose || T.purposes[0], remember: "grading_purposes", wide: true, hint: "لجان تقدير الدرجات، أو حضور ورشة/دورة… ويمكن إضافة غرض جديد" })}
+      </div><div class="form" id="gr-g">
         ${field({ label: "الفترة", key: "period", type: "select", options: T.periods, value: d.period || T.periods[0] })}
         ${field({ label: "الصف", key: "grade", type: "select", options: T.grades, value: d.grade || T.grade, remember: "grading_grades" })}
         ${field({ label: "المجال", key: "subject", type: "select", options: T.subjects, value: d.subject || T.subject, remember: "grading_subjects" })}
-        ${field({ label: "العام الدراسي", key: "academic_year", type: "select", options: years, value: r.academic_year, custom: false })}
+      </div><div class="form" id="gr-o">
+        ${field({ label: "العنوان (مثل: عنوان الورشة)", key: "topic", type: "textarea", rows: 2, value: d.topic || "", wide: true })}
+        ${field({ label: "التاريخ", key: "date", type: "date", value: d.date || "" })}
+        ${field({ label: "المكان", key: "place", value: d.place || "" })}
+        ${field({ label: "عنوان العمود الأخير", key: "last_col", type: "select", options: T.lastCols, value: d.last_col || "التوقيع", remember: "grading_lastcols" })}
+      </div><div class="form">        ${field({ label: "العام الدراسي", key: "academic_year", type: "select", options: years, value: r.academic_year, custom: false })}
         ${field({ label: "المنطقة التعليمية", key: "region", value: d.region ?? (G().region || "الأحمدي") })}
       </div></section>
       <section class="panel"><div class="page-head" style="margin-bottom:6px"><h2>المعلمون</h2>
-        <div class="toolbar" style="margin:0"><button class="btn primary" id="gr-fill">تعبئة من ميزانية المدارس</button><button class="btn" id="gr-add">+ اسم</button><button class="btn" id="gr-dist">توزيع: 2 مصحح / 1 مراجع</button></div></div>
+        <div class="toolbar" style="margin:0"><button class="btn primary" id="gr-fill">تعبئة من ميزانية المدارس</button><button class="btn" id="gr-add">+ اسم</button></div></div>
         <p class="hint" style="margin-top:0">الفئة تحدد لون الاسم في النموذج: <b style="color:${CAT_COLOR.new}">الجدد بالأحمر</b>، <b style="color:${CAT_COLOR.expert}">الخبرة بالأخضر</b>، <b style="color:${CAT_COLOR.head}">رؤساء الأقسام بالأزرق</b>، والباقي بالأسود. المستبعدات لا يظهرن في النموذج المطبوع.</p>
         <div id="gr-count" class="hint" style="font-weight:600;margin:6px 0"></div>
-        <div class="tbl-wrap"><table class="data gr-t"><thead><tr><th class="c-n">م</th><th>الاسم</th><th>الرقم المدني</th><th>مركز العمل</th><th>الفئة</th><th>العمل في اللجنة</th><th>استبعاد</th><th></th></tr></thead><tbody id="gr-rows"></tbody></table></div></section>`;
+        <div class="tbl-wrap"><table class="data gr-t"><thead><tr><th class="c-n">م</th><th>الاسم</th><th>الرقم المدني</th><th>مركز العمل</th><th>الفئة</th><th id="gr-lc">العمل في اللجنة</th><th>استبعاد</th><th></th></tr></thead><tbody id="gr-rows"></tbody></table></div></section>`;
 
       bindFields(body, (k, v) => ed.change((x) => {
         if (k === "academic_year") x.academic_year = v || state.year; else x.data[k] = v;
-        x.title = `${T.label} (الفترة ${x.data.period || ""})`;
+        x.title = isGradingPurpose(x.data) ? `${T.label} (الفترة ${x.data.period || ""})` : `${x.data.purpose || "قائمة معلمين"}${x.data.topic ? " — " + x.data.topic.slice(0, 50) : ""}`;
+        if (k === "purpose" || k === "last_col") paint();
       }));
 
       const count = () => {
         const rs = ed.rec.data.rows || [], inc = rs.filter((x) => !x.excl);
         const c = (role) => inc.filter((x) => x.role === role).length;
-        $("#gr-count", body).textContent = `المشاركون: ${inc.length} · مصحح: ${c("مصحح")} · مراجع: ${c("مراجع")} · بدون تحديد: ${inc.filter((x) => !x.role).length} · مستبعد: ${rs.length - inc.length}`;
+        if (!isGradingPurpose(ed.rec.data)) { $("#gr-count", body).textContent = `العدد: ${inc.length} · مستبعد: ${rs.length - inc.length}`; return; }
+        $("#gr-count", body).textContent = `المشاركون: ${inc.length} · مصحح: ${c("مصحح")} · مراجع: ${c("مراجع")} (المطلوب تقريباً: ${inc.length - Math.round(inc.length / 3)} مصحح و${Math.round(inc.length / 3)} مراجع) · بدون تحديد: ${inc.filter((x) => !x.role).length} · مستبعد: ${rs.length - inc.length}`;
       };
       const paint = () => {
-        const rs = ed.rec.data.rows || [];
+        const rs = ed.rec.data.rows || [], G_ = isGradingPurpose(ed.rec.data);
+        $("#gr-g", body).style.display = G_ ? "" : "none"; $("#gr-o", body).style.display = G_ ? "none" : ""; $$("[data-gonly]", body).forEach((e) => (e.style.display = G_ ? "" : "none"));
+        $("#gr-lc", body).textContent = G_ ? "العمل في اللجنة" : (ed.rec.data.last_col || "التوقيع");
         $("#gr-rows", body).innerHTML = rs.length ? rs.map((p, i) => `<tr data-p="${p.id}" style="${p.excl ? "opacity:.5" : ""}"><td class="c-n">${i + 1}</td>
           <td><input data-f="name" value="${esc(p.name || "")}" aria-label="الاسم ${i + 1}" style="min-width:170px;color:${CAT_COLOR[p.cat] || "inherit"};font-weight:600"></td>
           <td><div class="cid-wrap"><input data-f="civil_id" class="cid" dir="ltr" inputmode="numeric" maxlength="14" value="${esc(p.civil_id || "")}" aria-label="الرقم المدني ${i + 1}" placeholder="12 رقماً"><span class="cid-n"></span></div></td>
           <td><input data-f="school" value="${esc(p.school || "")}" aria-label="مركز العمل ${i + 1}" style="min-width:130px"></td>
           <td><select data-f="cat" aria-label="الفئة ${i + 1}">${CATS.map(([v, l]) => `<option value="${v}" ${(p.cat || "") === v ? "selected" : ""}>${l}</option>`).join("")}</select></td>
-          <td><select data-f="role" aria-label="العمل في اللجنة ${i + 1}"><option value="">—</option>${ROLES.map((x) => `<option ${p.role === x ? "selected" : ""}>${x}</option>`).join("")}</select></td>
+          <td>${G_ ? `<select data-f="role" aria-label="العمل في اللجنة ${i + 1}"><option value="">—</option>${ROLES.map((x) => `<option ${p.role === x ? "selected" : ""}>${x}</option>`).join("")}</select>` : `<input data-f="note" value="${esc(p.note || "")}" aria-label="العمود الأخير ${i + 1}" placeholder="(فارغ للتوقيع)" style="min-width:110px">`}</td>
           <td><select data-f="excl" aria-label="استبعاد ${i + 1}"><option value="">—</option>${EXCL.map((x) => `<option ${p.excl === x ? "selected" : ""}>${x}</option>`).join("")}</select></td>
           <td class="c-x"><button class="btn small ghost" data-rm style="color:var(--bad)" aria-label="حذف ${i + 1}">✕</button></td></tr>`).join("")
           : `<tr><td colspan="8" class="hint" style="text-align:center;padding:14px">لا توجد أسماء بعد — اضغطي «تعبئة من ميزانية المدارس».</td></tr>`;
@@ -83,7 +95,7 @@ export async function gradingEditor(main, rec) {
               if (el.classList.contains("cid")) paintCivil(el);
               const f = el.dataset.f, val = f === "civil_id" ? normCivil(el.value) : el.value;
               ed.change((x) => { const p = x.data.rows.find((y) => y.id === pid); if (p) p[f] = val; if (f === "excl" && val && p) p.role = ""; }, { immediate: el.tagName === "SELECT" });
-              if (el.tagName === "SELECT") paint(); else count();
+              if (el.tagName === "SELECT" && f !== "role") paint(); else count();
             });
           });
           $("[data-rm]", tr).onclick = async () => { if (!(await confirmBox("حذف الاسم", "حذف هذا الاسم من النموذج؟", "حذف", true))) return; ed.change((x) => { x.data.rows = x.data.rows.filter((y) => y.id !== pid); }, { immediate: true }); paint(); };
@@ -117,17 +129,6 @@ export async function gradingEditor(main, rec) {
         paint(); toast(`أُضيف ${add.length} اسم`);
       };
 
-      // التوزيع: مراجع لكل مصححَين؛ الأولوية في المراجعة لرؤساء الأقسام ثم الخبرة ثم الباقي، والجدد مصححون
-      $("#gr-dist", body).onclick = async () => {
-        const inc = (ed.rec.data.rows || []).filter((x) => !x.excl && (x.name || "").trim());
-        if (!inc.length) { toast("أضيفي الأسماء أولاً", "error"); return; }
-        if (inc.some((x) => x.role) && !(await confirmBox("توزيع العمل في اللجنة", "سيُعاد توزيع «مصحح / مراجع» على كل الأسماء غير المستبعدة. متابعة؟", "توزيع"))) return;
-        const rank = { head: 0, expert: 1, "": 2, new: 3 };
-        const R = Math.round(inc.length / 3);
-        const reviewers = new Set([...inc].map((p, i) => [p, i]).sort((a, b) => (rank[a[0].cat || ""] - rank[b[0].cat || ""]) || a[1] - b[1]).slice(0, R).map(([p]) => p.id));
-        ed.change((x) => { x.data.rows.forEach((p) => { if (!p.excl && (p.name || "").trim()) p.role = reviewers.has(p.id) ? "مراجع" : "مصحح"; }); }, { immediate: true });
-        paint(); toast(`مصحح: ${inc.length - R} · مراجع: ${R}`);
-      };
       paint();
     } });
 }
