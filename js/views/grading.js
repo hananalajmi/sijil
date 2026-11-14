@@ -10,8 +10,10 @@ import { normCivil, paintCivil } from "./forms.js";
 
 const T = FORMS.grading;
 const rid = () => Math.random().toString(36).slice(2, 10);
-const CATS = [["", "عادي (أسود)"], ["new", "جديد (أحمر)"], ["expert", "خبرة (أخضر)"], ["head", "رئيس قسم (أزرق)"]];
-const CAT_COLOR = { new: "#c62828", expert: "#2e7d32", head: "#1565c0" };
+const CATS = [["", "عادي"], ["new", "جديد"], ["expert", "خبرة"], ["head", "رئيس قسم"]];
+// ألوان الفئات (تُغيَّر من القائمة وتُحفظ معها): يتلوّن السطر كله
+export const DEF_COLORS = { std: "#000000", new: "#e00000", expert: "#00a03c", head: "#0050d0" };
+export const colorOf = (d, cat) => ({ ...DEF_COLORS, ...(d?.colors || {}) })[cat || "std"] || "#000000";
 const ROLES = ["مصحح", "مراجع"];
 const EXCL = ["حالات خاصة", "غير ملتزمة بالحضور", "إحالة"];
 const schoolTitle = (id) => state.schools.find((s) => s.id === id)?.title || "";
@@ -60,7 +62,8 @@ export async function gradingEditor(main, rec) {
       </div></section>
       <section class="panel"><div class="page-head" style="margin-bottom:6px"><h2>المعلمون</h2>
         <div class="toolbar" style="margin:0"><button class="btn" id="gr-fill">من مدارسي المسجلة</button><label class="btn primary">رفع ميزانية<input type="file" id="gr-up" accept=".pdf,.docx,.xlsx,application/pdf" multiple hidden></label><button class="btn" id="gr-add">+ اسم</button></div></div>
-        <p class="hint" style="margin-top:0">الفئة تحدد لون الاسم في النموذج: <b style="color:${CAT_COLOR.new}">الجدد بالأحمر</b>، <b style="color:${CAT_COLOR.expert}">الخبرة بالأخضر</b>، <b style="color:${CAT_COLOR.head}">رؤساء الأقسام بالأزرق</b>، والباقي بالأسود. المستبعدات لا يظهرن في النموذج المطبوع.</p>
+        <div class="row" style="gap:14px;flex-wrap:wrap;align-items:center;margin:4px 0"><b>ألوان الفئات (يتلوّن السطر كله):</b>${CATS.map(([v, l]) => `<label style="display:inline-flex;gap:6px;align-items:center;width:auto;margin:0"><input type="color" data-col="${v || "std"}" value="${colorOf(d, v)}" style="width:38px;height:30px;padding:0;border:1px solid var(--line);border-radius:6px"> ${l}</label>`).join("")}<button class="btn small ghost" type="button" id="gr-col0">الألوان الافتراضية</button></div>
+        <p class="hint" style="margin-top:0">المستبعدات لا يظهرن في النموذج المطبوع.</p>
         <div id="gr-count" class="hint" style="font-weight:600;margin:6px 0"></div>
         <div class="tbl-wrap"><table class="data gr-t"><thead><tr><th class="c-n">م</th><th>الاسم</th><th>الرقم المدني</th><th>مركز العمل</th><th>الفئة</th><th id="gr-lc">العمل في اللجنة</th><th>استبعاد</th><th></th></tr></thead><tbody id="gr-rows"></tbody></table></div></section>`;
 
@@ -81,9 +84,9 @@ export async function gradingEditor(main, rec) {
         $("#gr-g", body).style.display = G_ ? "" : "none"; $("#gr-o", body).style.display = G_ ? "none" : ""; $$("[data-gonly]", body).forEach((e) => (e.style.display = G_ ? "" : "none"));
         $("#gr-lc", body).textContent = G_ ? "العمل في اللجنة" : (ed.rec.data.last_col || "التوقيع");
         $("#gr-rows", body).innerHTML = rs.length ? rs.map((p, i) => `<tr data-p="${p.id}" style="${p.excl ? "opacity:.5" : ""}"><td class="c-n">${i + 1}</td>
-          <td>${p.by ? `<div class="hint" style="font-size:11px;margin-bottom:2px">أضافته: ${esc(p.by)}</div>` : ""}<input data-f="name" value="${esc(p.name || "")}" aria-label="الاسم ${i + 1}" style="min-width:170px;color:${CAT_COLOR[p.cat] || "inherit"};font-weight:600"></td>
-          <td><div class="cid-wrap"><input data-f="civil_id" class="cid" dir="ltr" inputmode="numeric" maxlength="14" value="${esc(p.civil_id || "")}" aria-label="الرقم المدني ${i + 1}" placeholder="12 رقماً"><span class="cid-n"></span></div></td>
-          <td><input data-f="school" value="${esc(p.school || "")}" aria-label="مركز العمل ${i + 1}" style="min-width:130px"></td>
+          <td>${p.by ? `<div class="hint" style="font-size:11px;margin-bottom:2px">أضافته: ${esc(p.by)}</div>` : ""}<input data-f="name" value="${esc(p.name || "")}" aria-label="الاسم ${i + 1}" style="min-width:170px;color:${colorOf(ed.rec.data, p.cat)};font-weight:600"></td>
+          <td><div class="cid-wrap"><input data-f="civil_id" class="cid" dir="ltr" inputmode="numeric" maxlength="14" value="${esc(p.civil_id || "")}" aria-label="الرقم المدني ${i + 1}" placeholder="12 رقماً" style="color:${colorOf(ed.rec.data, p.cat)}"><span class="cid-n"></span></div></td>
+          <td><input data-f="school" value="${esc(p.school || "")}" aria-label="مركز العمل ${i + 1}" style="min-width:130px;color:${colorOf(ed.rec.data, p.cat)}"></td>
           <td><select data-f="cat" aria-label="الفئة ${i + 1}">${CATS.map(([v, l]) => `<option value="${v}" ${(p.cat || "") === v ? "selected" : ""}>${l}</option>`).join("")}</select></td>
           <td>${G_ ? `<select data-f="role" aria-label="العمل في اللجنة ${i + 1}"><option value="">—</option>${ROLES.map((x) => `<option ${p.role === x ? "selected" : ""}>${x}</option>`).join("")}</select>` : `<input data-f="note" value="${esc(p.note || "")}" aria-label="العمود الأخير ${i + 1}" placeholder="(فارغ للتوقيع)" style="min-width:110px">`}</td>
           <td><select data-f="excl" aria-label="استبعاد ${i + 1}"><option value="">—</option>${EXCL.map((x) => `<option ${p.excl === x ? "selected" : ""}>${x}</option>`).join("")}</select></td>
@@ -187,6 +190,8 @@ export async function gradingEditor(main, rec) {
         paint(); toast(`أُضيف ${added} اسم${filled ? ` وأُكمل ${filled} رقم مدني` : ""}`);
       };
 
+      $$("[data-col]", body).forEach((c) => (c.onchange = () => { ed.change((x) => { x.data.colors = { ...(x.data.colors || {}), [c.dataset.col]: c.value }; }, { immediate: true }); paint(); }));
+      $("#gr-col0", body).onclick = () => { ed.change((x) => { delete x.data.colors; }, { immediate: true }); $$("[data-col]", body).forEach((c) => (c.value = DEF_COLORS[c.dataset.col])); paint(); };
       paint();
     } });
 }
