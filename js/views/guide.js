@@ -1,7 +1,7 @@
 // البيانات الرئيسية للموجّه + التوقيع والختم والشعارات
 import { api } from "../api.js";
 import { state, opts, recordEditor, fileUrl, G } from "../store.js";
-import { esc, $, $$, toast, modal, confirmBox, shrinkImage, academicYearOf } from "../ui.js";
+import { esc, $, $$, toast, modal, confirmBox, shrinkImage, academicYearOf, download } from "../ui.js";
 import { field, bindFields, savePill } from "../kit.js";
 import { LOGOS, COVER_LINES, FIRST_SUPERVISOR, MONTHLY_ACH } from "../templates.js";
 import { FONTS, HEAD_FONTS, PRINT_FONTS, COLORS, SIZES, SHAPES, MODES, DEFAULT_UI, applyUI, migrate } from "../theme.js";
@@ -116,7 +116,7 @@ export default async function (main, { name }) {
     const id = d()[key];
     const u = id ? await fileUrl(id) : null;
     box.innerHTML = `<div class="row">${u ? `<img src="${u}" alt="" style="max-height:80px;max-width:200px;background:#fff;border:1px solid var(--line);border-radius:6px;padding:4px">` : '<span class="hint">لم تُرفع بعد</span>'}
-      <label class="btn small">${u ? "استبدال" : "رفع صورة"}<input type="file" accept="image/*" hidden></label>${category === "signature" ? '<button class="btn small" type="button" data-draw>✍️ وقّعي بيدك أو بالقلم</button>' : ""}${u ? '<button class="btn small danger" data-x>إزالة</button>' : ""}</div>`;
+      <label class="btn small">${u ? "استبدال" : "رفع صورة"}<input type="file" accept="image/*" hidden></label>${category === "signature" ? '<button class="btn small" type="button" data-draw>✍️ وقّعي بيدك أو بالقلم</button>' : ""}${u ? '<button class="btn small" type="button" data-png>تنزيل مفرغ (PNG)</button>' : ""}${u ? '<button class="btn small danger" data-x>إزالة</button>' : ""}</div>`;
     const save = async (f) => { try { const up = await api.upload(await shrinkImage(f, 1000), { category, title: f.name }); ed.change((r) => (r.data[key] = up.id), { immediate: true }); await ed.save(); imgSlot(box, key, category); toast("تم حفظ التوقيع"); }
       catch (err) { toast("تعذر الحفظ: " + err.message, "error"); } };
     const dr = box.querySelector("[data-draw]");
@@ -129,6 +129,28 @@ export default async function (main, { name }) {
       if (!f) return;
       try { const up = await api.upload(await shrinkImage(f, 1000), { category, title: f.name }); ed.change((r) => (r.data[key] = up.id), { immediate: true }); await ed.save(); imgSlot(box, key, category); toast("تم الرفع"); }
       catch (err) { toast("تعذر الرفع: " + err.message, "error"); }
+    };
+    // نسخة شفافة الخلفية لوضعها على أي ملف (Word، PDF، صورة)
+    const png = box.querySelector("[data-png]"); if (png) png.onclick = async () => {
+      try {
+        toast("جارٍ تجهيز الصورة…");
+        const b = await (await fetch(u)).blob();
+        const im = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(b); });
+        const c = document.createElement("canvas"); c.width = im.naturalWidth; c.height = im.naturalHeight;
+        const cx = c.getContext("2d", { willReadFrequently: true }); cx.drawImage(im, 0, 0);
+        const px = cx.getImageData(0, 0, c.width, c.height).data; let clear = 0; for (let i = 3; i < px.length; i += 4) if (px[i] < 250) { clear++; if (clear > 50) break; }
+        let out;
+        if (clear > 50) out = await new Promise((r) => c.toBlob(r, "image/png")); // مفرغة أصلاً
+        else { // خلفية بيضاء: تُزال
+          const { prepareInk, renderInk, canvasToBlob } = await import("../inkclean.js");
+          const cc = renderInk(await prepareInk(new File([b], "x.png", { type: b.type })), { maxOut: 1400 });
+          if (!cc) throw new Error("لم أجد الختم في الصورة"); out = await canvasToBlob(cc);
+        }
+        const name = (category === "signature" ? "توقيعي" : "ختمي") + "-مفرغ.png";
+        const file = new File([out], name, { type: "image/png" });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file] }); return; } catch (e) { if (e.name === "AbortError") return; } }
+        download(out, name);
+      } catch (err) { toast("تعذّر التجهيز: " + (err.message || err), "error"); }
     };
     const x = box.querySelector("[data-x]"); if (x) x.onclick = async () => { ed.change((r) => (r.data[key] = null), { immediate: true }); await ed.save(); imgSlot(box, key, category); };
   };
