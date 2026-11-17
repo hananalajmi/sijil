@@ -99,14 +99,12 @@ export async function weeklyAuto(ws) {
     const recs = [...(v.data.records || []), v.data.records_other].filter(Boolean);
     if (recs.length) r.summary.push("متابعة السجلات: " + recs.join("، "));
     (v.data.achieved || "").split("\n").map((x) => x.trim()).filter(Boolean).forEach((x) => r.summary.push(x));
-    (v.data.recommendations || "").split("\n").map((x) => x.trim()).filter(Boolean).forEach((x) => r.summary.push("توصية: " + x));
   }
   for (const v of tv.filter(inWeek)) {
     const r = row(v.record_date, v.school_id); r.src.push(v.id);
     const t = teacherById(v.teacher_id)?.title || "";
     r.goal.push(`زيارة ${v.data.visitee === "head" ? "رئيس قسم" : "معلم"}: أ. ${t}`);
     r.summary.push(`زيارة أ. ${t}${v.data.grade ? " — الصف " + v.data.grade + (v.data.section ? "/" + v.data.section : "") : ""}${v.data.lesson ? " — درس: " + v.data.lesson : ""}`);
-    (v.data.recommendations || "").split("\n").map((x) => x.trim()).filter(Boolean).slice(0, 3).forEach((x) => r.summary.push("توصية: " + x));
   }
   return [...map.values()].sort((a, b) => a.date.localeCompare(b.date) || a.place.localeCompare(b.place, "ar"))
     .map((r) => ({ key: r.key, date: r.date, place: r.place, goal: r.goal.join("\n"), summary: r.summary.join("\n"), src: r.src, auto: true }));

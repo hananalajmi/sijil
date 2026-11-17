@@ -26,6 +26,8 @@ function running(ctx, title, period) {
 }
 
 /* ============================== الإنجازات الأسبوعية ============================== */
+// التوصيات لا تظهر في الإنجازات الأسبوعية (حتى في التقارير القديمة التي سُحبت فيها)
+const noRec = (t) => String(t || "").split("\n").filter((l) => !/^\s*توصية\s*:/.test(l)).join("\n");
 export async function weeklyReport(ctx) {
   // الإنجازات الأسبوعية: تاريخ التوقيع ظاهر افتراضياً (يُخفى بإلغاء الخيار)
   if (ctx.print?.showDate === undefined) ctx = { ...ctx, print: { ...(ctx.print || {}), showDate: true } };
@@ -52,7 +54,7 @@ export async function weeklyReport(ctx) {
   blocks.push({ html: H("ثانياً", "ملخص ما تم إنجازه في الزيارات") });
   for (const r of rows.length ? rows : [{}]) {
     blocks.push({ html: `<table class="grid ach-sum"><tr><th>اليوم والتاريخ:</th><th>مكان الزيارة:</th></tr><tr><td>${val(dayName(r.date))} ${fmtDateSlash(r.date)}</td><td>${val(r.place)}</td></tr>
-      <tr><td colspan="2" class="tl"><b>ملخص الزيارة:</b>${lines(r.summary)}</td></tr></table>` });
+      <tr><td colspan="2" class="tl"><b>ملخص الزيارة:</b>${lines(noRec(r.summary))}</td></tr></table>` });
   }
   blocks.push({ group: { cls: "ach-txt", head: H("ثالثاً", "مستوى المعلمين والمتعلمين"), items: nl(d.level).map((x) => `<div class="ln">${x}</div>`) } });
   const pns = [["الإيجابيات", d.positives], ["السلبيات", d.negatives], ["المقترحات", d.suggestions]].filter(([, t]) => (t || "").trim());
