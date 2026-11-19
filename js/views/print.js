@@ -50,6 +50,7 @@ export async function resolveReport(id, params) {
   if (!rec) throw new Error("السجل غير موجود");
   const back = state.profile && rec.owner_id && rec.owner_id !== state.profile.id && rec.kind !== "shared_achievements" ? `#/compile?month=${rec.data?.month || ""}` : `#/${KIND_ROUTE[rec.kind]}/${rec.id}`;
   const name = rec.title || KIND_LABEL[rec.kind];
+  if (rec.data?.doc === "teacher_list" && params.view === "dist") { const c = await recordContext(rec); c.view = "dist"; return [c, "توزيع " + name, back, rec]; }
   if (rec.status === "approved" && rec.snapshot) return [rec.snapshot, name, back, rec]; // النسخة الثابتة المعتمدة
   if (rec.kind === "monthly_plan") {
     // اسم الموجّه المُرسِل يظهر في اسم الملف (يُرى من الخارج عند الإرسال)

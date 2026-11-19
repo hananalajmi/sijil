@@ -300,3 +300,37 @@ export async function gradingForm(ctx) {
     blocks: [{ html: head }, { table: { cls: "gr-t", colgroup: `<colgroup><col style="width:30%"><col style="width:24%"><col style="width:21%"><col style="width:25%"></colgroup>`,
       thead: `<tr><th>الاسم</th><th>الرقم المدني</th><th>مركز العمل</th><th>${esc(isG ? "العمل في اللجنة" : d.last_col || "التوقيع")}</th></tr>`, rows } }] };
 }
+
+// ---------------- توزيع لجان تقدير الدرجات على الأسئلة ----------------
+export async function gradingDist(ctx) {
+  const T = FORMS.grading, d = ctx.rec.data || {}, dist = d.dist || {};
+  const rows = new Map((d.rows || []).filter((p) => !p.excl).map((p) => [p.id, p]));
+  const COL = { std: "#000000", new: "#e00000", expert: "#00a03c", head: "#0050d0", ...(d.colors || {}) };
+  const ok = (c) => (/^#[0-9a-f]{6}$/i.test(c || "") ? c : "#000");
+  const nm = (id) => { const p = rows.get(id); return p ? `<span style="color:${ok(p.color || COL[p.cat || "std"])}">${esc(p.name)}</span>` : ""; };
+  const yr = String(ctx.rec.academic_year || "").split("-");
+  const qs = String(dist.questions || "").split(/[,،\s]+/).map((x) => x.trim()).filter(Boolean);
+  const head = `<div class="gd-title"><div>لجان تقدير درجات امتحان ( الفترة ${esc(d.period || "")} )</div>
+      <div>للصف ${esc(d.grade || T.grade)} / في مجال ${esc(d.subject || T.subject)}</div>
+      <div>للعام الدراسي ${esc(yr[0] || "")}${yr[1] ? " / " + esc(yr[1]) : ""} م</div></div>`;
+  const blocks = [{ html: head }];
+  const rev = (dist.review || []).filter(Boolean);
+  if (String(dist.guides || "").trim() || rev.length) blocks.push({ html: `<table class="gd-box"><tr><th>لجنة المراجعة الفنية<br>منطقة ${esc(d.region || ctx.guide?.region || "الأحمدي")}</th></tr>
+    <tr><td>${esc(dist.guides || "").replace(/\n/g, "<br>")}<div class="gd-sub">رؤساء أقسام أو معلمين خبرة</div><div class="gd-inline">${(dist.review || []).map((id, i) => `<span>${i + 1}- ${nm(id)}</span>`).join("")}</div></td></tr></table>` });
+  for (const c of dist.comms || []) {
+    const cc = c.c || [], cells = [];
+    for (let i = 0; i < Math.max(Number(c.nc) || 0, cc.length); i++) cells.push(`<td><b>${i + 1}-</b> ${nm(cc[i])}</td>`);
+    const trs = []; for (let i = 0; i < cells.length; i += 3) trs.push(`<tr>${cells.slice(i, i + 3).join("")}${"<td></td>".repeat(Math.max(0, 3 - cells.slice(i, i + 3).length))}</tr>`);
+    const rr = (c.r || []).filter(Boolean);
+    blocks.push({ html: `<table class="gd-box gd-comm"><tr><th colspan="3">${esc(c.label || "")}</th></tr><tr><th colspan="3" class="gd-h2">اسماء المصححين</th></tr>${trs.join("")}
+      ${rr.length ? `<tr><td colspan="3"><b>المراجع:</b> ${rr.map(nm).join(" - ")}</td></tr>` : ""}</table>` });
+  }
+  (dist.tables || []).forEach((t, ti) => {
+    const ids = qs.flatMap((k) => [...((t.q || {})[k]?.c || []), (t.q || {})[k]?.r]).filter((x) => x && rows.has(x));
+    blocks.push({ html: `<div class="gd-th"><span class="gd-n">(${ids.length} معلم)</span><span class="gd-t">طاولة (${ti + 1})</span></div>
+      <table class="gd-tab"><colgroup><col style="width:14%"><col style="width:43%"><col style="width:43%"></colgroup>
+      <tr><th>رقم السؤال</th><th>اسماء المصححين</th><th>اسماء المراجعين</th></tr>
+      ${qs.map((k) => { const s = (t.q || {})[k] || {}; return `<tr><th>${esc(k)}</th><td>${(s.c || []).map((id) => `<div>- ${nm(id)}</div>`).join("")}</td><td><div>- ${nm(s.r)}</div></td></tr>`; }).join("")}</table>` });
+  });
+  return { orientation: "portrait", fixedOrientation: true, cls: "t-gd", header: "", identity: "", footer: "", blocks };
+}

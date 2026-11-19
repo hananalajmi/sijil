@@ -7,6 +7,7 @@ import { esc, $, $$, today, toast, modal, confirmBox } from "../ui.js";
 import { field, bindFields, recordPage } from "../kit.js";
 import { FORMS } from "../templates.js";
 import { normCivil, paintCivil } from "./forms.js";
+import { distPanel } from "./gradingDist.js";
 
 const T = FORMS.grading;
 const rid = () => Math.random().toString(36).slice(2, 10);
@@ -79,6 +80,7 @@ export async function gradingEditor(main, rec) {
         if (!isGradingPurpose(ed.rec.data)) { $("#gr-count", body).textContent = `العدد: ${inc.length} · مستبعد: ${rs.length - inc.length}`; return; }
         $("#gr-count", body).textContent = `المشاركون: ${inc.length} · مصحح: ${c("مصحح")} · مراجع: ${c("مراجع")} (المطلوب تقريباً: ${inc.length - Math.round(inc.length / 3)} مصحح و${Math.round(inc.length / 3)} مراجع) · بدون تحديد: ${inc.filter((x) => !x.role).length} · مستبعد: ${rs.length - inc.length}`;
       };
+      let distRepaint = null;
       const paint = () => {
         const rs = ed.rec.data.rows || [], G_ = isGradingPurpose(ed.rec.data);
         $("#gr-g", body).style.display = G_ ? "" : "none"; $("#gr-o", body).style.display = G_ ? "none" : ""; $$("[data-gonly]", body).forEach((e) => (e.style.display = G_ ? "" : "none"));
@@ -105,7 +107,7 @@ export async function gradingEditor(main, rec) {
           });
           $("[data-rm]", tr).onclick = async () => { if (!(await confirmBox("حذف الاسم", "حذف هذا الاسم من النموذج؟", "حذف", true))) return; ed.change((x) => { x.data.rows = x.data.rows.filter((y) => y.id !== pid); }, { immediate: true }); paint(); };
         });
-        count();
+        count(); distRepaint?.();
       };
 
       $("#gr-add", body).onclick = () => { const nid = rid(); ed.change((x) => { x.data.rows = [...(x.data.rows || []), { id: nid, name: "", civil_id: "", school: "", cat: "", role: "", excl: "", by: myName() }]; }, { immediate: true }); paint(); $(`tr[data-p="${nid}"] input`, body)?.focus(); };
@@ -190,5 +192,6 @@ export async function gradingEditor(main, rec) {
       };
 
       paint();
+      distRepaint = distPanel(body, ed);
     } });
 }
