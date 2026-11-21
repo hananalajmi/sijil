@@ -19,17 +19,19 @@ export async function subjectGuides(subject) {
 // مجموعات طاولات: لكل مجموعة أسئلتها وعدد طاولاتها (افتراضياً: طاولة للسؤالين 1 و2، وطاولات للأسئلة 3–6)
 // ولكل سؤال في الطاولة مصححتان ومراجعة
 // المجموعة الأولى (السؤال 1 و2): المصححات من المعلمات الجدد، والمراجعة معلمة عادية
-export const DEF_GROUPS = () => [{ questions: "1, 2", ntables: "1", cfrom: "new", rfrom: "std" }, { questions: "3, 4, 5, 6", ntables: "" }];
-export const DEF_DIST = () => ({ v: 4, guides: "", review: ["", "", "", "", "", ""], comms: [], groups: DEF_GROUPS(), tables: [] });
+export const DEF_GROUPS = () => [{ questions: "1, 2", ntables: "", cfrom: "new", rfrom: "std" }, { questions: "3, 4, 5, 6", ntables: "" }];
+export const DEF_DIST = () => ({ v: 5, guides: "", review: ["", "", "", "", "", ""], comms: [], groups: DEF_GROUPS(), tables: [] });
 export const normDist = (saved) => {
   const d0 = { ...DEF_DIST(), ...(saved || {}) };
   if (saved && (saved.v || 0) < 3) { // نسخ سابقة: لجنتا السؤال الأول والثاني الافتراضيتان تُحذفان، والأسئلة تصير مجموعات
     d0.comms = (d0.comms || []).filter((c) => !/^لجنة السؤال (الأول|الثاني)/.test(String(c.label || "")));
-    d0.groups = [{ questions: "1, 2", ntables: "1", cfrom: "new", rfrom: "std" }, { questions: "3, 4, 5, 6", ntables: d0.ntables || "" }];
+    d0.groups = [{ questions: "1, 2", ntables: "", cfrom: "new", rfrom: "std" }, { questions: "3, 4, 5, 6", ntables: d0.ntables || "" }];
     d0.v = 3;
   }
   if (!Array.isArray(d0.groups) || !d0.groups.length) d0.groups = DEF_GROUPS();
-  if ((d0.v || 0) < 4) { d0.groups = d0.groups.map((g) => (/^\s*1[,،\s]+2\s*$/.test(g.questions || "") && !g.cfrom ? { ...g, cfrom: "new", rfrom: "std" } : g)); d0.v = 4; }
+  if ((d0.v || 0) < 5) d0.groups = d0.groups.map((g) => (g.cfrom === "new" && String(g.ntables) === "1" ? { ...g, ntables: "" } : g)); // الجدد كلهم (لا طاولة واحدة فقط)
+  if ((d0.v || 0) < 4) d0.groups = d0.groups.map((g) => (/^\s*1[,،\s]+2\s*$/.test(g.questions || "") && !g.cfrom ? { ...g, cfrom: "new", rfrom: "std" } : g));
+  d0.v = 5;
   return d0;
 };
 const qOf = (str) => String(str || "").split(/[,،\s]+/).map((x) => x.trim()).filter(Boolean);
@@ -94,12 +96,17 @@ function distCore(all, dist) {
     const qs = qOf(g.questions); if (!qs.length) return;
     const last = gi === gs.length - 1, left = olds.length + news.length;
     // عدد الطاولات: كما كُتب، وإلا طاولة واحدة للمجموعات الأولى، والأخيرة تأخذ الباقين
-    const n = Number(g.ntables) > 0 ? Number(g.ntables) : last ? Math.max(1, Math.ceil(Math.max(left / (2 * qs.length), R.length / qs.length))) : 1;
+    // عدد الطاولات (إن لم يُكتب): مجموعة الجدد تتسع لكل الجدد، والأخيرة تتسع للباقين (كل سؤال مصححان ومراجع)، وغيرها طاولة واحدة
+    const n = Number(g.ntables) > 0 ? Number(g.ntables)
+      : g.cfrom === "new" ? Math.max(1, Math.ceil(news.length / (2 * qs.length)))
+      : last ? Math.max(1, Math.ceil((left + R.length) / (3 * qs.length))) : 1;
     for (let t = 0; t < n; t++) {
       const q = {};
       for (const k of qs) {
-        const a = g.cfrom === "new" ? takeNew() : takeC(), b = g.cfrom === "new" ? takeNew() : takeMate();
-        const r = g.rfrom === "std" ? takeStd() : R.shift();
+        // إن نفد المصححون يُكمَّل من المراجعين والعكس، حتى لا تبقى خانات فارغة وأسماء بلا توزيع
+        const takeAnyC = () => takeC() || R.shift(), takeAnyMate = () => takeMate() || R.shift();
+        const a = g.cfrom === "new" ? takeNew() || R.shift() : takeAnyC(), b = g.cfrom === "new" ? takeNew() || R.shift() : takeAnyMate();
+        const r = (g.rfrom === "std" ? takeStd() : R.shift()) || takeC();
         q[k] = { c: [a?.id || "", b?.id || ""], r: r?.id || "" };
       }
       byGroup[gi].push({ qs: g.questions, q });
