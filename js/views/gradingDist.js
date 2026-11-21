@@ -19,20 +19,21 @@ export async function subjectGuides(subject) {
 // مجموعات طاولات: لكل مجموعة أسئلتها وعدد طاولاتها (افتراضياً: طاولة للسؤالين 1 و2، وطاولات للأسئلة 3–6)
 // ولكل سؤال في الطاولة مصححتان ومراجعة
 // المجموعة الأولى (السؤال 1 و2): المصححات من المعلمات الجدد، والمراجعة معلمة عادية
-export const DEF_GROUPS = () => [{ questions: "1, 2", ntables: "", cfrom: "new", rfrom: "std", nc: "all" }, { questions: "3, 4, 5, 6", ntables: "" }];
-export const DEF_DIST = () => ({ v: 6, guides: "", review: ["", "", "", "", "", ""], comms: [], groups: DEF_GROUPS(), tables: [] });
+export const DEF_GROUPS = () => [{ questions: "1, 2", ntables: "", cfrom: "new", rfrom: "", nc: "all" }, { questions: "3, 4, 5, 6", ntables: "" }];
+export const DEF_DIST = () => ({ v: 7, guides: "", review: ["", "", "", "", "", ""], comms: [], groups: DEF_GROUPS(), tables: [] });
 export const normDist = (saved) => {
   const d0 = { ...DEF_DIST(), ...(saved || {}) };
   if (saved && (saved.v || 0) < 3) { // نسخ سابقة: لجنتا السؤال الأول والثاني الافتراضيتان تُحذفان، والأسئلة تصير مجموعات
     d0.comms = (d0.comms || []).filter((c) => !/^لجنة السؤال (الأول|الثاني)/.test(String(c.label || "")));
-    d0.groups = [{ questions: "1, 2", ntables: "", cfrom: "new", rfrom: "std", nc: "all" }, { questions: "3, 4, 5, 6", ntables: d0.ntables || "" }];
+    d0.groups = [{ questions: "1, 2", ntables: "", cfrom: "new", rfrom: "", nc: "all" }, { questions: "3, 4, 5, 6", ntables: d0.ntables || "" }];
     d0.v = 3;
   }
   if (!Array.isArray(d0.groups) || !d0.groups.length) d0.groups = DEF_GROUPS();
   if ((d0.v || 0) < 5) d0.groups = d0.groups.map((g) => (g.cfrom === "new" && String(g.ntables) === "1" ? { ...g, ntables: "" } : g)); // الجدد كلهم (لا طاولة واحدة فقط)
   if ((d0.v || 0) < 4) d0.groups = d0.groups.map((g) => (/^\s*1[,،\s]+2\s*$/.test(g.questions || "") && !g.cfrom ? { ...g, cfrom: "new", rfrom: "std" } : g));
   if ((d0.v || 0) < 6) d0.groups = d0.groups.map((g) => (g.cfrom === "new" && !g.nc ? { ...g, nc: "all" } : g)); // كل الجدد في طاولة واحدة
-  d0.v = 6;
+  if ((d0.v || 0) < 7) d0.groups = d0.groups.map((g) => (g.cfrom === "new" && g.rfrom === "std" ? { ...g, rfrom: "" } : g)); // المراجع من الخبرة/رؤساء الأقسام
+  d0.v = 7;
   return d0;
 };
 const qOf = (str) => String(str || "").split(/[,،\s]+/).map((x) => x.trim()).filter(Boolean);
@@ -84,7 +85,9 @@ export function autoDistribute(d, dist) {
 function distCore(all, dist) {
   const fixed = new Set([...(dist.review || []).filter(Boolean)]);
   const free = all.filter((p) => !fixed.has(p.id));
-  let C = free.filter((p) => p.role !== "مراجع"), R = free.filter((p) => p.role === "مراجع").sort((a, b) => (RANK[a.cat || ""] - RANK[b.cat || ""]));
+  // حسب نوع المعلم (اللون): الخبرة (أخضر) ورؤساء الأقسام (أزرق) مراجعون، والمعلم (أسود) والجديد (أحمر) مصححون
+  const isRev = (p) => p.cat === "expert" || p.cat === "head";
+  let C = free.filter((p) => !isRev(p)), R = free.filter(isRev).sort((a, b) => (RANK[a.cat || ""] - RANK[b.cat || ""]));
   // الجدد في مجموعة، والباقي في أخرى؛ كل زوج يأخذ من الاثنتين ما أمكن
   const news = C.filter((p) => p.cat === "new"), olds = C.filter((p) => p.cat !== "new");
   const takeC = () => (olds.length ? olds.shift() : news.shift());
@@ -102,7 +105,7 @@ function distCore(all, dist) {
     const n = Number(g.ntables) > 0 ? Number(g.ntables)
       : all ? 1
       : g.cfrom === "new" ? Math.max(1, Math.ceil(news.length / (per * qs.length)))
-      : last ? Math.max(1, Math.ceil((left + R.length) / ((per + 1) * qs.length))) : 1;
+      : last ? Math.max(1, Math.ceil(left / (per * qs.length))) : 1;
     const poolC = () => (g.cfrom === "new" ? news.length : olds.length + news.length);
     const perQ = all ? Math.ceil(poolC() / (n * qs.length)) : per;
     for (let t = 0; t < n; t++) {
@@ -112,10 +115,10 @@ function distCore(all, dist) {
         const cc = [];
         for (let i = 0; i < perQ; i++) {
           // «كل الجدد»: لا يُكمَّل من غيرهم؛ وغير ذلك إن نفد المصححون يُكمَّل من المراجعين
-          const p = g.cfrom === "new" ? (all ? news.shift() : takeNew() || R.shift()) : (i % 2 ? takeMate() : takeC()) || R.shift();
+          const p = g.cfrom === "new" ? (all ? news.shift() : takeNew()) : (i % 2 ? takeMate() : takeC());
           if (p) cc.push(p.id); else if (!all) cc.push("");
         }
-        const r = (g.rfrom === "std" ? takeStd() : R.shift()) || takeC();
+        const r = g.rfrom === "std" ? takeStd() : R.shift();
         q[k] = { c: cc, r: r?.id || "" };
       }
       byGroup[gi].push({ qs: g.questions, q });
@@ -170,7 +173,7 @@ export function distPanel(body, ed) {
         <button class="btn small" id="ds-new">+ توزيع جديد</button>
         <span style="flex:1"></span><input id="ds-name" value="${esc(distsOf(d)[curIdx()].name || "التوزيع")}" aria-label="اسم التوزيع" style="width:150px" placeholder="مثل: بنين">
         ${distsOf(d).length > 1 ? '<button class="btn small ghost" id="ds-del" style="color:var(--bad)">حذف هذا التوزيع</button>' : ""}</div>
-      <p class="hint" style="margin-top:0">يُوزَّع من القائمة أعلاه: لكل سؤال مصححتان ومراجعة، والجدد يُخلطون مع غيرهم. بعد التوزيع تقدرين تغيّرين أي اسم من القائمة المنسدلة.</p>
+      <p class="hint" style="margin-top:0">حسب نوع المعلم: <b style="color:#00a03c">الخبرة</b> و<b style="color:#0050d0">رؤساء الأقسام</b> مراجعون، و<b>المعلم</b> مصحح، و<b style="color:#e00000">الجدد</b> كلهم في طاولة السؤال الأول والثاني. يُوزَّع من القائمة أعلاه: لكل سؤال مصححتان ومراجعة، والجدد يُخلطون مع غيرهم. بعد التوزيع تقدرين تغيّرين أي اسم من القائمة المنسدلة.</p>
       <div class="hint" style="font-weight:600;margin:6px 0">الموزَّع: ${used.size} من ${all.length}${notUsed.length ? ` · غير موزَّع: ${notUsed.length}` : ""}${dup.size ? ` · <span style="color:var(--bad)">أسماء مكررة: ${dup.size}</span>` : ""}</div>
       ${notUsed.length ? `<details style="margin-bottom:8px"><summary class="hint">غير الموزَّعين</summary><p>${notUsed.map((p) => `<span class="pill" style="color:${colorOf(p)}">${esc(p.name)}${p.role ? " · " + p.role : ""}</span>`).join(" ")}</p></details>` : ""}
 

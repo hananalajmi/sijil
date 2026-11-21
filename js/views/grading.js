@@ -101,7 +101,7 @@ export async function gradingEditor(main, rec) {
             el.addEventListener(ev, () => {
               if (el.classList.contains("cid")) paintCivil(el);
               const f = el.dataset.f, val = f === "civil_id" ? normCivil(el.value) : el.value;
-              ed.change((x) => { const p = x.data.rows.find((y) => y.id === pid); if (p) p[f] = val; if (f === "excl" && val && p) p.role = ""; if (f === "cat" && p) delete p.color; }, { immediate: el.tagName === "SELECT" });
+              ed.change((x) => { const p = x.data.rows.find((y) => y.id === pid); if (p) p[f] = val; if (f === "excl" && val && p) p.role = ""; if (f === "cat" && p) { delete p.color; p.role = val === "expert" || val === "head" ? "مراجع" : "مصحح"; } }, { immediate: el.tagName === "SELECT" });
               if (el.tagName === "SELECT" && f !== "role") paint(); else count();
             });
           });
