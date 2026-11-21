@@ -90,15 +90,16 @@ function distCore(all, dist) {
   let C = free.filter((p) => !isRev(p)), R = free.filter(isRev).sort((a, b) => (RANK[a.cat || ""] - RANK[b.cat || ""]));
   // الجدد في مجموعة، والباقي في أخرى؛ كل زوج يأخذ من الاثنتين ما أمكن
   const news = C.filter((p) => p.cat === "new"), olds = C.filter((p) => p.cat !== "new");
-  const takeC = () => (olds.length ? olds.shift() : news.shift());
-  const takeMate = () => (news.length ? news.shift() : olds.shift());
+  // الجدد (الأحمر) لا يدخلون إلا مجموعات «معلمون جدد» (السؤال الأول والثاني)
+  const takeC = () => olds.shift();
+  const takeMate = () => olds.shift();
   // مراجعة «معلم عادي»: من المراجعات العاديات أولاً، ثم من المعلمات العاديات، ثم أي مراجعة
   const takeStd = () => { let i = R.findIndex((p) => !p.cat); if (i >= 0) return R.splice(i, 1)[0]; i = olds.findIndex((p) => !p.cat); if (i >= 0) return olds.splice(i, 1)[0]; return R.shift(); };
-  const takeNew = () => (news.length ? news.shift() : olds.shift());
+  const takeNew = () => news.shift();
   const gs = dist.groups || DEF_GROUPS(), byGroup = gs.map(() => []);
   const fillGroup = (g, gi) => {
     const qs = qOf(g.questions); if (!qs.length) return;
-    const last = gi === gs.length - 1, left = olds.length + news.length;
+    const last = gi === gs.length - 1, left = olds.length;
     // عدد الطاولات (إن لم يُكتب): مجموعة الجدد تتسع لكل الجدد، والأخيرة تتسع للباقين (كل سؤال مصححان ومراجع)، وغيرها طاولة واحدة
     // عدد المصححين لكل سؤال: رقم (الافتراضي 2)، أو «all» = كل المتاحين (الجدد في مجموعتهم) موزعين على الأسئلة
     const all = g.nc === "all", per = all ? 0 : Math.max(1, Number(g.nc) || 2);
