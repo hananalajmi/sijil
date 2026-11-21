@@ -67,8 +67,11 @@ export function usedIds(dist) {
 
 // توزيع تلقائي: المصححون (2 لكل سؤال، يُخلط الجدد مع غيرهم) والمراجعون (1 لكل سؤال، الأولوية لرؤساء الأقسام ثم الخبرة)
 // الفصل بين البنات والبنين (افتراضياً): كل لجنة لها طاولاتها، والترقيم يبدأ من 1 في كل لجنة
+// المدارس المشمولة في الفرز (الافتراضي: كل المدارس)؛ تُحفظ المستثناة في dist.schools_off
+const schoolKey = (p) => String(p.school || "").trim() || "بدون مدرسة";
+export const inScope = (dist) => { const off = new Set(dist.schools_off || []); return (p) => !off.has(schoolKey(p)); };
 export function autoDistribute(d, dist) {
-  const all = people(d);
+  const all = people(d).filter(inScope(dist));
   if (dist.split === false) return distCore(all, dist);
   const f = all.filter((p) => sexOf(p) !== "m"), m = all.filter((p) => sexOf(p) === "m");
   const A = f.length ? distCore(f, dist) : { comms: (dist.comms || []).map((c) => ({ ...c, c: [], r: [] })), tables: [] };
@@ -122,7 +125,7 @@ export function distPanel(body, ed) {
   const D = () => (normDist(ed.rec.data.dist));
   const save = (fn) => { ed.change((x) => { const d0 = normDist(x.data.dist); fn(d0); x.data.dist = d0; }, { immediate: true }); };
   const opt = (sel, used) => {
-    const ps = people(ed.rec.data);
+    const ps = people(ed.rec.data).filter((p) => inScope(D())(p) || p.id === sel);
     return `<option value="">—</option>` + ps.map((p) => `<option value="${p.id}" ${p.id === sel ? "selected" : ""}>${esc(p.name)}${p.role ? " · " + p.role : ""}${used.has(p.id) && p.id !== sel ? " (موزّعة)" : ""}</option>`).join("");
   };
   const slot = (path, val, used) => { const p = people(ed.rec.data).find((x) => x.id === val); return `<select data-slot="${path}" style="min-width:150px;font-weight:600;color:${p ? colorOf(p) : "inherit"}" aria-label="اختيار اسم">${opt(val, used)}</select>`; };
@@ -135,14 +138,20 @@ export function distPanel(body, ed) {
     host.style.display = "";
     const dist = D(), usedArr = usedIds(dist), used = new Set(usedArr);
     const dup = new Set(usedArr.filter((x, i) => usedArr.indexOf(x) !== i));
-    const all = people(d), notUsed = all.filter((p) => !used.has(p.id)), unk = all.filter((p) => !sexOf(p));
+    const everyone = people(d), all = everyone.filter(inScope(dist)), notUsed = all.filter((p) => !used.has(p.id)), unk = all.filter((p) => !sexOf(p));
+    const schools = [...new Set(everyone.map(schoolKey))].sort((a, b) => a.localeCompare(b, "ar")), off = new Set(dist.schools_off || []);
     host.innerHTML = `<div class="page-head" style="margin-bottom:6px"><h2>توزيع اللجان على الأسئلة</h2>
         <div class="toolbar" style="margin:0"><button class="btn primary" id="ds-auto">توزيع تلقائي</button><a class="btn" href="#/print/${ed.rec.id || ""}?view=dist" ${ed.rec.id ? "" : 'aria-disabled="true"'}>طباعة التوزيع</a><button class="btn ghost" id="ds-clear">تفريغ التوزيع</button></div></div>
       <p class="hint" style="margin-top:0">يُوزَّع من القائمة أعلاه: لكل سؤال مصححتان ومراجعة، والجدد يُخلطون مع غيرهم. بعد التوزيع تقدرين تغيّرين أي اسم من القائمة المنسدلة.</p>
       <div class="hint" style="font-weight:600;margin:6px 0">الموزَّع: ${used.size} من ${all.length}${notUsed.length ? ` · غير موزَّع: ${notUsed.length}` : ""}${dup.size ? ` · <span style="color:var(--bad)">أسماء مكررة: ${dup.size}</span>` : ""}</div>
       ${notUsed.length ? `<details style="margin-bottom:8px"><summary class="hint">غير الموزَّعين</summary><p>${notUsed.map((p) => `<span class="pill" style="color:${colorOf(p)}">${esc(p.name)}${p.role ? " · " + p.role : ""}</span>`).join(" ")}</p></details>` : ""}
 
-      <h3>لجنة المراجعة الفنية</h3>
+      <h3>المدارس المشمولة في الفرز</h3>
+      ${schools.length ? `<label style="display:inline-flex;gap:6px;align-items:center;margin-bottom:4px"><input type="checkbox" id="ds-sall" ${off.size ? "" : "checked"}> <b>كل المدارس</b> <span class="hint">(${schools.length - schools.filter((x) => off.has(x)).length} من ${schools.length})</span></label>
+      <div class="checks" id="ds-sl">${schools.map((sc) => { const n = everyone.filter((p) => schoolKey(p) === sc).length; return `<label><input type="checkbox" value="${esc(sc)}" ${off.has(sc) ? "" : "checked"}> ${esc(sc)} <span class="hint">(${n})</span></label>`; }).join("")}</div>
+      <p class="hint">بعد تغيير المدارس اضغطي «توزيع تلقائي». الأسماء من المدارس غير المحددة لا تدخل الفرز.</p>` : `<p class="hint">لا توجد أسماء بعد.</p>`}
+
+      <h3 style="margin-top:14px">لجنة المراجعة الفنية</h3>
       <p class="hint" style="margin:0 0 4px">موجهو ${esc(d.subject || "الكيمياء")}:</p>
       ${guideList.length ? `<label style="display:inline-flex;gap:6px;align-items:center;margin-bottom:4px"><input type="checkbox" id="ds-gall" ${guideList.every((n) => (dist.guide_list || []).includes(n)) ? "checked" : ""}> <b>تحديد الكل</b></label>
       <div class="checks no-gender" id="ds-gl">${[...new Set([...guideList, ...(dist.guide_list || [])])].map((n) => `<label><input type="checkbox" value="${esc(n)}" ${(dist.guide_list || []).includes(n) ? "checked" : ""}> ${esc(n)}</label>`).join("")}</div>`
@@ -193,6 +202,9 @@ export function distPanel(body, ed) {
     $("#ds-g", host).oninput = (e) => ed.change((x) => { x.data.dist = { ...normDist(x.data.dist), guides: e.target.value }; });
     $$("[data-gq],[data-gn]", host).forEach((i) => (i.onchange = () => { const k = +(i.dataset.gq ?? i.dataset.gn), f = i.dataset.gq != null ? "questions" : "ntables"; save((dd) => { dd.groups = dd.groups.map((g, j) => (j === k ? { ...g, [f]: i.value } : g)); }); }));
     $$("[data-gc],[data-gr]", host).forEach((i) => (i.onchange = () => { const k = +(i.dataset.gc ?? i.dataset.gr), f = i.dataset.gc != null ? "cfrom" : "rfrom"; save((dd) => { dd.groups = dd.groups.map((g, j) => (j === k ? { ...g, [f]: i.value } : g)); }); }));
+    const saveSch = () => { const on = new Set($$("#ds-sl input:checked", host).map((c) => c.value)); save((dd) => { dd.schools_off = schools.filter((x) => !on.has(x)); }); paint(); };
+    $$("#ds-sl input", host).forEach((c) => (c.onchange = saveSch));
+    const sa = $("#ds-sall", host); if (sa) sa.onchange = () => { $$("#ds-sl input", host).forEach((c) => (c.checked = sa.checked)); saveSch(); };
     $("#ds-split", host).onchange = (e) => { save((dd) => { dd.split = e.target.checked; }); paint(); };
     $$("[data-gx]", host).forEach((b) => (b.onclick = () => { save((dd) => { dd.groups = dd.groups.filter((_, j) => j !== +b.dataset.gx); }); paint(); }));
     $("#ds-gadd", host).onclick = () => { save((dd) => { dd.groups = [...(dd.groups || []), { questions: "", ntables: "1" }]; }); paint(); };
