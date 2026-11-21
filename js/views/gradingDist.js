@@ -2,7 +2,7 @@
 // لجنة المراجعة الفنية (الموجهون + رؤساء أقسام أو معلمون خبرة)، ولجان أسئلة مستقلة (اختيارية)،
 // وطاولات: لكل سؤال مصححان ومراجع واحد. يُحفظ في data.dist داخل القائمة المشتركة نفسها.
 import { esc, $, $$, toast, confirmBox } from "../ui.js";
-import { opts } from "../store.js";
+import { opts, state } from "../store.js";
 import { api } from "../api.js";
 
 // أسماء موجهي المادة: من قائمة «أسماء الموجهين حسب التخصص» (التخصص|الاسم)، ومن حسابات الزملاء المسجلين
@@ -132,6 +132,8 @@ export function distPanel(body, ed) {
   const colorOf = (p) => ({ new: "#e00000", expert: "#00a03c", head: "#0050d0" })[p.cat] || "#000";
 
   let guideList = [];
+  // الفرز والتوزيع للمسؤول فقط (مدير الحسابات أو منشئة الملف)؛ الباقون يشاهدون ويطبعون
+  const canManage = () => api.demo || state.profile?.role === "admin" || (!!ed.rec.owner_id && ed.rec.owner_id === state.profile?.id) || !ed.rec.id;
   const paint = () => {
     const d = ed.rec.data;
     if (d.purpose && d.purpose !== "لجان تقدير درجات امتحان") { host.style.display = "none"; return; }
@@ -187,6 +189,11 @@ export function distPanel(body, ed) {
         ${tableQs(t).map((k) => { const s = (t.q || {})[k] || {}; return `<tr><td class="num"><b>${esc(k)}</b></td><td>${slot(`tables.${ti}.${k}.c.0`, (s.c || [])[0] || "", used)}</td><td>${slot(`tables.${ti}.${k}.c.1`, (s.c || [])[1] || "", used)}</td><td>${slot(`tables.${ti}.${k}.r`, s.r || "", used)}</td></tr>`; }).join("")}
         </tbody></table></div></div>`; }).join(""); })() || `<p class="hint">اضغطي «توزيع تلقائي» لتوزيع الأسماء على الطاولات.</p>`}`;
 
+    if (!canManage()) {
+      $$("input,select,textarea,button", host).forEach((el) => { el.disabled = true; });
+      host.querySelector(".page-head")?.insertAdjacentHTML("afterend", `<div class="alert" style="margin:6px 0">الفرز والتوزيع يعدّله المسؤول فقط. تقدرين تشوفينه وتطبعينه.</div>`);
+      return;
+    }
     $$("[data-slot]", host).forEach((sel) => (sel.onchange = () => {
       const path = sel.dataset.slot.split("."), v = sel.value;
       save((dd) => {
