@@ -317,8 +317,9 @@ export async function gradingDist(ctx) {
       <div>للعام الدراسي ${esc(yr[0] || "")}${yr[1] ? " / " + esc(yr[1]) : ""} م</div></div>`;
   const blocks = [{ html: head }];
   const rev = (dist.review || []).filter(Boolean);
-  if (String(dist.guides || "").trim() || rev.length) blocks.push({ html: `<table class="gd-box"><tr><th>لجنة المراجعة الفنية<br>منطقة ${esc(d.region || ctx.guide?.region || "الأحمدي")}</th></tr>
-    <tr><td>${esc(dist.guides || "").replace(/\n/g, "<br>")}<div class="gd-sub">رؤساء أقسام أو معلمين خبرة</div><div class="gd-inline">${(dist.review || []).map((id, i) => `<span>${i + 1}- ${nm(id)}</span>`).join("")}</div></td></tr></table>` });
+  const gnames = [...(dist.guide_list || []).map((n) => "أ. " + n.replace(/^أ\.\s*/, "")), String(dist.guides || "").trim()].filter(Boolean).join(" - ");
+  if (gnames || rev.length) blocks.push({ html: `<table class="gd-box"><tr><th>لجنة المراجعة الفنية<br>منطقة ${esc(d.region || ctx.guide?.region || "الأحمدي")}</th></tr>
+    <tr><td>${esc(gnames)}<div class="gd-sub">رؤساء أقسام أو معلمين خبرة</div><div class="gd-inline">${(dist.review || []).map((id, i) => `<span>${i + 1}- ${nm(id)}</span>`).join("")}</div></td></tr></table>` });
   for (const c of dist.comms || []) {
     const cc = c.c || [], cells = [];
     for (let i = 0; i < Math.max(Number(c.nc) || 0, cc.length); i++) cells.push(`<td><b>${i + 1}-</b> ${nm(cc[i])}</td>`);

@@ -2,6 +2,19 @@
 // لجنة المراجعة الفنية (الموجهون + رؤساء أقسام أو معلمون خبرة)، ولجان أسئلة مستقلة (اختيارية)،
 // وطاولات: لكل سؤال مصححان ومراجع واحد. يُحفظ في data.dist داخل القائمة المشتركة نفسها.
 import { esc, $, $$, toast, confirmBox } from "../ui.js";
+import { opts } from "../store.js";
+import { api } from "../api.js";
+
+// أسماء موجهي المادة: من قائمة «أسماء الموجهين حسب التخصص» (التخصص|الاسم)، ومن حسابات الزملاء المسجلين
+const nrm = (t) => String(t || "").replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي").replace(/ـ/g, "").replace(/^ال/, "").replace(/\s+/g, " ").trim();
+let colCache = null;
+export async function subjectGuides(subject) {
+  const sub = nrm(subject || "الكيمياء");
+  const fromList = opts("guide_names").map((l) => String(l).split("|").map((x) => x.trim())).filter(([sp, n]) => n && nrm(sp).includes(sub)).map(([, n]) => n);
+  if (fromList.length) return [...new Set(fromList)];
+  colCache ||= (await api.rpc("list_colleagues").catch(() => [])) || [];
+  return [...new Set(colCache.map((c) => String(c.full_name || "").trim()).filter(Boolean))];
+}
 
 // مجموعات طاولات: لكل مجموعة أسئلتها وعدد طاولاتها (افتراضياً: طاولة للسؤالين 1 و2، وطاولات للأسئلة 3–6)
 // ولكل سؤال في الطاولة مصححتان ومراجعة
@@ -75,6 +88,7 @@ export function distPanel(body, ed) {
   const slot = (path, val, used) => { const p = people(ed.rec.data).find((x) => x.id === val); return `<select data-slot="${path}" style="min-width:150px;font-weight:600;color:${p ? colorOf(p) : "inherit"}" aria-label="اختيار اسم">${opt(val, used)}</select>`; };
   const colorOf = (p) => ({ new: "#e00000", expert: "#00a03c", head: "#0050d0" })[p.cat] || "#000";
 
+  let guideList = [];
   const paint = () => {
     const d = ed.rec.data;
     if (d.purpose && d.purpose !== "لجان تقدير درجات امتحان") { host.style.display = "none"; return; }
@@ -89,7 +103,11 @@ export function distPanel(body, ed) {
       ${notUsed.length ? `<details style="margin-bottom:8px"><summary class="hint">غير الموزَّعين</summary><p>${notUsed.map((p) => `<span class="pill" style="color:${colorOf(p)}">${esc(p.name)}${p.role ? " · " + p.role : ""}</span>`).join(" ")}</p></details>` : ""}
 
       <h3>لجنة المراجعة الفنية</h3>
-      <div class="form"><div class="f wide"><label for="ds-g">الموجهون (يُكتبون كما تريدين)</label><textarea id="ds-g" rows="2" placeholder="أ. … - أ. …">${esc(dist.guides || "")}</textarea></div></div>
+      <p class="hint" style="margin:0 0 4px">موجهو ${esc(d.subject || "الكيمياء")}:</p>
+      ${guideList.length ? `<label style="display:inline-flex;gap:6px;align-items:center;margin-bottom:4px"><input type="checkbox" id="ds-gall" ${guideList.every((n) => (dist.guide_list || []).includes(n)) ? "checked" : ""}> <b>تحديد الكل</b></label>
+      <div class="checks no-gender" id="ds-gl">${[...new Set([...guideList, ...(dist.guide_list || [])])].map((n) => `<label><input type="checkbox" value="${esc(n)}" ${(dist.guide_list || []).includes(n) ? "checked" : ""}> ${esc(n)}</label>`).join("")}</div>`
+        : `<p class="hint">لا توجد أسماء موجهين مسجلة لهذه المادة — اكتبيها في الخانة التالية.</p>`}
+      <div class="form"><div class="f wide"><label for="ds-g">أسماء إضافية (اختياري)</label><input id="ds-g" value="${esc(dist.guides || "")}" placeholder="أ. … - أ. …"></div></div>
       <p class="hint">رؤساء أقسام أو معلمين خبرة:</p>
       <div class="row" style="gap:6px;flex-wrap:wrap">${(dist.review || []).map((v, i) => `<span>${i + 1}- ${slot(`review.${i}`, v, used)}</span>`).join("")}<button class="btn small" id="ds-revadd">+ خانة</button></div>
 
@@ -124,6 +142,9 @@ export function distPanel(body, ed) {
       });
       paint();
     }));
+    const saveGl = () => { const v = $$("#ds-gl input:checked", host).map((c) => c.value); save((dd) => { dd.guide_list = v; }); const a = $("#ds-gall", host); if (a) a.checked = guideList.every((n) => v.includes(n)); };
+    $$("#ds-gl input", host).forEach((c) => (c.onchange = saveGl));
+    const ga = $("#ds-gall", host); if (ga) ga.onchange = () => { $$("#ds-gl input", host).forEach((c) => (c.checked = ga.checked)); saveGl(); };
     $("#ds-g", host).oninput = (e) => ed.change((x) => { x.data.dist = { ...normDist(x.data.dist), guides: e.target.value }; });
     $$("[data-gq],[data-gn]", host).forEach((i) => (i.onchange = () => { const k = +(i.dataset.gq ?? i.dataset.gn), f = i.dataset.gq != null ? "questions" : "ntables"; save((dd) => { dd.groups = dd.groups.map((g, j) => (j === k ? { ...g, [f]: i.value } : g)); }); }));
     $$("[data-gx]", host).forEach((b) => (b.onclick = () => { save((dd) => { dd.groups = dd.groups.filter((_, j) => j !== +b.dataset.gx); }); paint(); }));
@@ -147,5 +168,6 @@ export function distPanel(body, ed) {
     $("#ds-clear", host).onclick = async () => { if (!(await confirmBox("تفريغ التوزيع", "تفريغ كل الخانات؟", "تفريغ", true))) return; save((dd) => { dd.tables = []; dd.comms = (dd.comms || []).map((c) => ({ ...c, c: [], r: [] })); dd.review = (dd.review || []).map(() => ""); }); paint(); };
   };
   paint();
+  subjectGuides(ed.rec.data.subject).then((l) => { guideList = l; paint(); });
   return paint;
 }
