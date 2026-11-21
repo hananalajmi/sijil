@@ -303,7 +303,8 @@ export async function gradingForm(ctx) {
 
 // ---------------- توزيع لجان تقدير الدرجات على الأسئلة ----------------
 export async function gradingDist(ctx) {
-  const T = FORMS.grading, d = ctx.rec.data || {}, dist = d.dist || {};
+  const T = FORMS.grading, d = ctx.rec.data || {}, dist = { ...(d.dist || {}) };
+  if (!dist.comms_set && !(dist.comms || []).length) dist.comms = [{ label: "لجنة السؤال الأول", nc: 9, c: [], r: [] }, { label: "لجنة السؤال الثاني", nc: 7, nr: 1, c: [], r: [] }];
   const rows = new Map((d.rows || []).filter((p) => !p.excl).map((p) => [p.id, p]));
   const COL = { std: "#000000", new: "#e00000", expert: "#00a03c", head: "#0050d0", ...(d.colors || {}) };
   const ok = (c) => (/^#[0-9a-f]{6}$/i.test(c || "") ? c : "#000");

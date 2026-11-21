@@ -1,9 +1,12 @@
 // توزيع لجان تقدير الدرجات على الأسئلة (من القائمة الأساسية للمعلمين):
-// لجنة المراجعة الفنية (الموجهون + رؤساء أقسام أو معلمون خبرة)، ولجان أسئلة مستقلة (مثل الجيولوجيا)،
+// لجنة المراجعة الفنية (الموجهون + رؤساء أقسام أو معلمون خبرة)، ولجان أسئلة مستقلة (السؤال الأول والثاني)،
 // وطاولات: لكل سؤال مصححان ومراجع واحد. يُحفظ في data.dist داخل القائمة المشتركة نفسها.
 import { esc, $, $$, toast, confirmBox } from "../ui.js";
 
+// لجنتا السؤال الأول والثاني موجودتان افتراضياً (كما في النموذج: الأولى 9 مصححين، والثانية 7 مصححين ومراجع)
+export const DEF_COMMS = () => [{ label: "لجنة السؤال الأول", nc: 9, nr: 0, c: [], r: [] }, { label: "لجنة السؤال الثاني", nc: 7, nr: 1, c: [], r: [] }];
 export const DEF_DIST = () => ({ guides: "", review: ["", "", "", "", "", ""], comms: [], questions: "3, 4, 5, 6", tables: [] });
+export const normDist = (saved) => { const d0 = { ...DEF_DIST(), ...(saved || {}) }; if (!d0.comms_set && !(d0.comms || []).length) d0.comms = DEF_COMMS(); d0.comms = d0.comms.map((c) => ({ ...c, label: String(c.label || "").replace(/\s*\(\s*الجيولوجيا\s*\)/, "") })); return d0; };
 const qList = (dist) => String(dist.questions || "").split(/[,،\s]+/).map((x) => x.trim()).filter(Boolean);
 const people = (d) => (d.rows || []).filter((p) => !p.excl && (p.name || "").trim());
 const RANK = { head: 0, expert: 1, "": 2, new: 3 };
@@ -48,8 +51,8 @@ export function distPanel(body, ed) {
   const host = document.createElement("section");
   host.className = "panel"; host.id = "gr-dist";
   body.appendChild(host);
-  const D = () => ({ ...DEF_DIST(), ...(ed.rec.data.dist || {}) });
-  const save = (fn) => { ed.change((x) => { const d0 = { ...DEF_DIST(), ...(x.data.dist || {}) }; fn(d0); x.data.dist = d0; }, { immediate: true }); };
+  const D = () => (normDist(ed.rec.data.dist));
+  const save = (fn) => { ed.change((x) => { const d0 = normDist(x.data.dist); fn(d0); x.data.dist = d0; }, { immediate: true }); };
   const opt = (sel, used) => {
     const ps = people(ed.rec.data);
     return `<option value="">—</option>` + ps.map((p) => `<option value="${p.id}" ${p.id === sel ? "selected" : ""}>${esc(p.name)}${p.role ? " · " + p.role : ""}${used.has(p.id) && p.id !== sel ? " (موزّعة)" : ""}</option>`).join("");
@@ -75,7 +78,7 @@ export function distPanel(body, ed) {
       <p class="hint">رؤساء أقسام أو معلمين خبرة:</p>
       <div class="row" style="gap:6px;flex-wrap:wrap">${(dist.review || []).map((v, i) => `<span>${i + 1}- ${slot(`review.${i}`, v, used)}</span>`).join("")}<button class="btn small" id="ds-revadd">+ خانة</button></div>
 
-      <h3 style="margin-top:14px">لجان أسئلة مستقلة <small class="hint">(مثل لجنة السؤال الأول — الجيولوجيا)</small></h3>
+      <h3 style="margin-top:14px">لجان أسئلة مستقلة <small class="hint">(مثل لجنة السؤال الأول والثاني)</small></h3>
       ${(dist.comms || []).map((c, ci) => `<div class="panel" style="padding:10px;margin:6px 0">
         <div class="row" style="gap:8px;flex-wrap:wrap;align-items:end"><div class="f" style="flex:1;min-width:200px"><label>عنوان اللجنة</label><input data-cl="${ci}" value="${esc(c.label || "")}"></div>
           <div class="f" style="width:110px"><label>عدد المصححين</label><input type="number" min="0" max="30" data-cn="${ci}" value="${Number(c.nc) || 0}"></div>
@@ -102,14 +105,14 @@ export function distPanel(body, ed) {
       });
       paint();
     }));
-    $("#ds-g", host).oninput = (e) => ed.change((x) => { x.data.dist = { ...DEF_DIST(), ...(x.data.dist || {}), guides: e.target.value }; });
+    $("#ds-g", host).oninput = (e) => ed.change((x) => { x.data.dist = { ...normDist(x.data.dist), guides: e.target.value }; });
     $("#ds-q", host).onchange = (e) => { save((dd) => { dd.questions = e.target.value; }); paint(); };
     $("#ds-n", host).onchange = (e) => { save((dd) => { dd.ntables = e.target.value; }); };
     $("#ds-revadd", host).onclick = () => { save((dd) => { dd.review = [...(dd.review || []), ""]; }); paint(); };
-    $("#ds-comadd", host).onclick = () => { const n = (D().comms || []).length; save((dd) => { dd.comms = [...(dd.comms || []), { label: `لجنة السؤال ${["الأول", "الثاني", "الثالث", "الرابع"][n] || n + 1} ( الجيولوجيا)`, nc: 9, nr: 0, c: [], r: [] }]; }); paint(); };
-    $$("[data-cl]", host).forEach((i) => (i.oninput = () => ed.change((x) => { const dd = { ...DEF_DIST(), ...(x.data.dist || {}) }; dd.comms = dd.comms.map((c, k) => (k === +i.dataset.cl ? { ...c, label: i.value } : c)); x.data.dist = dd; })));
+    $("#ds-comadd", host).onclick = () => { const n = (D().comms || []).length; save((dd) => { dd.comms = [...(dd.comms || []), { label: `لجنة السؤال ${["الأول", "الثاني", "الثالث", "الرابع"][n] || n + 1}`, nc: 9, nr: 0, c: [], r: [] }]; }); paint(); };
+    $$("[data-cl]", host).forEach((i) => (i.oninput = () => ed.change((x) => { const dd = normDist(x.data.dist); dd.comms = dd.comms.map((c, k) => (k === +i.dataset.cl ? { ...c, label: i.value } : c)); x.data.dist = dd; })));
     $$("[data-cn],[data-cr]", host).forEach((i) => (i.onchange = () => { const k = i.dataset.cn ?? i.dataset.cr, f = i.dataset.cn != null ? "nc" : "nr"; save((dd) => { dd.comms[+k] = { ...dd.comms[+k], [f]: Math.max(0, Number(i.value) || 0) }; }); paint(); }));
-    $$("[data-cx]", host).forEach((b) => (b.onclick = async () => { if (!(await confirmBox("حذف اللجنة", "حذف هذه اللجنة من التوزيع؟", "حذف", true))) return; save((dd) => { dd.comms = dd.comms.filter((_, k) => k !== +b.dataset.cx); }); paint(); }));
+    $$("[data-cx]", host).forEach((b) => (b.onclick = async () => { if (!(await confirmBox("حذف اللجنة", "حذف هذه اللجنة من التوزيع؟", "حذف", true))) return; save((dd) => { dd.comms = dd.comms.filter((_, k) => k !== +b.dataset.cx); dd.comms_set = true; }); paint(); }));
     $("#ds-auto", host).onclick = async () => {
       if (!people(ed.rec.data).length) { toast("أضيفي أسماء المعلمين أولاً", "error"); return; }
       const has = usedIds(D()).length - (D().review || []).filter(Boolean).length;
