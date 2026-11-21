@@ -303,7 +303,9 @@ export async function gradingForm(ctx) {
 
 // ---------------- توزيع لجان تقدير الدرجات على الأسئلة ----------------
 export async function gradingDist(ctx) {
-  const T = FORMS.grading, d = ctx.rec.data || {}, dist = { ...(d.dist || {}) };
+  const T = FORMS.grading, d = ctx.rec.data || {};
+  const all = Array.isArray(d.dists) && d.dists.length ? d.dists : [{ name: "", ...(d.dist || {}) }];
+  const dist = { ...(all[Math.min(Number(ctx.distIdx) || 0, all.length - 1)] || {}) };
   const rows = new Map((d.rows || []).filter((p) => !p.excl).map((p) => [p.id, p]));
   const COL = { std: "#000000", new: "#e00000", expert: "#00a03c", head: "#0050d0", ...(d.colors || {}) };
   const ok = (c) => (/^#[0-9a-f]{6}$/i.test(c || "") ? c : "#000");
@@ -316,6 +318,7 @@ export async function gradingDist(ctx) {
       <div>للصف ${esc(d.grade || T.grade)} / في مجال ${esc(d.subject || T.subject)}</div>
       <div>للعام الدراسي ${esc(yr[0] || "")}${yr[1] ? " / " + esc(yr[1]) : ""} م</div></div>`;
   const blocks = [{ html: head }];
+  if (all.length > 1 && dist.name && dist.split === false) blocks.push({ html: `<div class="gd-sex">لجنة ${esc(String(dist.name).replace(/^لجنة\s+/, "").replace(/^(بنين|بنات)$/, "ال$1"))}</div>` });
   const rev = (dist.review || []).filter(Boolean);
   const gnames = [...(dist.guide_list || []).map((n) => "أ. " + n.replace(/^أ\.\s*/, "")), String(dist.guides || "").trim()].filter(Boolean).join(" - ");
   if (gnames || rev.length) blocks.push({ html: `<table class="gd-box"><tr><th>لجنة المراجعة الفنية<br>منطقة ${esc(d.region || ctx.guide?.region || "الأحمدي")}</th></tr>
