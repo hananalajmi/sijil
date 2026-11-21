@@ -1,12 +1,20 @@
 // توزيع لجان تقدير الدرجات على الأسئلة (من القائمة الأساسية للمعلمين):
-// لجنة المراجعة الفنية (الموجهون + رؤساء أقسام أو معلمون خبرة)، ولجان أسئلة مستقلة (السؤال الأول والثاني)،
+// لجنة المراجعة الفنية (الموجهون + رؤساء أقسام أو معلمون خبرة)، ولجان أسئلة مستقلة (اختيارية)،
 // وطاولات: لكل سؤال مصححان ومراجع واحد. يُحفظ في data.dist داخل القائمة المشتركة نفسها.
 import { esc, $, $$, toast, confirmBox } from "../ui.js";
 
-// لجنتا السؤال الأول والثاني موجودتان افتراضياً (كما في النموذج: الأولى 9 مصححين، والثانية 7 مصححين ومراجع)
-export const DEF_COMMS = () => [{ label: "لجنة السؤال الأول", nc: 9, nr: 0, c: [], r: [] }, { label: "لجنة السؤال الثاني", nc: 7, nr: 1, c: [], r: [] }];
-export const DEF_DIST = () => ({ guides: "", review: ["", "", "", "", "", ""], comms: [], questions: "3, 4, 5, 6", tables: [] });
-export const normDist = (saved) => { const d0 = { ...DEF_DIST(), ...(saved || {}) }; if (!d0.comms_set && !(d0.comms || []).length) d0.comms = DEF_COMMS(); d0.comms = d0.comms.map((c) => ({ ...c, label: String(c.label || "").replace(/\s*\(\s*الجيولوجيا\s*\)/, "") })); return d0; };
+// السؤال الأول والثاني ضمن الطاولات مثل باقي الأسئلة: لكل سؤال مصححتان ومراجعة
+
+export const DEF_DIST = () => ({ v: 2, guides: "", review: ["", "", "", "", "", ""], comms: [], questions: "1, 2, 3, 4, 5, 6", tables: [] });
+export const normDist = (saved) => {
+  const d0 = { ...DEF_DIST(), ...(saved || {}) };
+  if (saved && !saved.v) { // نسخة سابقة: يُضاف السؤال الأول والثاني للطاولات وتُحذف لجنتاهما الافتراضيتان
+    if (/^\s*3[,،\s]+4[,،\s]+5[,،\s]+6\s*$/.test(d0.questions || "")) d0.questions = "1, 2, 3, 4, 5, 6";
+    d0.comms = (d0.comms || []).filter((c) => !/^لجنة السؤال (الأول|الثاني)/.test(String(c.label || "")));
+    d0.v = 2;
+  }
+  return d0;
+};
 const qList = (dist) => String(dist.questions || "").split(/[,،\s]+/).map((x) => x.trim()).filter(Boolean);
 const people = (d) => (d.rows || []).filter((p) => !p.excl && (p.name || "").trim());
 const RANK = { head: 0, expert: 1, "": 2, new: 3 };
@@ -78,7 +86,7 @@ export function distPanel(body, ed) {
       <p class="hint">رؤساء أقسام أو معلمين خبرة:</p>
       <div class="row" style="gap:6px;flex-wrap:wrap">${(dist.review || []).map((v, i) => `<span>${i + 1}- ${slot(`review.${i}`, v, used)}</span>`).join("")}<button class="btn small" id="ds-revadd">+ خانة</button></div>
 
-      <h3 style="margin-top:14px">لجان أسئلة مستقلة <small class="hint">(مثل لجنة السؤال الأول والثاني)</small></h3>
+      <h3 style="margin-top:14px">لجان أسئلة مستقلة <small class="hint">(اختياري — لجنة خاصة لسؤال معيّن)</small></h3>
       ${(dist.comms || []).map((c, ci) => `<div class="panel" style="padding:10px;margin:6px 0">
         <div class="row" style="gap:8px;flex-wrap:wrap;align-items:end"><div class="f" style="flex:1;min-width:200px"><label>عنوان اللجنة</label><input data-cl="${ci}" value="${esc(c.label || "")}"></div>
           <div class="f" style="width:110px"><label>عدد المصححين</label><input type="number" min="0" max="30" data-cn="${ci}" value="${Number(c.nc) || 0}"></div>
