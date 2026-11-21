@@ -304,14 +304,14 @@ export async function gradingForm(ctx) {
 // ---------------- توزيع لجان تقدير الدرجات على الأسئلة ----------------
 export async function gradingDist(ctx) {
   const T = FORMS.grading, d = ctx.rec.data || {}, dist = { ...(d.dist || {}) };
-  if (!dist.v) { if (/^\s*3[,،\s]+4[,،\s]+5[,،\s]+6\s*$/.test(dist.questions || "")) dist.questions = "1, 2, 3, 4, 5, 6"; dist.comms = (dist.comms || []).filter((c) => !/^لجنة السؤال (الأول|الثاني)/.test(String(c.label || ""))); }
-  if (!dist.questions) dist.questions = "1, 2, 3, 4, 5, 6";
   const rows = new Map((d.rows || []).filter((p) => !p.excl).map((p) => [p.id, p]));
   const COL = { std: "#000000", new: "#e00000", expert: "#00a03c", head: "#0050d0", ...(d.colors || {}) };
   const ok = (c) => (/^#[0-9a-f]{6}$/i.test(c || "") ? c : "#000");
   const nm = (id) => { const p = rows.get(id); return p ? `<span style="color:${ok(p.color || COL[p.cat || "std"])}">${esc(p.name)}</span>` : ""; };
   const yr = String(ctx.rec.academic_year || "").split("-");
-  const qs = String(dist.questions || "").split(/[,،\s]+/).map((x) => x.trim()).filter(Boolean);
+  const qOf = (str) => String(str || "").split(/[,،\s]+/).map((x) => x.trim()).filter(Boolean);
+  const tqs = (t) => (t.qs ? qOf(t.qs) : Object.keys(t.q || {}).sort((a, b) => Number(a) - Number(b) || a.localeCompare(b)));
+  if ((dist.v || 0) < 3) dist.comms = (dist.comms || []).filter((c) => !/^لجنة السؤال (الأول|الثاني)/.test(String(c.label || "")));
   const head = `<div class="gd-title"><div>لجان تقدير درجات امتحان ( الفترة ${esc(d.period || "")} )</div>
       <div>للصف ${esc(d.grade || T.grade)} / في مجال ${esc(d.subject || T.subject)}</div>
       <div>للعام الدراسي ${esc(yr[0] || "")}${yr[1] ? " / " + esc(yr[1]) : ""} م</div></div>`;
@@ -328,6 +328,7 @@ export async function gradingDist(ctx) {
       ${rr.length ? `<tr><td colspan="3"><b>المراجع:</b> ${rr.map(nm).join(" - ")}</td></tr>` : ""}</table>` });
   }
   (dist.tables || []).forEach((t, ti) => {
+    const qs = tqs(t);
     const ids = qs.flatMap((k) => [...((t.q || {})[k]?.c || []), (t.q || {})[k]?.r]).filter((x) => x && rows.has(x));
     blocks.push({ html: `<div class="gd-th"><span class="gd-n">(${ids.length} معلم)</span><span class="gd-t">طاولة (${ti + 1})</span></div>
       <table class="gd-tab"><colgroup><col style="width:14%"><col style="width:43%"><col style="width:43%"></colgroup>

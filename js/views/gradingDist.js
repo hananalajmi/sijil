@@ -3,19 +3,22 @@
 // وطاولات: لكل سؤال مصححان ومراجع واحد. يُحفظ في data.dist داخل القائمة المشتركة نفسها.
 import { esc, $, $$, toast, confirmBox } from "../ui.js";
 
-// السؤال الأول والثاني ضمن الطاولات مثل باقي الأسئلة: لكل سؤال مصححتان ومراجعة
-
-export const DEF_DIST = () => ({ v: 2, guides: "", review: ["", "", "", "", "", ""], comms: [], questions: "1, 2, 3, 4, 5, 6", tables: [] });
+// مجموعات طاولات: لكل مجموعة أسئلتها وعدد طاولاتها (افتراضياً: طاولة للسؤالين 1 و2، وطاولات للأسئلة 3–6)
+// ولكل سؤال في الطاولة مصححتان ومراجعة
+export const DEF_GROUPS = () => [{ questions: "1, 2", ntables: "1" }, { questions: "3, 4, 5, 6", ntables: "" }];
+export const DEF_DIST = () => ({ v: 3, guides: "", review: ["", "", "", "", "", ""], comms: [], groups: DEF_GROUPS(), tables: [] });
 export const normDist = (saved) => {
   const d0 = { ...DEF_DIST(), ...(saved || {}) };
-  if (saved && !saved.v) { // نسخة سابقة: يُضاف السؤال الأول والثاني للطاولات وتُحذف لجنتاهما الافتراضيتان
-    if (/^\s*3[,،\s]+4[,،\s]+5[,،\s]+6\s*$/.test(d0.questions || "")) d0.questions = "1, 2, 3, 4, 5, 6";
+  if (saved && (saved.v || 0) < 3) { // نسخ سابقة: لجنتا السؤال الأول والثاني الافتراضيتان تُحذفان، والأسئلة تصير مجموعات
     d0.comms = (d0.comms || []).filter((c) => !/^لجنة السؤال (الأول|الثاني)/.test(String(c.label || "")));
-    d0.v = 2;
+    d0.groups = [{ questions: "1, 2", ntables: "1" }, { questions: "3, 4, 5, 6", ntables: d0.ntables || "" }];
+    d0.v = 3;
   }
+  if (!Array.isArray(d0.groups) || !d0.groups.length) d0.groups = DEF_GROUPS();
   return d0;
 };
-const qList = (dist) => String(dist.questions || "").split(/[,،\s]+/).map((x) => x.trim()).filter(Boolean);
+const qOf = (str) => String(str || "").split(/[,،\s]+/).map((x) => x.trim()).filter(Boolean);
+const tableQs = (t) => (t.qs ? qOf(t.qs) : Object.keys(t.q || {}).sort((a, b) => Number(a) - Number(b) || a.localeCompare(b)));
 const people = (d) => (d.rows || []).filter((p) => !p.excl && (p.name || "").trim());
 const RANK = { head: 0, expert: 1, "": 2, new: 3 };
 
@@ -30,7 +33,7 @@ export function usedIds(dist) {
 
 // توزيع تلقائي: المصححون (2 لكل سؤال، يُخلط الجدد مع غيرهم) والمراجعون (1 لكل سؤال، الأولوية لرؤساء الأقسام ثم الخبرة)
 export function autoDistribute(d, dist) {
-  const qs = qList(dist), all = people(d);
+  const all = people(d);
   const fixed = new Set([...(dist.review || []).filter(Boolean)]);
   const free = all.filter((p) => !fixed.has(p.id));
   let C = free.filter((p) => p.role !== "مراجع"), R = free.filter((p) => p.role === "مراجع").sort((a, b) => (RANK[a.cat || ""] - RANK[b.cat || ""]));
@@ -44,15 +47,19 @@ export function autoDistribute(d, dist) {
     const rr = []; for (let i = 0; i < nr; i++) rr.push(R.shift()?.id || "");
     return { ...c, c: cc, r: rr };
   });
-  const left = olds.length + news.length;
-  const n = Math.max(1, Number(dist.ntables) || Math.ceil(Math.max(left / (2 * (qs.length || 1)), R.length / (qs.length || 1))) || 1);
-  const tables = [];
-  for (let t = 0; t < n; t++) {
-    const q = {};
-    for (const k of qs) { const a = takeC(), b = takeMate(); q[k] = { c: [a?.id || "", b?.id || ""], r: R.shift()?.id || "" }; }
-    tables.push({ q });
-  }
-  return { ...dist, comms, tables, ntables: dist.ntables || "" };
+  const tables = [], gs = dist.groups || DEF_GROUPS();
+  gs.forEach((g, gi) => {
+    const qs = qOf(g.questions); if (!qs.length) return;
+    const last = gi === gs.length - 1, left = olds.length + news.length;
+    // عدد الطاولات: كما كُتب، وإلا طاولة واحدة للمجموعات الأولى، والأخيرة تأخذ الباقين
+    const n = Number(g.ntables) > 0 ? Number(g.ntables) : last ? Math.max(1, Math.ceil(Math.max(left / (2 * qs.length), R.length / qs.length))) : 1;
+    for (let t = 0; t < n; t++) {
+      const q = {};
+      for (const k of qs) { const a = takeC(), b = takeMate(); q[k] = { c: [a?.id || "", b?.id || ""], r: R.shift()?.id || "" }; }
+      tables.push({ qs: g.questions, q });
+    }
+  });
+  return { ...dist, comms, tables };
 }
 
 export function distPanel(body, ed) {
@@ -72,12 +79,12 @@ export function distPanel(body, ed) {
     const d = ed.rec.data;
     if (d.purpose && d.purpose !== "لجان تقدير درجات امتحان") { host.style.display = "none"; return; }
     host.style.display = "";
-    const dist = D(), qs = qList(dist), usedArr = usedIds(dist), used = new Set(usedArr);
+    const dist = D(), usedArr = usedIds(dist), used = new Set(usedArr);
     const dup = new Set(usedArr.filter((x, i) => usedArr.indexOf(x) !== i));
     const all = people(d), notUsed = all.filter((p) => !used.has(p.id));
     host.innerHTML = `<div class="page-head" style="margin-bottom:6px"><h2>توزيع اللجان على الأسئلة</h2>
         <div class="toolbar" style="margin:0"><button class="btn primary" id="ds-auto">توزيع تلقائي</button><a class="btn" href="#/print/${ed.rec.id || ""}?view=dist" ${ed.rec.id ? "" : 'aria-disabled="true"'}>طباعة التوزيع</a><button class="btn ghost" id="ds-clear">تفريغ التوزيع</button></div></div>
-      <p class="hint" style="margin-top:0">يُوزَّع من القائمة أعلاه: لكل سؤال مصححان ومراجع، والجدد يُخلطون مع غيرهم. بعد التوزيع تقدرين تغيّرين أي اسم من القائمة المنسدلة.</p>
+      <p class="hint" style="margin-top:0">يُوزَّع من القائمة أعلاه: لكل سؤال مصححتان ومراجعة، والجدد يُخلطون مع غيرهم. بعد التوزيع تقدرين تغيّرين أي اسم من القائمة المنسدلة.</p>
       <div class="hint" style="font-weight:600;margin:6px 0">الموزَّع: ${used.size} من ${all.length}${notUsed.length ? ` · غير موزَّع: ${notUsed.length}` : ""}${dup.size ? ` · <span style="color:var(--bad)">أسماء مكررة: ${dup.size}</span>` : ""}</div>
       ${notUsed.length ? `<details style="margin-bottom:8px"><summary class="hint">غير الموزَّعين</summary><p>${notUsed.map((p) => `<span class="pill" style="color:${colorOf(p)}">${esc(p.name)}${p.role ? " · " + p.role : ""}</span>`).join(" ")}</p></details>` : ""}
 
@@ -97,11 +104,15 @@ export function distPanel(body, ed) {
       <button class="btn small" id="ds-comadd">+ لجنة سؤال</button>
 
       <h3 style="margin-top:14px">الطاولات</h3>
-      <div class="row" style="gap:10px;flex-wrap:wrap;align-items:end"><div class="f" style="width:170px"><label for="ds-q">أرقام الأسئلة</label><input id="ds-q" value="${esc(dist.questions || "")}" placeholder="3, 4, 5, 6"></div>
-        <div class="f" style="width:150px"><label for="ds-n">عدد الطاولات</label><input id="ds-n" type="number" min="0" max="40" value="${esc(dist.ntables || "")}" placeholder="تلقائي"></div></div>
+      <p class="hint" style="margin:0 0 4px">كل مجموعة لها أسئلتها وطاولاتها الخاصة (مثلاً السؤال 1 و2 على طاولة لحالها):</p>
+      ${(dist.groups || []).map((g, gi) => `<div class="row" style="gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:6px"><b style="align-self:center">مجموعة ${gi + 1}</b>
+        <div class="f" style="width:170px"><label>أرقام الأسئلة</label><input data-gq="${gi}" value="${esc(g.questions || "")}" placeholder="3, 4, 5, 6"></div>
+        <div class="f" style="width:150px"><label>عدد الطاولات</label><input data-gn="${gi}" type="number" min="0" max="40" value="${esc(g.ntables || "")}" placeholder="تلقائي"></div>
+        ${(dist.groups || []).length > 1 ? `<button class="btn small ghost" data-gx="${gi}" style="color:var(--bad)">حذف</button>` : ""}</div>`).join("")}
+      <button class="btn small" id="ds-gadd">+ مجموعة طاولات</button>
       ${(dist.tables || []).map((t, ti) => `<div class="panel" style="padding:10px;margin:8px 0"><b>طاولة (${ti + 1})</b>
         <div class="tbl-wrap"><table class="data"><thead><tr><th>السؤال</th><th>المصحح 1</th><th>المصحح 2</th><th>المراجع</th></tr></thead><tbody>
-        ${qs.map((k) => { const s = (t.q || {})[k] || {}; return `<tr><td class="num"><b>${esc(k)}</b></td><td>${slot(`tables.${ti}.${k}.c.0`, (s.c || [])[0] || "", used)}</td><td>${slot(`tables.${ti}.${k}.c.1`, (s.c || [])[1] || "", used)}</td><td>${slot(`tables.${ti}.${k}.r`, s.r || "", used)}</td></tr>`; }).join("")}
+        ${tableQs(t).map((k) => { const s = (t.q || {})[k] || {}; return `<tr><td class="num"><b>${esc(k)}</b></td><td>${slot(`tables.${ti}.${k}.c.0`, (s.c || [])[0] || "", used)}</td><td>${slot(`tables.${ti}.${k}.c.1`, (s.c || [])[1] || "", used)}</td><td>${slot(`tables.${ti}.${k}.r`, s.r || "", used)}</td></tr>`; }).join("")}
         </tbody></table></div></div>`).join("") || `<p class="hint">اضغطي «توزيع تلقائي» لتوزيع الأسماء على الطاولات.</p>`}`;
 
     $$("[data-slot]", host).forEach((sel) => (sel.onchange = () => {
@@ -114,8 +125,9 @@ export function distPanel(body, ed) {
       paint();
     }));
     $("#ds-g", host).oninput = (e) => ed.change((x) => { x.data.dist = { ...normDist(x.data.dist), guides: e.target.value }; });
-    $("#ds-q", host).onchange = (e) => { save((dd) => { dd.questions = e.target.value; }); paint(); };
-    $("#ds-n", host).onchange = (e) => { save((dd) => { dd.ntables = e.target.value; }); };
+    $$("[data-gq],[data-gn]", host).forEach((i) => (i.onchange = () => { const k = +(i.dataset.gq ?? i.dataset.gn), f = i.dataset.gq != null ? "questions" : "ntables"; save((dd) => { dd.groups = dd.groups.map((g, j) => (j === k ? { ...g, [f]: i.value } : g)); }); }));
+    $$("[data-gx]", host).forEach((b) => (b.onclick = () => { save((dd) => { dd.groups = dd.groups.filter((_, j) => j !== +b.dataset.gx); }); paint(); }));
+    $("#ds-gadd", host).onclick = () => { save((dd) => { dd.groups = [...(dd.groups || []), { questions: "", ntables: "1" }]; }); paint(); };
     $("#ds-revadd", host).onclick = () => { save((dd) => { dd.review = [...(dd.review || []), ""]; }); paint(); };
     $("#ds-comadd", host).onclick = () => { const n = (D().comms || []).length; save((dd) => { dd.comms = [...(dd.comms || []), { label: `لجنة السؤال ${["الأول", "الثاني", "الثالث", "الرابع"][n] || n + 1}`, nc: 9, nr: 0, c: [], r: [] }]; }); paint(); };
     $$("[data-cl]", host).forEach((i) => (i.oninput = () => ed.change((x) => { const dd = normDist(x.data.dist); dd.comms = dd.comms.map((c, k) => (k === +i.dataset.cl ? { ...c, label: i.value } : c)); x.data.dist = dd; })));
