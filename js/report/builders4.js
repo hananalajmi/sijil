@@ -328,10 +328,14 @@ export async function gradingDist(ctx) {
     blocks.push({ html: `<table class="gd-box gd-comm"><tr><th colspan="3">${esc(c.label || "")}</th></tr><tr><th colspan="3" class="gd-h2">اسماء المصححين</th></tr>${trs.join("")}
       ${rr.length ? `<tr><td colspan="3"><b>المراجع:</b> ${rr.map(nm).join(" - ")}</td></tr>` : ""}</table>` });
   }
-  (dist.tables || []).forEach((t, ti) => {
+  let lastSex = null, num = 0;
+  (dist.tables || []).forEach((t) => {
+    const sx = dist.split === false ? "" : t.sex || "f";
+    if (sx !== lastSex) { if (sx) blocks.push({ html: `<div class="gd-sex">${sx === "m" ? "لجنة البنين" : "لجنة البنات"}</div>` }); lastSex = sx; num = 0; }
+    num++;
     const qs = tqs(t);
     const ids = qs.flatMap((k) => [...((t.q || {})[k]?.c || []), (t.q || {})[k]?.r]).filter((x) => x && rows.has(x));
-    blocks.push({ html: `<div class="gd-th"><span class="gd-n">(${ids.length} معلم)</span><span class="gd-t">طاولة (${ti + 1})</span></div>
+    blocks.push({ html: `<div class="gd-th"><span class="gd-n">(${ids.length} معلم)</span><span class="gd-t">طاولة (${num})</span></div>
       <table class="gd-tab"><colgroup><col style="width:14%"><col style="width:43%"><col style="width:43%"></colgroup>
       <tr><th>رقم السؤال</th><th>اسماء المصححين</th><th>اسماء المراجعين</th></tr>
       ${qs.map((k) => { const s = (t.q || {})[k] || {}; return `<tr><th>${esc(k)}</th><td>${(s.c || []).map((id) => `<div>- ${nm(id)}</div>`).join("")}</td><td><div>- ${nm(s.r)}</div></td></tr>`; }).join("")}</table>` });

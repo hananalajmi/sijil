@@ -7,7 +7,7 @@ import { esc, $, $$, today, toast, modal, confirmBox } from "../ui.js";
 import { field, bindFields, recordPage } from "../kit.js";
 import { FORMS } from "../templates.js";
 import { normCivil, paintCivil } from "./forms.js";
-import { distPanel } from "./gradingDist.js";
+import { distPanel, sexOf } from "./gradingDist.js";
 
 const T = FORMS.grading;
 const rid = () => Math.random().toString(36).slice(2, 10);
@@ -88,7 +88,7 @@ export async function gradingEditor(main, rec) {
         $("#gr-rows", body).innerHTML = rs.length ? rs.map((p, i) => `<tr data-p="${p.id}" style="${p.excl ? "opacity:.5" : ""}"><td class="c-n">${i + 1}</td>
           <td>${p.by ? `<div class="hint" style="font-size:11px;margin-bottom:2px">أضافته: ${esc(p.by)}</div>` : ""}<input data-f="name" value="${esc(p.name || "")}" aria-label="الاسم ${i + 1}" style="min-width:170px;color:${rowColor(ed.rec.data, p)};font-weight:600"><select data-f="cat" aria-label="نوع المعلم ${i + 1}" style="display:block;margin-top:4px;width:100%;color:${rowColor(ed.rec.data, p)};font-weight:600">${CATS.map(([v, l]) => `<option value="${v}" ${(p.cat || "") === v ? "selected" : ""}>${l}</option>`).join("")}</select></td>
           <td><div class="cid-wrap"><input data-f="civil_id" class="cid" dir="ltr" inputmode="numeric" maxlength="14" value="${esc(p.civil_id || "")}" aria-label="الرقم المدني ${i + 1}" placeholder="12 رقماً" style="color:${rowColor(ed.rec.data, p)}"><span class="cid-n"></span></div></td>
-          <td><input data-f="school" value="${esc(p.school || "")}" aria-label="مركز العمل ${i + 1}" style="min-width:130px;color:${rowColor(ed.rec.data, p)}"></td>
+          <td><input data-f="school" value="${esc(p.school || "")}" aria-label="مركز العمل ${i + 1}" style="min-width:130px;color:${rowColor(ed.rec.data, p)}"><select data-f="sex" aria-label="بنات أو بنين ${i + 1}" style="display:block;margin-top:4px;width:100%"><option value="">${sexOf(p) === "m" ? "بنين (من اسم المدرسة)" : sexOf(p) === "f" ? "بنات (من اسم المدرسة)" : "— بنات/بنين —"}</option><option value="f" ${p.sex === "f" ? "selected" : ""}>بنات</option><option value="m" ${p.sex === "m" ? "selected" : ""}>بنين</option></select></td>
           <td>${G_ ? `<select data-f="role" aria-label="العمل في اللجنة ${i + 1}"><option value="">—</option>${ROLES.map((x) => `<option ${p.role === x ? "selected" : ""}>${x}</option>`).join("")}</select>` : `<input data-f="note" value="${esc(p.note || "")}" aria-label="العمود الأخير ${i + 1}" placeholder="(فارغ للتوقيع)" style="min-width:110px">`}</td>
           <td><select data-f="excl" aria-label="استبعاد ${i + 1}"><option value="">—</option>${EXCL.map((x) => `<option ${p.excl === x ? "selected" : ""}>${x}</option>`).join("")}</select></td>
           <td class="c-x"><button class="btn small ghost" data-rm style="color:var(--bad)" aria-label="حذف ${i + 1}">✕</button></td></tr>`).join("")

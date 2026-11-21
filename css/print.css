@@ -583,3 +583,4 @@
 .t-gd .gd-tab th { background: #d9d9d9; text-align: center; }
 .t-gd .gd-tab td { height: 15mm; }
 .t-gd .gd-tab td div { margin: .6mm 0; }
+.t-gd .gd-sex { text-align: center; font-weight: 800; font-size: 15pt; margin: 3mm 0 2mm; padding: 1.5mm; border: .4mm solid #000; background: #eef2f8; }
