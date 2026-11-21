@@ -18,16 +18,18 @@ export async function subjectGuides(subject) {
 
 // مجموعات طاولات: لكل مجموعة أسئلتها وعدد طاولاتها (افتراضياً: طاولة للسؤالين 1 و2، وطاولات للأسئلة 3–6)
 // ولكل سؤال في الطاولة مصححتان ومراجعة
-export const DEF_GROUPS = () => [{ questions: "1, 2", ntables: "1" }, { questions: "3, 4, 5, 6", ntables: "" }];
-export const DEF_DIST = () => ({ v: 3, guides: "", review: ["", "", "", "", "", ""], comms: [], groups: DEF_GROUPS(), tables: [] });
+// المجموعة الأولى (السؤال 1 و2): المصححات من المعلمات الجدد، والمراجعة معلمة عادية
+export const DEF_GROUPS = () => [{ questions: "1, 2", ntables: "1", cfrom: "new", rfrom: "std" }, { questions: "3, 4, 5, 6", ntables: "" }];
+export const DEF_DIST = () => ({ v: 4, guides: "", review: ["", "", "", "", "", ""], comms: [], groups: DEF_GROUPS(), tables: [] });
 export const normDist = (saved) => {
   const d0 = { ...DEF_DIST(), ...(saved || {}) };
   if (saved && (saved.v || 0) < 3) { // نسخ سابقة: لجنتا السؤال الأول والثاني الافتراضيتان تُحذفان، والأسئلة تصير مجموعات
     d0.comms = (d0.comms || []).filter((c) => !/^لجنة السؤال (الأول|الثاني)/.test(String(c.label || "")));
-    d0.groups = [{ questions: "1, 2", ntables: "1" }, { questions: "3, 4, 5, 6", ntables: d0.ntables || "" }];
+    d0.groups = [{ questions: "1, 2", ntables: "1", cfrom: "new", rfrom: "std" }, { questions: "3, 4, 5, 6", ntables: d0.ntables || "" }];
     d0.v = 3;
   }
   if (!Array.isArray(d0.groups) || !d0.groups.length) d0.groups = DEF_GROUPS();
+  if ((d0.v || 0) < 4) { d0.groups = d0.groups.map((g) => (/^\s*1[,،\s]+2\s*$/.test(g.questions || "") && !g.cfrom ? { ...g, cfrom: "new", rfrom: "std" } : g)); d0.v = 4; }
   return d0;
 };
 const qOf = (str) => String(str || "").split(/[,،\s]+/).map((x) => x.trim()).filter(Boolean);
@@ -54,24 +56,35 @@ export function autoDistribute(d, dist) {
   const news = C.filter((p) => p.cat === "new"), olds = C.filter((p) => p.cat !== "new");
   const takeC = () => (olds.length ? olds.shift() : news.shift());
   const takeMate = () => (news.length ? news.shift() : olds.shift());
-  const comms = (dist.comms || []).map((c) => {
-    const nc = Math.max(0, Number(c.nc) || 0), nr = Math.max(0, Number(c.nr) || 0);
-    const cc = []; for (let i = 0; i < nc; i++) { const p = i % 2 ? takeMate() : takeC(); cc.push(p?.id || ""); }
-    const rr = []; for (let i = 0; i < nr; i++) rr.push(R.shift()?.id || "");
-    return { ...c, c: cc, r: rr };
-  });
-  const tables = [], gs = dist.groups || DEF_GROUPS();
-  gs.forEach((g, gi) => {
+  // مراجعة «معلم عادي»: من المراجعات العاديات أولاً، ثم من المعلمات العاديات، ثم أي مراجعة
+  const takeStd = () => { let i = R.findIndex((p) => !p.cat); if (i >= 0) return R.splice(i, 1)[0]; i = olds.findIndex((p) => !p.cat); if (i >= 0) return olds.splice(i, 1)[0]; return R.shift(); };
+  const takeNew = () => (news.length ? news.shift() : olds.shift());
+  const gs = dist.groups || DEF_GROUPS(), byGroup = gs.map(() => []);
+  const fillGroup = (g, gi) => {
     const qs = qOf(g.questions); if (!qs.length) return;
     const last = gi === gs.length - 1, left = olds.length + news.length;
     // عدد الطاولات: كما كُتب، وإلا طاولة واحدة للمجموعات الأولى، والأخيرة تأخذ الباقين
     const n = Number(g.ntables) > 0 ? Number(g.ntables) : last ? Math.max(1, Math.ceil(Math.max(left / (2 * qs.length), R.length / qs.length))) : 1;
     for (let t = 0; t < n; t++) {
       const q = {};
-      for (const k of qs) { const a = takeC(), b = takeMate(); q[k] = { c: [a?.id || "", b?.id || ""], r: R.shift()?.id || "" }; }
-      tables.push({ qs: g.questions, q });
+      for (const k of qs) {
+        const a = g.cfrom === "new" ? takeNew() : takeC(), b = g.cfrom === "new" ? takeNew() : takeMate();
+        const r = g.rfrom === "std" ? takeStd() : R.shift();
+        q[k] = { c: [a?.id || "", b?.id || ""], r: r?.id || "" };
+      }
+      byGroup[gi].push({ qs: g.questions, q });
     }
+  };
+  // المجموعات المخصصة للجدد أولاً (حتى لا يُستهلك الجدد في غيرها)، ثم لجان الأسئلة، ثم باقي المجموعات
+  gs.forEach((g, gi) => { if (g.cfrom === "new") fillGroup(g, gi); });
+  const comms = (dist.comms || []).map((c) => {
+    const nc = Math.max(0, Number(c.nc) || 0), nr = Math.max(0, Number(c.nr) || 0);
+    const cc = []; for (let i = 0; i < nc; i++) { const p = i % 2 ? takeMate() : takeC(); cc.push(p?.id || ""); }
+    const rr = []; for (let i = 0; i < nr; i++) rr.push(R.shift()?.id || "");
+    return { ...c, c: cc, r: rr };
   });
+  gs.forEach((g, gi) => { if (g.cfrom !== "new") fillGroup(g, gi); });
+  const tables = byGroup.flat();
   return { ...dist, comms, tables };
 }
 
@@ -126,6 +139,8 @@ export function distPanel(body, ed) {
       ${(dist.groups || []).map((g, gi) => `<div class="row" style="gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:6px"><b style="align-self:center">مجموعة ${gi + 1}</b>
         <div class="f" style="width:170px"><label>أرقام الأسئلة</label><input data-gq="${gi}" value="${esc(g.questions || "")}" placeholder="3, 4, 5, 6"></div>
         <div class="f" style="width:150px"><label>عدد الطاولات</label><input data-gn="${gi}" type="number" min="0" max="40" value="${esc(g.ntables || "")}" placeholder="تلقائي"></div>
+        <div class="f" style="width:150px"><label>المصححون</label><select data-gc="${gi}"><option value="">من الجميع</option><option value="new" ${g.cfrom === "new" ? "selected" : ""}>معلمون جدد</option></select></div>
+        <div class="f" style="width:150px"><label>المراجع</label><select data-gr="${gi}"><option value="">حسب القائمة</option><option value="std" ${g.rfrom === "std" ? "selected" : ""}>معلم عادي</option></select></div>
         ${(dist.groups || []).length > 1 ? `<button class="btn small ghost" data-gx="${gi}" style="color:var(--bad)">حذف</button>` : ""}</div>`).join("")}
       <button class="btn small" id="ds-gadd">+ مجموعة طاولات</button>
       ${(dist.tables || []).map((t, ti) => `<div class="panel" style="padding:10px;margin:8px 0"><b>طاولة (${ti + 1})</b>
@@ -147,6 +162,7 @@ export function distPanel(body, ed) {
     const ga = $("#ds-gall", host); if (ga) ga.onchange = () => { $$("#ds-gl input", host).forEach((c) => (c.checked = ga.checked)); saveGl(); };
     $("#ds-g", host).oninput = (e) => ed.change((x) => { x.data.dist = { ...normDist(x.data.dist), guides: e.target.value }; });
     $$("[data-gq],[data-gn]", host).forEach((i) => (i.onchange = () => { const k = +(i.dataset.gq ?? i.dataset.gn), f = i.dataset.gq != null ? "questions" : "ntables"; save((dd) => { dd.groups = dd.groups.map((g, j) => (j === k ? { ...g, [f]: i.value } : g)); }); }));
+    $$("[data-gc],[data-gr]", host).forEach((i) => (i.onchange = () => { const k = +(i.dataset.gc ?? i.dataset.gr), f = i.dataset.gc != null ? "cfrom" : "rfrom"; save((dd) => { dd.groups = dd.groups.map((g, j) => (j === k ? { ...g, [f]: i.value } : g)); }); }));
     $$("[data-gx]", host).forEach((b) => (b.onclick = () => { save((dd) => { dd.groups = dd.groups.filter((_, j) => j !== +b.dataset.gx); }); paint(); }));
     $("#ds-gadd", host).onclick = () => { save((dd) => { dd.groups = [...(dd.groups || []), { questions: "", ntables: "1" }]; }); paint(); };
     $("#ds-revadd", host).onclick = () => { save((dd) => { dd.review = [...(dd.review || []), ""]; }); paint(); };
