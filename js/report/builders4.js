@@ -341,7 +341,7 @@ export async function gradingDist(ctx) {
     blocks.push({ html: `<div class="gd-th"><span class="gd-n">(${ids.length} معلم)</span><span class="gd-t">طاولة (${num})</span></div>
       <table class="gd-tab"><colgroup><col style="width:14%"><col style="width:43%"><col style="width:43%"></colgroup>
       <tr><th>رقم السؤال</th><th>اسماء المصححين</th><th>اسماء المراجعين</th></tr>
-      ${qs.map((k) => { const s = (t.q || {})[k] || {}; return `<tr><th>${esc(k)}</th><td>${(s.c || []).map((id) => `<div>- ${nm(id)}</div>`).join("")}</td><td><div>- ${nm(s.r)}</div></td></tr>`; }).join("")}</table>` });
+      ${qs.map((k) => { const s = (t.q || {})[k] || {}; return `<tr><th>${esc(k)}</th><td>${(() => { const cs = (s.c || []).filter((id) => rows.has(id)); return cs.length > 2 ? `<div class="gd-grid">${cs.map((id, i) => `<span>${i + 1}- ${nm(id)}</span>`).join("")}</div>` : (cs.length ? cs : ["", ""]).map((id) => `<div>- ${nm(id)}</div>`).join(""); })()}</td><td><div>- ${nm(s.r)}</div></td></tr>`; }).join("")}</table>` });
   });
   return { orientation: "portrait", fixedOrientation: true, cls: "t-gd", header: "", identity: "", footer: "", blocks };
 }

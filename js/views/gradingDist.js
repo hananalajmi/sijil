@@ -19,19 +19,20 @@ export async function subjectGuides(subject) {
 // مجموعات طاولات: لكل مجموعة أسئلتها وعدد طاولاتها (افتراضياً: طاولة للسؤالين 1 و2، وطاولات للأسئلة 3–6)
 // ولكل سؤال في الطاولة مصححتان ومراجعة
 // المجموعة الأولى (السؤال 1 و2): المصححات من المعلمات الجدد، والمراجعة معلمة عادية
-export const DEF_GROUPS = () => [{ questions: "1, 2", ntables: "", cfrom: "new", rfrom: "std" }, { questions: "3, 4, 5, 6", ntables: "" }];
-export const DEF_DIST = () => ({ v: 5, guides: "", review: ["", "", "", "", "", ""], comms: [], groups: DEF_GROUPS(), tables: [] });
+export const DEF_GROUPS = () => [{ questions: "1, 2", ntables: "", cfrom: "new", rfrom: "std", nc: "all" }, { questions: "3, 4, 5, 6", ntables: "" }];
+export const DEF_DIST = () => ({ v: 6, guides: "", review: ["", "", "", "", "", ""], comms: [], groups: DEF_GROUPS(), tables: [] });
 export const normDist = (saved) => {
   const d0 = { ...DEF_DIST(), ...(saved || {}) };
   if (saved && (saved.v || 0) < 3) { // نسخ سابقة: لجنتا السؤال الأول والثاني الافتراضيتان تُحذفان، والأسئلة تصير مجموعات
     d0.comms = (d0.comms || []).filter((c) => !/^لجنة السؤال (الأول|الثاني)/.test(String(c.label || "")));
-    d0.groups = [{ questions: "1, 2", ntables: "", cfrom: "new", rfrom: "std" }, { questions: "3, 4, 5, 6", ntables: d0.ntables || "" }];
+    d0.groups = [{ questions: "1, 2", ntables: "", cfrom: "new", rfrom: "std", nc: "all" }, { questions: "3, 4, 5, 6", ntables: d0.ntables || "" }];
     d0.v = 3;
   }
   if (!Array.isArray(d0.groups) || !d0.groups.length) d0.groups = DEF_GROUPS();
   if ((d0.v || 0) < 5) d0.groups = d0.groups.map((g) => (g.cfrom === "new" && String(g.ntables) === "1" ? { ...g, ntables: "" } : g)); // الجدد كلهم (لا طاولة واحدة فقط)
   if ((d0.v || 0) < 4) d0.groups = d0.groups.map((g) => (/^\s*1[,،\s]+2\s*$/.test(g.questions || "") && !g.cfrom ? { ...g, cfrom: "new", rfrom: "std" } : g));
-  d0.v = 5;
+  if ((d0.v || 0) < 6) d0.groups = d0.groups.map((g) => (g.cfrom === "new" && !g.nc ? { ...g, nc: "all" } : g)); // كل الجدد في طاولة واحدة
+  d0.v = 6;
   return d0;
 };
 const qOf = (str) => String(str || "").split(/[,،\s]+/).map((x) => x.trim()).filter(Boolean);
@@ -95,19 +96,27 @@ function distCore(all, dist) {
   const fillGroup = (g, gi) => {
     const qs = qOf(g.questions); if (!qs.length) return;
     const last = gi === gs.length - 1, left = olds.length + news.length;
-    // عدد الطاولات: كما كُتب، وإلا طاولة واحدة للمجموعات الأولى، والأخيرة تأخذ الباقين
     // عدد الطاولات (إن لم يُكتب): مجموعة الجدد تتسع لكل الجدد، والأخيرة تتسع للباقين (كل سؤال مصححان ومراجع)، وغيرها طاولة واحدة
+    // عدد المصححين لكل سؤال: رقم (الافتراضي 2)، أو «all» = كل المتاحين (الجدد في مجموعتهم) موزعين على الأسئلة
+    const all = g.nc === "all", per = all ? 0 : Math.max(1, Number(g.nc) || 2);
     const n = Number(g.ntables) > 0 ? Number(g.ntables)
-      : g.cfrom === "new" ? Math.max(1, Math.ceil(news.length / (2 * qs.length)))
-      : last ? Math.max(1, Math.ceil((left + R.length) / (3 * qs.length))) : 1;
+      : all ? 1
+      : g.cfrom === "new" ? Math.max(1, Math.ceil(news.length / (per * qs.length)))
+      : last ? Math.max(1, Math.ceil((left + R.length) / ((per + 1) * qs.length))) : 1;
+    const poolC = () => (g.cfrom === "new" ? news.length : olds.length + news.length);
+    const perQ = all ? Math.ceil(poolC() / (n * qs.length)) : per;
     for (let t = 0; t < n; t++) {
       const q = {};
       for (const k of qs) {
         // إن نفد المصححون يُكمَّل من المراجعين والعكس، حتى لا تبقى خانات فارغة وأسماء بلا توزيع
-        const takeAnyC = () => takeC() || R.shift(), takeAnyMate = () => takeMate() || R.shift();
-        const a = g.cfrom === "new" ? takeNew() || R.shift() : takeAnyC(), b = g.cfrom === "new" ? takeNew() || R.shift() : takeAnyMate();
+        const cc = [];
+        for (let i = 0; i < perQ; i++) {
+          // «كل الجدد»: لا يُكمَّل من غيرهم؛ وغير ذلك إن نفد المصححون يُكمَّل من المراجعين
+          const p = g.cfrom === "new" ? (all ? news.shift() : takeNew() || R.shift()) : (i % 2 ? takeMate() : takeC()) || R.shift();
+          if (p) cc.push(p.id); else if (!all) cc.push("");
+        }
         const r = (g.rfrom === "std" ? takeStd() : R.shift()) || takeC();
-        q[k] = { c: [a?.id || "", b?.id || ""], r: r?.id || "" };
+        q[k] = { c: cc, r: r?.id || "" };
       }
       byGroup[gi].push({ qs: g.questions, q });
     }
@@ -195,6 +204,7 @@ export function distPanel(body, ed) {
         <div class="f" style="width:170px"><label>أرقام الأسئلة</label><input data-gq="${gi}" value="${esc(g.questions || "")}" placeholder="3, 4, 5, 6"></div>
         <div class="f" style="width:150px"><label>عدد الطاولات</label><input data-gn="${gi}" type="number" min="0" max="40" value="${esc(g.ntables || "")}" placeholder="تلقائي"></div>
         <div class="f" style="width:150px"><label>المصححون</label><select data-gc="${gi}"><option value="">من الجميع</option><option value="new" ${g.cfrom === "new" ? "selected" : ""}>معلمون جدد</option></select></div>
+        <div class="f" style="width:150px"><label>مصححون لكل سؤال</label><select data-gp="${gi}">${[["2", "2"], ["3", "3"], ["4", "4"], ["6", "6"], ["9", "9"], ["all", "الكل في طاولة"]].map(([v, l]) => `<option value="${v}" ${String(g.nc || "2") === v ? "selected" : ""}>${l}</option>`).join("")}</select></div>
         <div class="f" style="width:150px"><label>المراجع</label><select data-gr="${gi}"><option value="">حسب القائمة</option><option value="std" ${g.rfrom === "std" ? "selected" : ""}>معلم عادي</option></select></div>
         ${(dist.groups || []).length > 1 ? `<button class="btn small ghost" data-gx="${gi}" style="color:var(--bad)">حذف</button>` : ""}</div>`).join("")}
       <button class="btn small" id="ds-gadd">+ مجموعة طاولات</button>
@@ -202,8 +212,9 @@ export function distPanel(body, ed) {
       ${unk.length && dist.split !== false ? `<p class="hint" style="color:var(--bad)">${unk.length} اسم لم يُعرف إن كان بنات أو بنين (يُحسب مع البنات): حدّديه من جدول المعلمين.</p>` : ""}
       ${(() => { let last = null, num = 0; return (dist.tables || []).map((t, ti) => { const sx = dist.split === false ? "" : t.sex || "f"; const headH = sx !== last ? `<h3 style="margin:14px 0 4px;color:var(--brand,#1b2a4e)">${sx ? SEX_LABEL[sx] : ""}</h3>` : ""; if (sx !== last) num = 0; last = sx; num++;
         return `${headH}<div class="panel" style="padding:10px;margin:8px 0"><b>طاولة (${num})</b>
-        <div class="tbl-wrap"><table class="data"><thead><tr><th>السؤال</th><th>المصحح 1</th><th>المصحح 2</th><th>المراجع</th></tr></thead><tbody>
-        ${tableQs(t).map((k) => { const s = (t.q || {})[k] || {}; return `<tr><td class="num"><b>${esc(k)}</b></td><td>${slot(`tables.${ti}.${k}.c.0`, (s.c || [])[0] || "", used)}</td><td>${slot(`tables.${ti}.${k}.c.1`, (s.c || [])[1] || "", used)}</td><td>${slot(`tables.${ti}.${k}.r`, s.r || "", used)}</td></tr>`; }).join("")}
+        <div class="tbl-wrap"><table class="data"><thead><tr><th>السؤال</th><th>المصححون</th><th>المراجع</th></tr></thead><tbody>
+        ${tableQs(t).map((k) => { const s = (t.q || {})[k] || {}; const cs = [...(s.c || [])]; while (cs.length < 2) cs.push(""); if (cs[cs.length - 1]) cs.push(""); // خانة فارغة للإضافة
+          return `<tr><td class="num"><b>${esc(k)}</b></td><td><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:4px">${cs.map((v, ci) => slot(`tables.${ti}.${k}.c.${ci}`, v, used)).join("")}</div></td><td>${slot(`tables.${ti}.${k}.r`, s.r || "", used)}</td></tr>`; }).join("")}
         </tbody></table></div></div>`; }).join(""); })() || `<p class="hint">اضغطي «توزيع تلقائي» لتوزيع الأسماء على الطاولات.</p>`}`;
 
     if (!canManage()) {
@@ -231,6 +242,7 @@ export function distPanel(body, ed) {
     const ga = $("#ds-gall", host); if (ga) ga.onchange = () => { $$("#ds-gl input", host).forEach((c) => (c.checked = ga.checked)); saveGl(); };
     $("#ds-g", host).oninput = (e) => ed.change((x) => { put(x, { ...normDist(distsOf(x.data)[curIdx()]), guides: e.target.value }); });
     $$("[data-gq],[data-gn]", host).forEach((i) => (i.onchange = () => { const k = +(i.dataset.gq ?? i.dataset.gn), f = i.dataset.gq != null ? "questions" : "ntables"; save((dd) => { dd.groups = dd.groups.map((g, j) => (j === k ? { ...g, [f]: i.value } : g)); }); }));
+    $$("[data-gp]", host).forEach((i) => (i.onchange = () => { const k = +i.dataset.gp; save((dd) => { dd.groups = dd.groups.map((g, j) => (j === k ? { ...g, nc: i.value } : g)); }); }));
     $$("[data-gc],[data-gr]", host).forEach((i) => (i.onchange = () => { const k = +(i.dataset.gc ?? i.dataset.gr), f = i.dataset.gc != null ? "cfrom" : "rfrom"; save((dd) => { dd.groups = dd.groups.map((g, j) => (j === k ? { ...g, [f]: i.value } : g)); }); }));
     const saveSch = () => { const on = new Set($$("#ds-sl input:checked", host).map((c) => c.value)); save((dd) => { dd.schools_off = schools.filter((x) => !on.has(x)); }); paint(); };
     $$("#ds-sl input", host).forEach((c) => (c.onchange = saveSch));
