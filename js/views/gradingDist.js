@@ -217,8 +217,8 @@ export function distPanel(body, ed) {
       ${(() => { let last = null, num = 0; return (dist.tables || []).map((t, ti) => { const sx = dist.split === false ? "" : t.sex || "f"; const headH = sx !== last ? `<h3 style="margin:14px 0 4px;color:var(--brand,#1b2a4e)">${sx ? SEX_LABEL[sx] : ""}</h3>` : ""; if (sx !== last) num = 0; last = sx; num++;
         return `${headH}<div class="panel" style="padding:10px;margin:8px 0"><b>طاولة (${num})</b>
         <div class="tbl-wrap"><table class="data"><thead><tr><th>السؤال</th><th>المصححون</th><th>المراجع</th></tr></thead><tbody>
-        ${tableQs(t).map((k) => { const s = (t.q || {})[k] || {}; const cs = [...(s.c || [])]; while (cs.length < 2) cs.push(""); if (cs[cs.length - 1]) cs.push(""); // خانة فارغة للإضافة
-          return `<tr><td class="num"><b>${esc(k)}</b></td><td><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:4px">${cs.map((v, ci) => slot(`tables.${ti}.${k}.c.${ci}`, v, used)).join("")}</div></td><td>${slot(`tables.${ti}.${k}.r`, s.r || "", used)}</td></tr>`; }).join("")}
+        ${tableQs(t).map((k) => { const s = (t.q || {})[k] || {}; const cs = [...(s.c || [])]; while (cs.length < 2) cs.push("");
+          return `<tr><td class="num"><b>${esc(k)}</b></td><td><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:4px">${cs.map((v, ci) => slot(`tables.${ti}.${k}.c.${ci}`, v, used)).join("")}</div><button type="button" class="btn small ghost" data-addc="${ti}|${esc(k)}" style="margin-top:4px">+ مصحح</button></td><td>${slot(`tables.${ti}.${k}.r`, s.r || "", used)}</td></tr>`; }).join("")}
         </tbody></table></div></div>`; }).join(""); })() || `<p class="hint">اضغطي «توزيع تلقائي» لتوزيع الأسماء على الطاولات.</p>`}`;
 
     if (!canManage()) {
@@ -232,6 +232,7 @@ export function distPanel(body, ed) {
       ed.change((x) => { x.data.dists = [...distsOf(x.data).map((q) => ({ ...q, id: q.id || rid() })), { ...DEF_DIST(), id: rid(), name: nm, split: false, guides: D().guides, guide_list: D().guide_list, review: [...(D().review || [])] }]; }, { immediate: true });
       cur = distsOf(ed.rec.data).length - 1; paint(); toast(`أُضيف توزيع «${nm}» — حدّدي مدارسه ثم «توزيع تلقائي»`); };
     $("#ds-del", host)?.addEventListener("click", async () => { if (!(await confirmBox("حذف التوزيع", `حذف توزيع «${D().name || ""}»؟ (أسماء المعلمين لا تُحذف)`, "حذف", true))) return; ed.change((x) => { x.data.dists = distsOf(x.data).filter((_, k) => k !== curIdx()); }, { immediate: true }); cur = 0; paint(); });
+    $$("[data-addc]", host).forEach((b) => (b.onclick = () => { const [ti, k] = b.dataset.addc.split("|"); save((dd) => { const t = dd.tables[+ti]; t.q ||= {}; const q = (t.q[k] ||= { c: ["", ""], r: "" }); q.c = [...(q.c || []), ""]; while (q.c.length < 3) q.c.push(""); }); paint(); }));
     $$("[data-slot]", host).forEach((sel) => (sel.onchange = () => {
       const path = sel.dataset.slot.split("."), v = sel.value;
       save((dd) => {
