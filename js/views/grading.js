@@ -63,7 +63,7 @@ export async function gradingEditor(main, rec) {
         ${field({ label: "المنطقة التعليمية", key: "region", value: d.region ?? (G().region || "الأحمدي") })}
       </div></section>
       <section class="panel"><div class="page-head" style="margin-bottom:6px"><h2>المعلمون</h2>
-        <div class="toolbar" style="margin:0"><button class="btn" id="gr-fill">من مدارسي المسجلة</button><label class="btn primary">رفع ميزانية<input type="file" id="gr-up" accept=".pdf,.docx,.xlsx,application/pdf" multiple hidden></label><button class="btn" id="gr-add">+ اسم</button></div></div>
+        <div class="toolbar" style="margin:0"><button class="btn" id="gr-fill">من مدارسي المسجلة</button><label class="btn primary">رفع ميزانية<input type="file" id="gr-up" accept=".pdf,.docx,.xlsx,application/pdf" multiple hidden></label><button class="btn" id="gr-add">+ اسم</button><button class="btn" id="gr-revs" data-gonly>اختيار المراجعين</button></div></div>
         <p class="hint" style="margin-top:0">المستبعدات لا يظهرن في النموذج المطبوع.</p>
         <div id="gr-count" class="hint" style="font-weight:600;margin:6px 0"></div>
         <div class="tbl-wrap"><table class="data gr-t"><thead><tr><th class="c-n">م</th><th>الاسم ونوع المعلم</th><th>الرقم المدني</th><th>مركز العمل</th><th id="gr-lc">العمل في اللجنة</th><th>استبعاد</th><th></th></tr></thead><tbody id="gr-rows"></tbody></table></div></section>`;
@@ -110,6 +110,24 @@ export async function gradingEditor(main, rec) {
         count(); distRepaint?.();
       };
 
+      // تحديد المراجعين دفعة واحدة: المحدد «مراجع» والباقي «مصحح»
+      $("#gr-revs", body).onclick = async () => {
+        const rs = (ed.rec.data.rows || []).filter((p) => !p.excl && (p.name || "").trim());
+        if (!rs.length) { toast("أضيفي الأسماء أولاً", "error"); return; }
+        const sorted = [...rs].sort((a, b) => (a.name || "").localeCompare(b.name || "", "ar"));
+        const pr = modal({ title: "اختيار المراجعين", wide: true, body: `<p class="hint" style="margin-top:0">حدّدي المراجعات فقط؛ الباقيات يصرن «مصحح». ابحثي بالاسم:</p>
+            <input id="rv-q" placeholder="بحث بالاسم…" style="width:100%;margin-bottom:6px">
+            <div id="rv-l" style="max-height:55vh;overflow:auto">${sorted.map((p) => `<label data-n="${esc(p.name)}" style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line)"><input type="checkbox" value="${p.id}" ${p.role === "مراجع" ? "checked" : ""}><span style="flex:1;color:${rowColor(ed.rec.data, p)};font-weight:600">${esc(p.name)}</span><span class="hint">${esc(p.school || "")}</span></label>`).join("")}</div>
+            <p class="hint" id="rv-n"></p>`,
+          actions: [{ label: "إلغاء", value: null }, { label: "حفظ", kind: "primary", value: (b) => $$("#rv-l input:checked", b).map((c) => c.value) }] });
+        const cnt = () => { const n = $("#rv-n"); if (n) n.textContent = `المحدد: ${$$("#rv-l input:checked").length} مراجع`; };
+        $$("#rv-l input").forEach((c) => (c.onchange = cnt)); cnt();
+        const q = $("#rv-q"); if (q) q.oninput = () => $$("#rv-l label").forEach((l) => (l.style.display = !q.value.trim() || l.dataset.n.includes(q.value.trim()) ? "" : "none"));
+        const ids = await pr; if (!ids) return;
+        const set = new Set(ids);
+        ed.change((x) => { x.data.rows.forEach((p) => { if (!p.excl && (p.name || "").trim()) p.role = set.has(p.id) ? "مراجع" : "مصحح"; }); }, { immediate: true });
+        paint(); toast(`المراجعون: ${set.size} · المصححون: ${rs.length - set.size}`);
+      };
       $("#gr-add", body).onclick = () => { const nid = rid(); ed.change((x) => { x.data.rows = [...(x.data.rows || []), { id: nid, name: "", civil_id: "", school: "", cat: "", role: "", excl: "", by: myName() }]; }, { immediate: true }); paint(); $(`tr[data-p="${nid}"] input`, body)?.focus(); };
 
       // تعبئة من ميزانية المدارس: معلمو المدارس المختارة (المسجلون من ملف الميزانية في «المدارس والمعلمات»)
