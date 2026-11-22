@@ -300,13 +300,22 @@ export async function gradingForm(ctx) {
   const gOf = (p) => (!String(p.school || "").trim() ? "none" : sx(p));
   const ord = { f: 0, m: 1, none: 2 }, LBL = { f: "البنات", m: "البنين", none: "بدون اسم مدرسة" };
   const sorted0 = blank || !isG ? rows0 : [...rows0].sort((a, b) => ord[gOf(a)] - ord[gOf(b)]);
-  const rowsOut = []; let lastG = null;
-  for (const p of sorted0) { if (isG && !blank && gOf(p) !== lastG) { lastG = gOf(p); rowsOut.push(`<tr class="gr-sec"><td colspan="4">${LBL[lastG]}</td></tr>`); } rowsOut.push(p); }
-  const rows = rowsOut.map((p) => typeof p === "string" ? p : `<tr class="gc-${p.cat || "std"}" style="color:${/^#[0-9a-f]{6}$/i.test(p.color || "") ? p.color : /^#[0-9a-f]{6}$/i.test(COL[p.cat || "std"] || "") ? COL[p.cat || "std"] : "#000"}"><td class="gr-name">${esc(p.name || "")}</td><td dir="ltr">${esc(p.civil_id || "")}</td><td>${esc(p.school || "")}</td><td>${esc(isG ? p.role || "" : p.note || "")}</td></tr>`);
-  for (let i = rows.length; i < T.minLines; i++) rows.push(`<tr><td class="gr-name">&nbsp;</td><td></td><td></td><td></td></tr>`);
-  return { orientation: "portrait", fixedOrientation: true, cls: "t-gr", header: "", identity: "", footer: "",
-    blocks: [{ html: head }, { table: { cls: "gr-t", colgroup: `<colgroup><col style="width:30%"><col style="width:24%"><col style="width:21%"><col style="width:25%"></colgroup>`,
-      thead: `<tr><th>الاسم</th><th>الرقم المدني</th><th>مركز العمل</th><th>${esc(isG ? "العمل في اللجنة" : d.last_col || "التوقيع")}</th></tr>`, rows } }] };
+  // «بدون اسم مدرسة» في صفحة مستقلة (فاصل صفحة؛ الهوامش وحدود الصفحة يضبطها التقسيم التلقائي للصفحات)
+  const rowOf = (p) => `<tr class="gc-${p.cat || "std"}" style="color:${/^#[0-9a-f]{6}$/i.test(p.color || "") ? p.color : /^#[0-9a-f]{6}$/i.test(COL[p.cat || "std"] || "") ? COL[p.cat || "std"] : "#000"}"><td class="gr-name">${esc(p.name || "")}</td><td dir="ltr">${esc(p.civil_id || "")}</td><td>${esc(p.school || "")}</td><td>${esc(isG ? p.role || "" : p.note || "")}</td></tr>`;
+  const main0 = isG && !blank ? sorted0.filter((p) => gOf(p) !== "none") : sorted0, none0 = isG && !blank ? sorted0.filter((p) => gOf(p) === "none") : [];
+  const rows = []; let lastG = null;
+  for (const p of main0) { if (isG && !blank && gOf(p) !== lastG) { lastG = gOf(p); rows.push(`<tr class="gr-sec"><td colspan="4">${LBL[lastG]}</td></tr>`); } rows.push(rowOf(p)); }
+  if (!none0.length) for (let i = rows.length; i < T.minLines; i++) rows.push(`<tr><td class="gr-name">&nbsp;</td><td></td><td></td><td></td></tr>`);
+  const colgroup = `<colgroup><col style="width:30%"><col style="width:24%"><col style="width:21%"><col style="width:25%"></colgroup>`;
+  const thead = `<tr><th>الاسم</th><th>الرقم المدني</th><th>مركز العمل</th><th>${esc(isG ? "العمل في اللجنة" : d.last_col || "التوقيع")}</th></tr>`;
+  const blocks = [{ html: head }];
+  if (rows.length) blocks.push({ table: { cls: "gr-t", colgroup, thead, rows } });
+  if (none0.length) {
+    if (rows.length) blocks.push({ pageBreak: true });
+    blocks.push({ html: `<div class="gr-title"><div>${esc(LBL.none)} (${none0.length})</div></div>` });
+    blocks.push({ table: { cls: "gr-t", colgroup, thead, rows: none0.map(rowOf) } });
+  }
+  return { orientation: "portrait", fixedOrientation: true, cls: "t-gr", header: "", identity: "", footer: "", blocks };
 }
 
 // ---------------- توزيع لجان تقدير الدرجات على الأسئلة ----------------
