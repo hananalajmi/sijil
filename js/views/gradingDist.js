@@ -57,6 +57,8 @@ export function sexGuess(p) {
 }
 export const sexOf = (p) => sexGuess(p).sex;
 export const SEX_LABEL = { f: "لجنة البنات", m: "لجنة البنين" };
+// المراجع حسب «العمل في اللجنة» المختار في القائمة (حتى لو كانت خبرة)؛ إن لم يُختر: الخبرة ورؤساء الأقسام مراجعون
+export const isReviewer = (p) => (p.role === "مراجع" ? true : p.role === "مصحح" ? false : p.cat === "expert" || p.cat === "head");
 const people = (d) => (d.rows || []).filter((p) => !p.excl && (p.name || "").trim());
 const RANK = { head: 0, expert: 1, "": 2, new: 3 };
 
@@ -86,7 +88,7 @@ function distCore(all, dist) {
   const fixed = new Set([...(dist.review || []).filter(Boolean)]);
   const free = all.filter((p) => !fixed.has(p.id));
   // حسب نوع المعلم (اللون): الخبرة (أخضر) ورؤساء الأقسام (أزرق) مراجعون، والمعلم (أسود) والجديد (أحمر) مصححون
-  const isRev = (p) => p.cat === "expert" || p.cat === "head";
+  const isRev = isReviewer;
   let C = free.filter((p) => !isRev(p)), R = free.filter(isRev).sort((a, b) => (RANK[a.cat || ""] - RANK[b.cat || ""]));
   // الجدد في مجموعة، والباقي في أخرى؛ كل زوج يأخذ من الاثنتين ما أمكن
   const news = C.filter((p) => p.cat === "new"), olds = C.filter((p) => p.cat !== "new");
@@ -150,11 +152,13 @@ export function distPanel(body, ed) {
   const D = () => normDist(distsOf(ed.rec.data)[curIdx()]);
   const put = (x, d0) => { const all = distsOf(x.data).map((v) => ({ ...v })); all[curIdx()] = { ...d0, id: all[curIdx()].id || rid(), name: all[curIdx()].name || "التوزيع" }; x.data.dists = all; };
   const save = (fn) => { ed.change((x) => { const d0 = normDist(distsOf(x.data)[curIdx()]); fn(d0); put(x, d0); }, { immediate: true }); };
-  const opt = (sel, used) => {
-    const ps = people(ed.rec.data).filter((p) => inScope(D())(p) || p.id === sel);
+  // خانة المراجع: المراجعون فقط، وخانة المصحح: المصححون فقط (والاسم الحالي يبقى ظاهراً)
+  const opt = (sel, used, kind) => {
+    const ps = people(ed.rec.data).filter((p) => p.id === sel || (inScope(D())(p) && (kind === "r" ? isReviewer(p) : kind === "c" ? !isReviewer(p) : true)));
     return `<option value="">—</option>` + ps.map((p) => `<option value="${p.id}" ${p.id === sel ? "selected" : ""}>${esc(p.name)}${p.role ? " · " + p.role : ""}${used.has(p.id) && p.id !== sel ? " (موزّعة)" : ""}</option>`).join("");
   };
-  const slot = (path, val, used) => { const p = people(ed.rec.data).find((x) => x.id === val); return `<select data-slot="${path}" style="min-width:150px;font-weight:600;color:${p ? colorOf(p) : "inherit"}" aria-label="اختيار اسم">${opt(val, used)}</select>`; };
+  const slot = (path, val, used) => { const p = people(ed.rec.data).find((x) => x.id === val); const kind = /\.r(\.|$)/.test(path) ? "r" : /\.c\./.test(path) ? "c" : "";
+    return `<select data-slot="${path}" style="min-width:150px;font-weight:600;color:${p ? colorOf(p) : "inherit"}" aria-label="${kind === "r" ? "اختيار مراجع" : kind === "c" ? "اختيار مصحح" : "اختيار اسم"}">${opt(val, used, kind)}</select>`; };
   const colorOf = (p) => ({ new: "#e00000", expert: "#00a03c", head: "#0050d0" })[p.cat] || "#000";
 
   let guideList = [];
@@ -174,7 +178,7 @@ export function distPanel(body, ed) {
         <button class="btn small" id="ds-new">+ توزيع جديد</button>
         <span style="flex:1"></span><input id="ds-name" value="${esc(distsOf(d)[curIdx()].name || "التوزيع")}" aria-label="اسم التوزيع" style="width:150px" placeholder="مثل: بنين">
         ${distsOf(d).length > 1 ? '<button class="btn small ghost" id="ds-del" style="color:var(--bad)">حذف هذا التوزيع</button>' : ""}</div>
-      <p class="hint" style="margin-top:0">حسب نوع المعلم: <b style="color:#00a03c">الخبرة</b> و<b style="color:#0050d0">رؤساء الأقسام</b> مراجعون، و<b>المعلم</b> مصحح، و<b style="color:#e00000">الجدد</b> كلهم في طاولة السؤال الأول والثاني. يُوزَّع من القائمة أعلاه: لكل سؤال مصححتان ومراجعة، والجدد يُخلطون مع غيرهم. بعد التوزيع تقدرين تغيّرين أي اسم من القائمة المنسدلة.</p>
+      <p class="hint" style="margin-top:0">المراجعون هم من اخترتِ لهم «مراجع» في القائمة (حتى لو كانوا خبرة)، والباقون مصححون، و<b style="color:#e00000">الجدد</b> كلهم في السؤال الأول والثاني فقط. يُوزَّع من القائمة أعلاه: لكل سؤال مصححتان ومراجعة، والجدد يُخلطون مع غيرهم. بعد التوزيع تقدرين تغيّرين أي اسم من القائمة المنسدلة.</p>
       <div class="hint" style="font-weight:600;margin:6px 0">الموزَّع: ${used.size} من ${all.length}${notUsed.length ? ` · غير موزَّع: ${notUsed.length}` : ""}${dup.size ? ` · <span style="color:var(--bad)">أسماء مكررة: ${dup.size}</span>` : ""}</div>
       ${notUsed.length ? `<details style="margin-bottom:8px"><summary class="hint">غير الموزَّعين</summary><p>${notUsed.map((p) => `<span class="pill" style="color:${colorOf(p)}">${esc(p.name)}${p.role ? " · " + p.role : ""}</span>`).join(" ")}</p></details>` : ""}
 
