@@ -240,6 +240,12 @@ export function distPanel(body, ed) {
     $$("[data-slot]", host).forEach((sel) => (sel.onchange = () => {
       const path = sel.dataset.slot.split("."), v = sel.value;
       save((dd) => {
+        // الاسم لا يتكرر: يُشال من أي خانة ثانية قبل وضعه هنا
+        if (v) {
+          dd.review = (dd.review || []).map((x) => (x === v ? "" : x));
+          dd.comms = (dd.comms || []).map((c) => ({ ...c, c: (c.c || []).map((x) => (x === v ? "" : x)), r: (c.r || []).map((x) => (x === v ? "" : x)) }));
+          dd.tables = (dd.tables || []).map((t) => ({ ...t, q: Object.fromEntries(Object.entries(t.q || {}).map(([k, s0]) => [k, { ...s0, c: (s0.c || []).map((x) => (x === v ? "" : x)), r: s0.r === v ? "" : s0.r }])) }));
+        }
         if (path[0] === "review") dd.review[+path[1]] = v;
         else if (path[0] === "comms") { const c = dd.comms[+path[1]]; c[path[2]] = [...(c[path[2]] || [])]; c[path[2]][+path[3]] = v; }
         else { const t = dd.tables[+path[1]]; t.q ||= {}; const s = (t.q[path[2]] ||= { c: ["", ""], r: "" }); if (path[3] === "r") s.r = v; else { s.c = [...(s.c || ["", ""])]; s.c[+path[4]] = v; } }
