@@ -340,6 +340,7 @@ export async function gradingDist(ctx) {
   const gnames = [...(dist.guide_list || []).map((n) => "أ. " + n.replace(/^أ\.\s*/, "")), String(dist.guides || "").trim()].filter(Boolean).join(" - ");
   if (gnames || rev.length) blocks.push({ html: `<table class="gd-box"><tr><th>لجنة المراجعة الفنية<br>منطقة ${esc(d.region || ctx.guide?.region || "الأحمدي")}</th></tr>
     <tr><td>${esc(gnames)}<div class="gd-sub">رؤساء أقسام أو معلمين خبرة</div><div class="gd-inline">${(dist.review || []).map((id, i) => `<span>${i + 1}- ${nm(id)}</span>`).join("")}</div></td></tr></table>` });
+  if (blocks.length > 1) blocks.push({ pageBreak: true }); // صفحة الموجهات (لجنة المراجعة الفنية) مستقلة
   for (const c of dist.comms || []) {
     const cc = c.c || [], cells = [];
     for (let i = 0; i < Math.max(Number(c.nc) || 0, cc.length); i++) cells.push(`<td><b>${i + 1}-</b> ${nm(cc[i])}</td>`);
@@ -351,6 +352,7 @@ export async function gradingDist(ctx) {
   let lastSex = null, num = 0;
   (dist.tables || []).forEach((t) => {
     const sx = dist.split === false ? "" : t.sex || "f";
+    if (blocks.length > 1) blocks.push({ pageBreak: true }); // كل طاولة في صفحة مستقلة (الأولى مع العنوان إن لم يسبقها شيء)
     if (sx !== lastSex) { if (sx) blocks.push({ html: `<div class="gd-sex">${sx === "m" ? "لجنة البنين" : "لجنة البنات"}</div>` }); lastSex = sx; num = 0; }
     num++;
     const qs = tqs(t);
