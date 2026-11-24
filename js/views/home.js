@@ -17,6 +17,8 @@ export default async function (main) {
   const alerts = [];
   if (!state.guide || !g.full_name || !g.stage) alerts.push(["bad", "أكملي البيانات الرئيسية (الاسم، المرحلة، التخصص) لتظهر في التقارير", "#/guide"]);
   if (!state.schools.length) alerts.push(["", "لم تُضف أي مدرسة بعد", "#/schools/new"]);
+  // الإنجازات الأسبوعية أُلغيت: حذف تقاريرها القديمة (تنتقل إلى المحذوفات، ويمكن استرجاعها من «الملفات والأرشيف»)
+  if (plans.length && (state.profile?.role === "admin" || api.demo)) alerts.push(["bad", `صفحة الإنجازات الأسبوعية أُلغيت، ولديك ${plans.length} تقرير منها. اضغطي «حذف» لحذفها كلها.`, "#", "wk-purge"]);
   const local = pendingDrafts();
   if (local.length) alerts.push(["bad", `${local.length} تعديل لم يُحفظ في الخادم (مشكلة اتصال سابقة). افتحي السجل المعني لإعادة الحفظ`, "#/search"]);
   const waiting = drafts.filter((r) => r.status !== "approved");
@@ -26,7 +28,7 @@ export default async function (main) {
   const [visitsLastWeek, monthly] = await Promise.all([
     api.list({ kinds: ["school_visit", "teacher_visit"] }).then((l) => l.filter((v) => v.record_date >= lastWs && v.record_date <= addDays(lastWs, 4)).length),
     api.list({ kind: "shared_achievements" })]);
-  if (visitsLastWeek && !plans.some((p) => p.data.week_start === lastWs)) alerts.push(["", `لم يُكتب تقرير الإنجازات الأسبوعية للأسبوع الماضي (من ${fmtDate(lastWs)})، وفيه ${visitsLastWeek} زيارة`, `#/weekly/new?week=${lastWs}`]);
+  if (false && visitsLastWeek && !plans.some((p) => p.data.week_start === lastWs)) alerts.push(["", `لم يُكتب تقرير الإنجازات الأسبوعية للأسبوع الماضي (من ${fmtDate(lastWs)})، وفيه ${visitsLastWeek} زيارة`, `#/weekly/new?week=${lastWs}`]);
   const d0 = new Date(); const lastMonth = new Date(d0.getFullYear(), d0.getMonth() - 1, 1); const lm = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, "0")}`;
   if (d0.getDate() <= 10 && !monthly.some((m) => m.data.month === lm)) alerts.push(["", "لم يُنشأ ملف الإنجازات الشهرية المشترك للشهر الماضي بعد", `#/monthly-ach/new?month=${lm}`]);
   const missingTeacher = visits.filter((v) => !v.teacher_id || !v.school_id || !v.term);
@@ -43,7 +45,7 @@ export default async function (main) {
         : `<img src="assets/ui/card-${s.card}.jpg" alt="">`}</div>
       <div class="hc-badge">${icon(s.icon)}</div></div>
       <div class="hc-body"><h2>${esc(s.label)}</h2><span class="hc-line" aria-hidden="true"></span><p>${esc(s.desc)}</p>${counts[s.id] ? `<span class="hc-count">${typeof counts[s.id] === "number" ? counts[s.id] + " زيارة هذا العام" : esc(counts[s.id])}</span>` : ""}</div></a>`;
-  const quick = [["#/teacher-visits/new", "زيارة معلم جديدة", "user"], ["#/school-visits/new", "زيارة مدرسة", "school"], ["#/weekly/new", "الإنجازات الأسبوعية", "layers"], ["#/events/new", "تقرير فعالية", "star"], ["#/dates", "التقويم الدراسي", "calendar"]];
+  const quick = [["#/teacher-visits/new", "زيارة معلم جديدة", "user"], ["#/school-visits/new", "زيارة مدرسة", "school"], ["#/events/new", "تقرير فعالية", "star"], ["#/dates", "التقويم الدراسي", "calendar"]];
   const emblem = await logoSrc("emblem");
   main.innerHTML = `<div class="container home">
     <section class="hero">
@@ -54,13 +56,21 @@ export default async function (main) {
     </section>
     <div class="hcards">${SECTIONS.map(card).join("")}</div>
     <div class="home-lower">
-      <section class="panel"><h2 class="ph">${icon("bell")} تنبيهات</h2>${alerts.length ? `<div class="alerts">${alerts.map(([k, t, h]) => `<div class="alert ${k}"><span>${esc(t)}</span><a class="btn small" href="${h}">فتح</a></div>`).join("")}</div>` : `<p class="hint">لا توجد تنبيهات. ${esc(g.full_name ? "أحسنتِ يا أ. " + g.full_name.split(" ")[0] : "")}</p>`}</section>
+      <section class="panel"><h2 class="ph">${icon("bell")} تنبيهات</h2>${alerts.length ? `<div class="alerts">${alerts.map(([k, t, h, id]) => `<div class="alert ${k}"><span>${esc(t)}</span>${id ? `<button class="btn small danger" id="${id}">حذف</button>` : `<a class="btn small" href="${h}">فتح</a>`}</div>`).join("")}</div>` : `<p class="hint">لا توجد تنبيهات. ${esc(g.full_name ? "أحسنتِ يا أ. " + g.full_name.split(" ")[0] : "")}</p>`}</section>
       <section class="panel"><h2 class="ph">${icon("plus")} إجراءات سريعة</h2><div class="quick">${quick.map(([h, t, i]) => `<a class="qa" href="${h}">${icon(i)}<span>${t}</span></a>`).join("")}</div>
         <p class="hint" style="margin-top:10px">${state.teachers.filter((t) => visited.has(t.id)).length} من ${state.teachers.length} معلمة تمت زيارتهن في العام ${esc(year)}.</p></section>
       <section class="panel" id="mylinks"></section>
     </div>
   </div>`;
   paintLinks($("#mylinks", main));
+  const wp = $("#wk-purge", main); if (wp) wp.onclick = async () => {
+    const ok = await modal({ title: "حذف تقارير الإنجازات الأسبوعية", body: `<p>حذف ${plans.length} تقرير من تقارير الإنجازات الأسبوعية؟ تنتقل إلى «المحذوفات» في «الملفات والأرشيف» ويمكن استرجاعها منها.</p>`, actions: [{ label: "إلغاء", value: false }, { label: "حذف الكل", kind: "danger", value: true }] });
+    if (!ok) return;
+    wp.disabled = true; let n = 0, bad = 0;
+    for (const r of plans) { try { await api.update(r.id, { deleted_at: new Date().toISOString() }, r.version); n++; } catch (_) { bad++; } }
+    toast(`حُذف ${n} تقرير${bad ? ` · تعذّر ${bad}` : ""}`, bad ? "error" : undefined);
+    const mod = await import("./home.js"); mod.default(main);
+  };
   const ic = installCard(); if (ic) { ic.style.marginBottom = "16px"; $(".hero", main).after(ic); }
 }
 
