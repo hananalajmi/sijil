@@ -25,9 +25,11 @@ export const isExternal = (r) => /^https?:\/\//.test(r);
 export const sectionOf = (route) => [...SECTIONS, MORE].find((s) => s.route === route || (s.items || []).some(([r]) => r === route || r.split("?")[0] === route));
 
 // روابط الخطط: كل سطر «المرحلة|الاسم|الرابط»؛ المرحلة: ثانوي / متوسط / ابتدائي / الكل
+// روابط أُلغيت (الخطة الأسبوعية القبلية والبعدية للمرحلة الثانوية — نماذج Microsoft Forms) لا تظهر حتى لو بقيت في القائمة المحفوظة
+const REMOVED_LINKS = ["forms.cloud.microsoft/r/N46DUrLyFn", "forms.cloud.microsoft/r/6DQKABdVES"];
 export function planLinks() {
   const st = String(G().stage || "").trim();
-  return opts("plan_links").map((l) => String(l).split("|").map((x) => x.trim())).filter(([s, t, u]) => t && /^https?:\/\//.test(u || "") && (!st || !s || s === "الكل" || s === st))
+  return opts("plan_links").map((l) => String(l).split("|").map((x) => x.trim())).filter(([s, t, u]) => t && /^https?:\/\//.test(u || "") && !REMOVED_LINKS.some((x) => u.includes(x)) && (!st || !s || s === "الكل" || s === st))
     .map(([s, t, u]) => [u, s && s !== "الكل" && !t.includes(s) ? `${t} (${s})` : t, "doc", s && s !== "الكل" ? `للمرحلة: ${s}` : "لكل المراحل"]);
 }
 // صفحات القسم مع روابط الخطط (قبل «قائمة المهام» في قسم الخطط)

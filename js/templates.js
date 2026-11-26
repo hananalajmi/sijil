@@ -156,8 +156,6 @@ export const DEFAULT_OPTIONS = {
   wp_acts: { label: "الخطة الأسبوعية: أنشطة إضافية", items: [] },
   wp_week1: { label: "الخطة الأسبوعية: بداية الأسبوع الأول للعام الدراسي (تاريخ الأحد yyyy-mm-dd)", items: ["2026-09-13"] },
   plan_links: { label: "روابط الخطط (المرحلة|الاسم|الرابط) — المرحلة: ثانوي أو متوسط أو ابتدائي أو الكل", items: [
-    "ثانوي|الخطة الأسبوعية القبلية|https://forms.cloud.microsoft/r/N46DUrLyFn",
-    "ثانوي|الخطة الأسبوعية البعدية|https://forms.cloud.microsoft/r/6DQKABdVES",
     "الكل|الخطة القبلية word|https://docs.google.com/document/d/1hUyBprWrP1Y3wea1ve-zES7RiCf28HQz/edit",
     "الكل|الخطة البعدية word|https://docs.google.com/document/d/1B6JoCbHqCp4kt6cTayHq8Y7pv8lWJPX2/edit"] },
   grades: { label: "الصفوف", items: ["العاشر", "الحادي عشر", "الثاني عشر"] },
