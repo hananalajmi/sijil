@@ -47,7 +47,7 @@ export default async function (main, { id }) {
     await setGuideData("sec_links", { ...(G().sec_links || {}), [id]: next }); paint();
   };
   paint();
-  if (id === "plans") {
+  if (false && id === "plans") { // تذكير الخطط الأسبوعية موقوف (أُزيلت «خطتي الأسبوعية» من القائمة)
     const r = document.createElement("div");
     r.className = "panel"; r.style.marginTop = "14px";
     r.innerHTML = `<h2 class="ph">${icon("bell")} تذكير أسبوعي</h2><p class="hint">آخر موعد لتعبئة الخطط الأسبوعية كل أربعاء الساعة 8 مساءً. أضيفي التذكير لتقويم جوالك: ينبهك الساعة 6 ثم الساعة 8 مساءً، حتى لو كان الموقع مغلقاً.</p>
