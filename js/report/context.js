@@ -50,6 +50,17 @@ export async function visitStatsContext({ year, term, school = "", includeUnvisi
     if (!byTeacher.has(v.teacher_id)) byTeacher.set(v.teacher_id, []);
     byTeacher.get(v.teacher_id).push({ id: v.id, date: v.record_date, cls: [v.data?.grade, v.data?.section].filter(Boolean).join("/") });
   }
+  // زيارات المعلمين المسجلة داخل «زيارة الموجه للمدرسة» (صف معلم يدوي، بلا تقرير زيارة معلم) تُحسب أيضاً
+  const svs = (await api.list({ kind: "school_visit", year })).filter((v) => (!term || sameTerm(v.term, term)) && (!school || v.school_id === school));
+  let fromSv = 0;
+  for (const sv of svs) for (const [ri, row] of (sv.data?.teacher_rows || []).entries()) {
+    if (!row?.teacher || row.tv) continue; // الصف المرتبط بزيارة معلم محسوب من الزيارة نفسها
+    const list = byTeacher.get(row.teacher) || [];
+    if (list.some((x) => x.date === sv.record_date)) continue; // لا تكرار لنفس المعلم في نفس اليوم
+    list.push({ id: sv.id, src: "sv", key: sv.id + ":" + ri, date: sv.record_date, cls: [row.grade, row.section].filter(Boolean).join("/") });
+    byTeacher.set(row.teacher, list); fromSv++;
+  }
+  for (const l of byTeacher.values()) l.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
   // معلم بلا مدرسة (مدرسته محذوفة) لا يظهر إلا إذا كانت له زيارات — حتى لا تتكرر الأسماء
   const teachers = state.teachers.filter((t) => (!school || t.school_id === school) && (includeUnvisited || byTeacher.has(t.id)) && (schoolById(t.school_id) || byTeacher.has(t.id)));
   // سبب عدم الزيارة (إجازة دراسية، مجلس، وضع...) يُحفظ مع المعلم لكل عام وفترة
@@ -61,7 +72,7 @@ export async function visitStatsContext({ year, term, school = "", includeUnvisi
   const rows = teachers.map((t) => ({ teacher_id: t.id, teacher: t.title, school: schoolById(t.school_id)?.title || "", visits: byTeacher.get(t.id) || [], reason: reasonOf(t) }))
     .sort((a, b) => a.school.localeCompare(b.school, "ar") || a.teacher.localeCompare(b.teacher, "ar"));
   // زيارات لمعلمين نُقلوا إلى سلة المحذوفات تبقى ظاهرة في المصدر للشفافية
-  return { kind: "stats_visits", year, term, termWord: termWord(term), guide: guideCtx(), rows, total: seen.size };
+  return { kind: "stats_visits", year, term, termWord: termWord(term), guide: guideCtx(), rows, total: seen.size + fromSv };
 }
 
 /* ---------------- إحصائية متابعة الامتحان النظري / العملي ---------------- */
